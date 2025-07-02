@@ -1,6 +1,7 @@
 NAME = webserv
 
 SRC = ./src/main.cpp \
+			./src/utils/printError.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 

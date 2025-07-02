@@ -1,26 +1,19 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
+/*   printError.cpp                                     :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/02 09:32:26 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/02 12:20:27 by srandria         ###   ########.fr       */
+/*   Created: 2025/07/02 10:58:57 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/02 11:01:24 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <iostream>
-#include "../include/utils/utils.hpp"
+#include "../../include/utils/utils.hpp"
 
-int main(int argc, char **argv)
+void  printError(std::string message)
 {
-  (void)argv;
-  if (argc != 2)
-  {
-    printError("2 argument are expected");
-    return (0);
-  }
-
-  return (0);
+  std::cerr << message << std::endl;
 }
+
