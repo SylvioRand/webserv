@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Server.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/07 11:36:17 by srandria         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../../include/core/Server.hpp"
 #include <stdexcept>
 #include <sys/socket.h>
@@ -20,10 +32,11 @@ void  Server::initSocket(void)
 
   _address.sin_family = AF_INET;
   _address.sin_port = htons(_port);
-  _address.sin_addr.s_addr = INADDR_ANY
+  _address.sin_addr.s_addr = INADDR_ANY;
 
-  if (bind(_socketFd, (struct sockaddr *)&_address, sizeof(_address)) < 0) {
+  if (bind(_socketFd, (struct sockaddr *)&_address, sizeof(_address)) < 0)
+  {
         perror("bind");
         throw std::runtime_error("Bind failed");
-    }
+  }
 }

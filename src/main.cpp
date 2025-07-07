@@ -6,11 +6,10 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/02 09:32:26 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/02 12:20:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/07 10:26:08 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include <iostream>
 #include "../include/utils/utils.hpp"
 
 int main(int argc, char **argv)
