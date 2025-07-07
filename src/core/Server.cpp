@@ -6,13 +6,24 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/07 11:36:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/07 13:31:19 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
 #include <stdexcept>
 #include <sys/socket.h>
+
+Server::Server(int port, const std::string &host) : _port(port), _host(host),
+  _socketFd(-1)
+{
+  std::memset(&_address, 0, sizeof(_address));
+}
+
+Server::~Server(void)
+{
+  close(_socketFd);
+}
 
 void  Server::initSocket(void)
 {
@@ -36,7 +47,25 @@ void  Server::initSocket(void)
 
   if (bind(_socketFd, (struct sockaddr *)&_address, sizeof(_address)) < 0)
   {
-        perror("bind");
-        throw std::runtime_error("Bind failed");
+    std::cerr << "bing: " << strerror(errno) << std::endl;
+    throw std::runtime_error("Bind failed");
   }
 }
+
+void  Server::startListening(void)
+{
+  if (listen(_socketFd, SOMAXCONN) < 0)
+  {
+    std::cerr << "listen: " << strerror(errno) << std::endl;
+    throw std::runtime_error("Listen failed");
+  }
+
+  std::cout << "🟢 Listening on port " << _port << std::endl;
+}
+
+int  Server::getSocketFd(void)
+{
+  return (_socketFd);
+}
+
+

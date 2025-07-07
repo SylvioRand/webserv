@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/07 10:26:00 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/07 13:17:59 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,8 @@ class Server
     ~Server(void);
 
     void  initSocket();
+    void  startListening();
+    int   getSocketFd(void);
 
   private:
     Server(void);
