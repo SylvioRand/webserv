@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/15 10:35:29 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/15 12:20:00 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,7 +42,7 @@ class Server
         socklen_t           addrLen;
     };
 
-    std::vector<ListenInfo> _listens;
+    std::vector<ListenInfo> _listen_fds;
 };
 
 #endif

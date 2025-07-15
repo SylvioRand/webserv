@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/15 10:42:09 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/15 12:22:15 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,10 +23,10 @@ Server::Server(void) {}
 
 Server::~Server(void)
 {
-    for (size_t i = 0; i < _listens.size(); ++i)
+  for (size_t i = 0; i < _listen_fds.size(); ++i)
     {
-        if (_listens[i].socketFd != -1)
-            close(_listens[i].socketFd);
+        if (_listen_fds[i].socketFd != -1)
+            close(_listen_fds[i].socketFd);
     }
 }
 
@@ -39,14 +39,14 @@ void Server::addListen(const std::string &host, int port)
     info.family = AF_UNSPEC;
     std::memset(&info.address, 0, sizeof(info.address));
     info.addrLen = 0;
-    _listens.push_back(info);
+    _listen_fds.push_back(info);
 }
 
 void Server::initSockets()
 {
-    for (size_t i = 0; i < _listens.size(); ++i)
+    for (size_t i = 0; i < _listen_fds.size(); ++i)
     {
-        ListenInfo &info = _listens[i];
+        ListenInfo &info = _listen_fds[i];
 
         // Résolution d'adresse générique (IPv4 ou IPv6)
         struct addrinfo hints;
@@ -109,17 +109,17 @@ void Server::initSockets()
 
 void Server::startListening()
 {
-    for (size_t i = 0; i < _listens.size(); ++i)
+    for (size_t i = 0; i < _listen_fds.size(); ++i)
     {
-        if (listen(_listens[i].socketFd, SOMAXCONN) < 0)
+        if (listen(_listen_fds[i].socketFd, SOMAXCONN) < 0)
         {
             std::cerr << "listen: " << strerror(errno) << std::endl;
             throw std::runtime_error("Listen failed");
         }
 
         std::cout << "🟢 Listening on "
-                  << _listens[i].host << ":" << _listens[i].port
-                  << ((_listens[i].family == AF_INET6) ? " (IPv6)" : " (IPv4)")
+                  << _listen_fds[i].host << ":" << _listen_fds[i].port
+                  << ((_listen_fds[i].family == AF_INET6) ? " (IPv6)" : " (IPv4)")
                   << std::endl;
     }
 }
@@ -128,7 +128,7 @@ const std::vector<int>& Server::getListenFds() const
 {
     static std::vector<int> fds;
     fds.clear();
-    for (size_t i = 0; i < _listens.size(); ++i)
-        fds.push_back(_listens[i].socketFd);
+    for (size_t i = 0; i < _listen_fds.size(); ++i)
+        fds.push_back(_listen_fds[i].socketFd);
     return fds;
 }

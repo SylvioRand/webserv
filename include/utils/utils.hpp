@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <netdb.h>
