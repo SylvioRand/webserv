@@ -6,35 +6,44 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/07 13:17:59 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/15 10:35:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "../utils/utils.hpp"
+#include <vector>
+#include <string>
+#include <netinet/in.h>
 
 class Server
 {
   public:
-    Server(int port, const std::string &host);
+    Server(void);
     ~Server(void);
 
-    void  initSocket();
-    void  startListening();
-    int   getSocketFd(void);
+    void addListen(const std::string &host, int port);
+    void initSockets();
+    void startListening();
+
+    const std::vector<int>& getListenFds() const;
 
   private:
-    Server(void);
     Server(const Server &other);
-    Server& operator=(const Server& other);
+    Server& operator=(const Server &other);
 
-    int                 _socketFd;
-    int                 _port;
-    std::string         _host;
-    struct sockaddr_in  _address;
+    struct ListenInfo {
+        int                 socketFd;
+        int                 port;
+        std::string         host;
+        int                 family; // AF_INET or AF_INET6
+        struct sockaddr_storage address;
+        socklen_t           addrLen;
+    };
 
+    std::vector<ListenInfo> _listens;
 };
 
 #endif
+
