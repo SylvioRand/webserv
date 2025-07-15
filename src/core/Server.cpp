@@ -6,18 +6,11 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/15 12:22:15 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/15 13:01:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
-#include <cstring>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <iostream>
-#include <stdexcept>
-#include <netdb.h>
-#include <unistd.h>
 
 Server::Server(void) {}
 
