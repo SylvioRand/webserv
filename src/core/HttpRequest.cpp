@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 13:38:43 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 15:22:39 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,11 +22,13 @@ HttpRequest::~HttpRequest(void)
 
 }
 
+// TODO
 void  HttpRequest::parse(const std::string &raw_request)
 {
 
 }
 
+// TODO
 bool  HttpRequest::isValid(void) const
 {
   return (true);
@@ -35,4 +37,9 @@ bool  HttpRequest::isValid(void) const
 const std::string& HttpRequest::getMethod() const
 {
   return (_method);
+}
+
+bool  HttpRequest::isComplete(void) const
+{
+  return (_isComplete);
 }

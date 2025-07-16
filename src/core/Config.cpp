@@ -1,12 +1,10 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Config.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*   Config.cpp                                         :+:      :+:    :+:   */ /*                                                    +:+ +:+         +:+     */ /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 13:59:16 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 15:28:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +18,8 @@ Config::~Config(void)
 {
 }
 
-void Config::skipWhiteSpace() {
+void Config::skipWhiteSpace()
+{
   // 1. Recherche du premier caractère qui n'est pas un espace ou tabulation
   size_t pos = _current_line.find_first_not_of(" \t");
   
@@ -34,14 +33,16 @@ void Config::skipWhiteSpace() {
   }
 }
 
-void Config::load(const std::string& filepath) {
+void Config::load(const std::string& filepath)
+{
   _config_file_path = filepath;
   _config_file.open(filepath.c_str());
   if (!_config_file.is_open()) {
     throw std::runtime_error("Failed to open config file: " + filepath);
   }
 
-  while (std::getline(_config_file, _current_line)) {
+  while (std::getline(_config_file, _current_line))
+  {
     _line_number++;
     this->skipWhiteSpace();
     if (_current_line.empty() || _current_line[0] == '#') {
@@ -63,30 +64,31 @@ const std::vector<ServerConfig>& Config::getServers() const
   return (_servers);
 }
 
-bool Config::isValid() const {
-    for (size_t i = 0; i < _servers.size(); ++i) {
-        const ServerConfig& s = _servers[i];
-        
-        // Vérifie que chaque serveur a au moins un port d'écoute
-        if (s.port < 1 || s.port > 65535)
-            return false;
-        
-        // Vérifie les tailles maximales de body
-        if (s.client_max_body_size > MAX_BODY_LIMIT)
-            return false;
-        
-        // Vérifie qu`on a bien location /`
-        if (s.locations.find("/") == s.locations.end())
-            return false;
-    }
-    return true;
+bool Config::isValid() const
+{
+  for (size_t i = 0; i < _servers.size(); ++i) {
+    const ServerConfig& s = _servers[i];
+    
+    // Vérifie que chaque serveur a au moins un port d'écoute
+    if (s.port < 1 || s.port > 65535)
+      return false;
+    
+    // Vérifie les tailles maximales de body
+    if (s.client_max_body_size > MAX_BODY_LIMIT)
+      return false;
+    
+    // Vérifie qu`on a bien location /`
+    if (s.locations.find("/") == s.locations.end())
+      return false;
+  }
+  return true;
 }
 
 
 
 /* Zramahaz’s implementation starts here.     */
 
-// This function serves as the entry point for the configuration file parser.
+// TODO : This function serves as the entry point for the configuration file parser.
 void parseServerBlock()
 {
 

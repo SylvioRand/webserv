@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 13:18:39 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 15:39:10 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,9 @@
 class Server
 {
   public:
-    Server(const struct ServerConfig);
+    Server(const Config& config);
+
+    void  setConfig(const Config& config);
 
   private:
     Server(void);
@@ -28,9 +30,9 @@ class Server
     Server(const Server &other);
     Server& operator=(const Server &other);
 
-    Config  _config;
-    std::map<int, Client> _clients;
-    std::vector<struct pollfd> _fds;
+    Config                      _config;
+    std::map<int, Client>       _clients;
+    std::vector<struct pollfd>  _fds;
 
 };
 

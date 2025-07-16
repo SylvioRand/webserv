@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 13:53:42 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 15:13:49 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,6 @@ private:
   std::ifstream             _config_file;
   std::string               _current_line;
   size_t                    _line_number;
-
   void parseServerBlock();
   void skipWhiteSpace();
 
