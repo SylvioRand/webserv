@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 12:58:40 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 13:18:39 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,6 @@ class Server
 {
   public:
     Server(const struct ServerConfig);
-
 
   private:
     Server(void);

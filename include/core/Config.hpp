@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 12:08:09 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 13:53:42 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,24 +46,29 @@ struct ServerConfig {
 
 class Config {
 private:
-    std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
-    std::string               _config_file_path;
-    std::ifstream             _config_file;
-    std::string               _current_line;
-    size_t                    _line_number;
+  Config(const Config& other);
+  Config& operator=(const Config& other);
 
-    void parseServerBlock();
-    void skipWhiteSpace();
+  std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
+  std::string               _config_file_path;
+  std::ifstream             _config_file;
+  std::string               _current_line;
+  size_t                    _line_number;
+
+  void parseServerBlock();
+  void skipWhiteSpace();
 
 public:
-    // Charge et parse le fichier de configuration
-    void load(const std::string& filepath);
+  Config(void);
+  ~Config(void);
+  // Charge et parse le fichier de configuration
+  void load(const std::string& filepath);
 
-    // Getter pour accéder à la configuration parsée
-    const std::vector<ServerConfig>& getServers() const;
+  // Getter pour accéder à la configuration parsée
+  const std::vector<ServerConfig>& getServers() const;
 
-    // Vérifie si la configuration est valide
-    bool isValid() const;
+  // Vérifie si la configuration est valide
+  bool isValid() const;
 };
 
 #endif
