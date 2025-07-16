@@ -1,14 +1,15 @@
-/* ************************************************************************** */ /*                                                                            */
+/* ************************************************************************** */
+/*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/16 09:06:23 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 10:04:50 by srandria         ###   ########.fr       */
+/*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/16 10:52:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-  
+
 #include "../../include/core/Config.hpp"
 
 void Config::skipWhiteSpace() {
@@ -49,7 +50,6 @@ void Config::load(const std::string& filepath) {
     }
 }
 
-
 const std::vector<ServerConfig>& Config::getServers() const
 {
   return (_servers);
@@ -67,7 +67,7 @@ bool Config::isValid() const {
         if (s.client_max_body_size > MAX_BODY_LIMIT)
             return false;
         
-        // Vérifie qu`on a location /`
+        // Vérifie qu`on a bien location /`
         if (s.locations.find("/") == s.locations.end())
             return false;
     }
@@ -75,8 +75,11 @@ bool Config::isValid() const {
 }
 
 
-// Zramahaz’s implementation starts here.
+
+/* Zramahaz’s implementation starts here.     */
 
 // This function serves as the entry point for the configuration file parser.
 void parseServerBlock()
-{}
+{
+
+}

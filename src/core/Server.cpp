@@ -6,12 +6,19 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/15 13:05:35 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 11:50:33 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
 
+void  new_one(void)
+{
+  std::vector<struct pollfd> _fds;
+
+}
+
+/*
 Server::Server(void) {}
 
 Server::~Server(void)
@@ -125,3 +132,4 @@ const std::vector<int>& Server::getListenFds() const
     fds.push_back(_listen_fds[i].socketFd);
   return fds;
 }
+*/

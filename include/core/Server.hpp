@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/15 12:46:46 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/16 12:58:40 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,10 +14,28 @@
 #define SERVER_HPP
 
 #include "../utils/utils.hpp"
-#include <vector>
-#include <string>
-#include <netinet/in.h>
+#include "../core/Config.hpp"
+#include "../core/Client.hpp"
 
+class Server
+{
+  public:
+    Server(const struct ServerConfig);
+
+
+  private:
+    Server(void);
+    ~Server(void);
+    Server(const Server &other);
+    Server& operator=(const Server &other);
+
+    Config  _config;
+    std::map<int, Client> _clients;
+    std::vector<struct pollfd> _fds;
+
+};
+
+/*
 class Server
 {
   public:
@@ -45,6 +63,7 @@ class Server
 
     std::vector<ListenInfo> _listen_fds;
 };
+*/
 
 #endif
 
