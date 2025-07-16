@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/15 13:01:29 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/15 13:05:35 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,111 +17,111 @@ Server::Server(void) {}
 Server::~Server(void)
 {
   for (size_t i = 0; i < _listen_fds.size(); ++i)
-    {
-        if (_listen_fds[i].socketFd != -1)
-            close(_listen_fds[i].socketFd);
-    }
+  {
+    if (_listen_fds[i].socketFd != -1)
+      close(_listen_fds[i].socketFd);
+  }
 }
 
 void Server::addListen(const std::string &host, int port)
 {
-    ListenInfo info;
-    info.host = host;
-    info.port = port;
-    info.socketFd = -1;
-    info.family = AF_UNSPEC;
-    std::memset(&info.address, 0, sizeof(info.address));
-    info.addrLen = 0;
-    _listen_fds.push_back(info);
+  ListenInfo info;
+  info.host = host;
+  info.port = port;
+  info.socketFd = -1;
+  info.family = AF_UNSPEC;
+  std::memset(&info.address, 0, sizeof(info.address));
+  info.addrLen = 0;
+  _listen_fds.push_back(info);
 }
 
 void Server::initSockets()
 {
-    for (size_t i = 0; i < _listen_fds.size(); ++i)
+  for (size_t i = 0; i < _listen_fds.size(); ++i)
+  {
+    ListenInfo &info = _listen_fds[i];
+
+    // Résolution d'adresse générique (IPv4 ou IPv6)
+    struct addrinfo hints;
+    struct addrinfo *res;
+
+    std::memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC; // Supporte IPv4 et IPv6
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    char portStr[6];
+    snprintf(portStr, sizeof(portStr), "%d", info.port);
+
+    int status = getaddrinfo(info.host.c_str(), portStr, &hints, &res);
+    if (status != 0)
     {
-        ListenInfo &info = _listen_fds[i];
-
-        // Résolution d'adresse générique (IPv4 ou IPv6)
-        struct addrinfo hints;
-        struct addrinfo *res;
-
-        std::memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_UNSPEC; // Supporte IPv4 et IPv6
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_PASSIVE;
-
-        char portStr[6];
-        snprintf(portStr, sizeof(portStr), "%d", info.port);
-
-        int status = getaddrinfo(info.host.c_str(), portStr, &hints, &res);
-        if (status != 0)
-        {
-            std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
-            throw std::runtime_error("Invalid host: " + info.host);
-        }
-
-        info.family = res->ai_family;
-        info.addrLen = res->ai_addrlen;
-        std::memcpy(&info.address, res->ai_addr, res->ai_addrlen);
-
-        info.socketFd = socket(info.family, SOCK_STREAM, 0);
-        if (info.socketFd < 0)
-        {
-            std::cerr << "socket: " << strerror(errno) << std::endl;
-            freeaddrinfo(res);
-            throw std::runtime_error("Failed to create socket");
-        }
-
-        // Non bloquant
-        if (fcntl(info.socketFd, F_SETFL, O_NONBLOCK) < 0)
-        {
-            std::cerr << "fcntl: " << strerror(errno) << std::endl;
-            freeaddrinfo(res);
-            throw std::runtime_error("Failed to set socket to non-blocking");
-        }
-
-        int opt = 1;
-        if (setsockopt(info.socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-        {
-            std::cerr << "setsockopt: " << strerror(errno) << std::endl;
-            freeaddrinfo(res);
-            throw std::runtime_error("Failed to set socket options");
-        }
-
-        // Bind socket
-        if (bind(info.socketFd, (struct sockaddr *)&info.address, info.addrLen) < 0)
-        {
-            std::cerr << "bind: " << strerror(errno) << std::endl;
-            freeaddrinfo(res);
-            throw std::runtime_error("Bind failed");
-        }
-
-        freeaddrinfo(res);
+      std::cerr << "getaddrinfo: " << gai_strerror(status) << std::endl;
+      throw std::runtime_error("Invalid host: " + info.host);
     }
+
+    info.family = res->ai_family;
+    info.addrLen = res->ai_addrlen;
+    std::memcpy(&info.address, res->ai_addr, res->ai_addrlen);
+
+    info.socketFd = socket(info.family, SOCK_STREAM, 0);
+    if (info.socketFd < 0)
+    {
+      std::cerr << "socket: " << strerror(errno) << std::endl;
+      freeaddrinfo(res);
+      throw std::runtime_error("Failed to create socket");
+    }
+
+    // Non bloquant
+    if (fcntl(info.socketFd, F_SETFL, O_NONBLOCK) < 0)
+    {
+      std::cerr << "fcntl: " << strerror(errno) << std::endl;
+      freeaddrinfo(res);
+      throw std::runtime_error("Failed to set socket to non-blocking");
+    }
+
+    int opt = 1;
+    if (setsockopt(info.socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+      std::cerr << "setsockopt: " << strerror(errno) << std::endl;
+      freeaddrinfo(res);
+      throw std::runtime_error("Failed to set socket options");
+    }
+
+    // Bind socket
+    if (bind(info.socketFd, (struct sockaddr *)&info.address, info.addrLen) < 0)
+    {
+      std::cerr << "bind: " << strerror(errno) << std::endl;
+      freeaddrinfo(res);
+      throw std::runtime_error("Bind failed");
+    }
+
+    freeaddrinfo(res);
+  }
 }
 
 void Server::startListening()
 {
-    for (size_t i = 0; i < _listen_fds.size(); ++i)
+  for (size_t i = 0; i < _listen_fds.size(); ++i)
+  {
+    if (listen(_listen_fds[i].socketFd, SOMAXCONN) < 0)
     {
-        if (listen(_listen_fds[i].socketFd, SOMAXCONN) < 0)
-        {
-            std::cerr << "listen: " << strerror(errno) << std::endl;
-            throw std::runtime_error("Listen failed");
-        }
-
-        std::cout << "🟢 Listening on "
-                  << _listen_fds[i].host << ":" << _listen_fds[i].port
-                  << ((_listen_fds[i].family == AF_INET6) ? " (IPv6)" : " (IPv4)")
-                  << std::endl;
+      std::cerr << "listen: " << strerror(errno) << std::endl;
+      throw std::runtime_error("Listen failed");
     }
+
+    std::cout << "🟢 Listening on "
+              << _listen_fds[i].host << ":" << _listen_fds[i].port
+              << ((_listen_fds[i].family == AF_INET6) ? " (IPv6)" : " (IPv4)")
+              << std::endl;
+  }
 }
 
 const std::vector<int>& Server::getListenFds() const
 {
-    static std::vector<int> fds;
-    fds.clear();
-    for (size_t i = 0; i < _listen_fds.size(); ++i)
-        fds.push_back(_listen_fds[i].socketFd);
-    return fds;
+  static std::vector<int> fds;
+  fds.clear();
+  for (size_t i = 0; i < _listen_fds.size(); ++i)
+    fds.push_back(_listen_fds[i].socketFd);
+  return fds;
 }
