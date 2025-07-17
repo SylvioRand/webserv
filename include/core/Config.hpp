@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 15:13:49 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/17 09:51:15 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,8 +53,8 @@ private:
   std::ifstream             _config_file;
   std::string               _current_line;
   size_t                    _line_number;
-  void parseServerBlock();
-  void skipWhiteSpace();
+  void parseServerBlock(void);
+  void skipWhiteSpace(void);
 
 public:
   Config(void);
@@ -66,7 +66,7 @@ public:
   const std::vector<ServerConfig>& getServers() const;
 
   // Vérifie si la configuration est valide
-  bool isValid() const;
+  bool isValid(void) const;
 };
 
 #endif

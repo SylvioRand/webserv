@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 13:44:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/17 09:48:15 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,12 +26,21 @@ void  HttpResponse::setStatus(int code)
   _status_code = code;
 }
 
+// TODO
 void  HttpResponse::setBody(const std::string &content)
 {
-
+  (void)content;
 }
 
+// TODO
 void  HttpResponse::sendFile(const std::string &path)
 {
+  (void)path;
+}
 
+// TODO
+std::string HttpResponse::build(void) const
+{
+  std::string result;
+  return (result);
 }

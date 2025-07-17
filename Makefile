@@ -2,7 +2,13 @@ NAME = webserv
 
 SRC = ./src/main.cpp \
 			./src/core/Server.cpp \
-			./src/utils/printError.cpp \
+			./src/core/Client.cpp \
+			./src/core/Config.cpp \
+			./src/core/HttpRequest.cpp \
+			./src/core/HttpResponse.cpp \
+			./src/utils/Logger.cpp \
+			./src/utils/Fileutils.cpp \
+			./src/utils/throwWithLog.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 

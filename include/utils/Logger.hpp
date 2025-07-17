@@ -1,21 +1,29 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Logger.cpp                                         :+:      :+:    :+:   */
+/*   Logger.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/17 08:23:20 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 09:13:53 by srandria         ###   ########.fr       */
+/*   Created: 2025/07/17 08:20:51 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/17 09:13:37 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../../include/utils/utils.hpp"
+#ifndef LOGGER_HPP
+#define LOGGER_HPP
 
-void logger(LogLevel level, const std::string &message)
-{
-  const std::string prefix[5] = {"INFO", "DEBUG", "WARNING", "ERROR", "FATAL"};
-  std::ostream& out = (level) ? std::cerr : std::cout;
+#include <string>
 
-  out << "[" << prefix[level] << "] " << message << std::endl;
-}
+enum LogLevel {
+    LOG_INFO,
+    LOG_DEBUG,
+    LOG_WARNING,
+    LOG_ERROR,
+    LOG_FATAL
+};
+
+void logger(LogLevel level, const std::string &message);
+
+#endif
+

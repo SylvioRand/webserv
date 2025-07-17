@@ -6,22 +6,16 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 07:51:39 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/17 09:54:13 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
 #include "../../include/core/Server.hpp"
-
-void  new_one(void)
-{
-  std::vector<struct pollfd> _fds;
-
-}
 
 Server::Server(const Config& config) : _config(config)
 {
 
 }
+
 
 /*
 Server::Server(void) {}

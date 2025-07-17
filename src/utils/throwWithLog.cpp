@@ -1,19 +1,25 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   printError.cpp                                     :+:      :+:    :+:   */
+/*   throwWithLog.cpp                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/02 10:58:57 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/02 11:01:24 by srandria         ###   ########.fr       */
+/*   Created: 2025/07/17 08:09:35 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/17 09:29:04 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/utils/utils.hpp"
 
-void  printError(std::string message)
+void  throwWithLog(LogLevel level, const std::string &msg)
 {
-  std::cerr << message << std::endl;
-}
+  const std::string prefix[5] = {"INFO", "DEBUG", "WARNING", "ERROR", "FATAL"};
 
+  if (level < LOG_INFO || level > LOG_FATAL)
+    throw std::runtime_error("UNKNOWN log level: " + msg);
+
+  std::string msglevel = prefix[level] + " " + msg;
+
+  throw std::runtime_error(msglevel);
+}

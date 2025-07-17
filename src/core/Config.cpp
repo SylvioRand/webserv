@@ -18,7 +18,7 @@ Config::~Config(void)
 {
 }
 
-void Config::skipWhiteSpace()
+void Config::skipWhiteSpace(void)
 {
   // 1. Recherche du premier caractère qui n'est pas un espace ou tabulation
   size_t pos = _current_line.find_first_not_of(" \t");
@@ -59,12 +59,12 @@ void Config::load(const std::string& filepath)
   }
 }
 
-const std::vector<ServerConfig>& Config::getServers() const
+const std::vector<ServerConfig>& Config::getServers(void) const
 {
   return (_servers);
 }
 
-bool Config::isValid() const
+bool Config::isValid(void) const
 {
   for (size_t i = 0; i < _servers.size(); ++i) {
     const ServerConfig& s = _servers[i];
@@ -89,7 +89,7 @@ bool Config::isValid() const
 /* Zramahaz’s implementation starts here.     */
 
 // TODO : This function serves as the entry point for the configuration file parser.
-void parseServerBlock()
+void Config::parseServerBlock(void)
 {
 
 }
