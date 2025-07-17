@@ -43,7 +43,6 @@ struct ServerConfig {
 
     ServerConfig();
 };
-
 class Config {
 private:
   Config(const Config& other);

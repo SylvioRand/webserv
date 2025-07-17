@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 15:40:19 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/17 07:51:39 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,11 +21,6 @@ void  new_one(void)
 Server::Server(const Config& config) : _config(config)
 {
 
-}
-
-void Server::setConfig(const Config& config)
-{
-  _config = &config;
 }
 
 /*

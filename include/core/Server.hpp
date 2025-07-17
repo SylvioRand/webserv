@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 15:39:10 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/17 07:56:18 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,17 +22,17 @@ class Server
   public:
     Server(const Config& config);
 
-    void  setConfig(const Config& config);
-
   private:
     Server(void);
     ~Server(void);
     Server(const Server &other);
     Server& operator=(const Server &other);
 
-    Config                      _config;
+    const Config&               _config;
     std::map<int, Client>       _clients;
     std::vector<struct pollfd>  _fds;
+
+    void start_server();
 
 };
 
