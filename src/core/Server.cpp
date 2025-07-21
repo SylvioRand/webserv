@@ -6,12 +6,60 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 09:54:13 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 08:52:26 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 #include "../../include/core/Server.hpp"
 
 Server::Server(const Config& config) : _config(config)
+{
+
+}
+
+// TODO
+void  Server::start_server(void)
+{
+
+}
+
+// TODO
+void  Server::stop_server(void)
+{
+
+}
+
+// TODO
+void  Server::create_all_listeners_(void)
+{
+
+}
+
+// TODO
+void  Server::accept_new_client_(int listener_fd)
+{
+  (void)listener_fd;
+}
+
+// TODO
+void  Server::handle_pollin_(int fd)
+{
+  (void)fd;
+}
+
+// TODO
+void  Server::handle_pollout_(int fd)
+{
+  (void)fd;
+}
+
+// TODO
+void  Server::close_client_(int fd)
+{
+  close(fd);
+}
+
+// TODO
+void  Server::check_timout_(void)
 {
 
 }

@@ -7,9 +7,7 @@
 /*   Updated: 2025/07/16 15:28:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
 #include "../../include/core/Config.hpp"
-
 Config::Config(void)
 {
 }
@@ -18,7 +16,7 @@ Config::~Config(void)
 {
 }
 
-void Config::skipWhiteSpace(void)
+void Config::skipWhiteSpace_(void)
 {
   // 1. Recherche du premier caractère qui n'est pas un espace ou tabulation
   size_t pos = _current_line.find_first_not_of(" \t");
@@ -35,7 +33,7 @@ void Config::skipWhiteSpace(void)
 
 void Config::load(const std::string& filepath)
 {
-  _config_file_path = filepath;
+  _config_path = filepath;
   _config_file.open(filepath.c_str());
   if (!_config_file.is_open()) {
     throw std::runtime_error("Failed to open config file: " + filepath);
@@ -44,13 +42,13 @@ void Config::load(const std::string& filepath)
   while (std::getline(_config_file, _current_line))
   {
     _line_number++;
-    this->skipWhiteSpace();
+    this->skipWhiteSpace_();
     if (_current_line.empty() || _current_line[0] == '#') {
         continue;
     }
 
     if (_current_line.find("server") == 0) {
-        this->parseServerBlock();
+        this->parseServerBlock_();
     }
   }
 
@@ -89,7 +87,7 @@ bool Config::isValid(void) const
 /* Zramahaz’s implementation starts here.     */
 
 // TODO : This function serves as the entry point for the configuration file parser.
-void Config::parseServerBlock(void)
+void Config::parseServerBlock_(void)
 {
 
 }
