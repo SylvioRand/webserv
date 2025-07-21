@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 13:37:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 17:06:43 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <algorithm>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>

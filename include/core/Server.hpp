@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 16:22:29 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 16:52:30 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,34 +53,4 @@ class Server
 
 };
 
-/*
-class Server
-{
-  public:
-    Server(void);
-    ~Server(void);
-
-    void addListen(const std::string &host, int port);
-    void initSockets();
-    void startListening();
-
-    const std::vector<int>& getListenFds() const;
-
-  private:
-    Server(const Server &other); Server& operator=(const Server &other);
-
-    struct ListenInfo {
-        int                 socketFd;
-        int                 port;
-        std::string         host;
-        int                 family; // AF_INET or AF_INET6
-        struct sockaddr_storage address;
-        socklen_t           addrLen;
-    };
-
-    std::vector<ListenInfo> _listen_fds;
-};
-*/
-
 #endif
-

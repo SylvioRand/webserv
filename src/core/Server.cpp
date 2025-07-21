@@ -4,8 +4,12 @@
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */ /*   Updated: 2025/07/21 13:07:30 by srandria         ###   ########.fr       */ /*                                                                            */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/21 17:32:33 by srandria         ###   ########.fr       */
+/*                                                                            */
 /* ************************************************************************** */
+
 #include "../../include/core/Server.hpp"
 
 Server::Server(const Config& config) : _config(config)
@@ -23,6 +27,38 @@ void  Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
   this->create_all_listeners_();
+  while (true)
+  {
+    int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
+    if (ready == -1)
+      throwWithLog(LOG_FATAL, "poll() failed");
+
+    for (size_t i = 0; i < _pool_fds.size() && ready > 0; ++i)
+    {
+      if (_pool_fds[i].revents == 0)
+        continue;
+      --ready;
+
+      int fd = _pool_fds[i].fd;
+
+      if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end()
+          && (_pool_fds[i].revents & POLLIN))
+      {
+        accept_new_client_(fd);
+      }
+      else if (_clients.find(fd) != _clients.end())
+      {
+        if (_pool_fds[i].revents & POLLIN)
+          this->handle_pollin_(fd);
+        if (_pool_fds[i].revents & POLLOUT)
+          this->handle_pollout_(fd);
+        if (_pool_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+          this->close_client_(fd);
+      }
+    }
+    check_timout_();
+    logger(LOG_INFO, "Coucouuuu");
+  }
 
 }
 
@@ -52,7 +88,6 @@ void  Server::create_all_listeners_(void)
     this->registerListenerToPoll_(fd);
   }
 }
-
 
 int   Server::createTcpSocket_(void)
 {
@@ -119,7 +154,6 @@ void  Server::registerListenerToPoll_(int fd)
 
   _pool_fds.push_back(pfd);
 }
-
 
 // TODO
 void  Server::accept_new_client_(int listener_fd)
