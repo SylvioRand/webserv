@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 08:49:40 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 13:37:27 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,8 @@
 #include <fstream>
 #include <vector>
 #include <map>
-#include <ostream>
+#include <sstream>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
 #include "cstdio"
@@ -33,6 +34,6 @@
 #include <cerrno>
 #include <fcntl.h>
 
-void  printError(std::string message);
+void  throwWithLog(LogLevel level, const std::string &msg);
 
 #endif

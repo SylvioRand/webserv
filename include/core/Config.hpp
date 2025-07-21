@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 09:06:22 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 10:07:50 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,30 +47,29 @@ struct ServerConfig {
 class Config
 {
   private:
+    Config(void);
     Config(const Config& other);
     Config& operator=(const Config& other);
 
-    void parseServerBlock_(void);
+    void load_(void);                       // Charge et parse le fichier de configuration
+    bool isValid_(void) const;              // Vérifie si la configuration est valide
+    void parseServerBlock_(void);           // parse de zramahaz
     void skipWhiteSpace_(void);
 
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
-    std::string               _config_path;
+    const std::string         _config_path;
     std::ifstream             _config_file;
     std::string               _current_line;
     size_t                    _line_number;
 
 
   public:
-    Config(void);
+    Config(std::string argv1);
     ~Config(void);
-    // Charge et parse le fichier de configuration
-    void load(const std::string& filepath);
 
     // Getter pour accéder à la configuration parsée
     const std::vector<ServerConfig>& getServers() const;
 
-    // Vérifie si la configuration est valide
-    bool isValid(void) const;
 };
 
 #endif

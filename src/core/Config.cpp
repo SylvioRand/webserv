@@ -8,8 +8,12 @@
 /*                                                                            */
 /* ************************************************************************** */
 #include "../../include/core/Config.hpp"
-Config::Config(void)
+
+Config::Config(std::string filepath) : _config_path(filepath)
 {
+  load_();
+  isValid_();
+
 }
 
 Config::~Config(void)
@@ -31,12 +35,11 @@ void Config::skipWhiteSpace_(void)
   }
 }
 
-void Config::load(const std::string& filepath)
+void Config::load_(void)
 {
-  _config_path = filepath;
-  _config_file.open(filepath.c_str());
+  _config_file.open(_config_path.c_str());
   if (!_config_file.is_open()) {
-    throw std::runtime_error("Failed to open config file: " + filepath);
+    throwWithLog(LOG_ERROR, "Failed to open config file: " + _config_path);
   }
 
   while (std::getline(_config_file, _current_line))
@@ -52,9 +55,12 @@ void Config::load(const std::string& filepath)
     }
   }
 
+  // Uncomment this block once the configuration file parsing has been parsed.
+  /*
   if (_servers.empty()) {
-    throw std::runtime_error("No server blocks found in config file");
+    throwWithLog(LOG_ERROR, "No server blocks found in config file");
   }
+  */
 }
 
 const std::vector<ServerConfig>& Config::getServers(void) const
@@ -62,7 +68,7 @@ const std::vector<ServerConfig>& Config::getServers(void) const
   return (_servers);
 }
 
-bool Config::isValid(void) const
+bool Config::isValid_(void) const
 {
   for (size_t i = 0; i < _servers.size(); ++i) {
     const ServerConfig& s = _servers[i];
@@ -87,7 +93,7 @@ bool Config::isValid(void) const
 /* Zramahaz’s implementation starts here.     */
 
 // TODO : This function serves as the entry point for the configuration file parser.
+// Don`t forget comment is allowed too on this server bloc
 void Config::parseServerBlock_(void)
 {
-
 }

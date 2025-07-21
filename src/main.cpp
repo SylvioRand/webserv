@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/02 09:32:26 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 09:43:13 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 10:19:55 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,12 +22,14 @@ int main(int argc, char **argv)
     return (0);
   }
 
-  /*
-  Multiplexer mux;
-  mux.addListeningSockets(server.getListenFds());
+  try {
+    Config  config(argv[1]);
+    Server  server(config);
 
-  mux.loop();
-  */
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << std::endl;
+    return (0);
+  }
 
   return (0);
 }

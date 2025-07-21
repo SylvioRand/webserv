@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 08:36:53 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/21 16:22:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,27 +21,34 @@ class Server
 {
   public:
     Server(const Config& config);
-    void  start_server(void);
+    ~Server(void);
+
     void  stop_server(void);
 
   private:
     Server(void);
-    ~Server(void);
     Server(const Server &other);
     Server& operator=(const Server &other);
 
+    int   createTcpSocket_(void);
+    void  start_server_(void);
     void  create_all_listeners_(void);
     void  accept_new_client_(int listener_fd);
     void  handle_pollin_(int fd);
     void  handle_pollout_(int fd);
     void  close_client_(int fd);
     void  check_timout_(void);
+    void  registerListenerToPoll_(int fd);
+    void  startListener_(int fd, const ServerConfig &cfg);
+    void  bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& addr);
+    void  setSocketReuseAddr_(int fd);
+    void  buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& cfg);
+
 
 
     const Config&               _config;
     std::map<int, Client>       _clients;
     std::vector<struct pollfd>  _pool_fds;
-    int                         _master_socket;
     std::vector<int>            _listener_fds;
 
 };
