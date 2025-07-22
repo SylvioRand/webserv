@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 16:52:30 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/22 12:06:28 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,16 +38,18 @@ class Server
     void  handle_pollout_(int fd);
     void  close_client_(int fd);
     void  check_timout_(void);
-    void  registerListenerToPoll_(int fd);
+    void  addFdToPoll_(int fd);
     void  startListener_(int fd, const ServerConfig &cfg);
     void  bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& addr);
     void  setSocketReuseAddr_(int fd);
     void  buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& cfg);
+    void  setNonBlocking_(int fd);
+    void  setPollOut_(int fd);
 
 
 
     const Config&               _config;
-    std::map<int, Client>       _clients;
+    std::map<int, Client*>      _clients;
     std::vector<struct pollfd>  _pool_fds;
     std::vector<int>            _listener_fds;
 

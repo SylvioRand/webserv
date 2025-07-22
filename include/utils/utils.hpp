@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 17:06:43 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/22 08:46:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,9 +23,12 @@
 #include <map>
 #include <sstream>
 #include <algorithm>
+#include <utility>
+#include <sys/types.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
+#include <sys/socket.h>
 #include "cstdio"
 #include <sys/socket.h>
 #include <sys/select.h>

@@ -6,11 +6,13 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 17:32:33 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/22 12:29:10 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
+#include <csignal>
+#include <sys/socket.h>
 
 Server::Server(const Config& config) : _config(config)
 {
@@ -22,7 +24,6 @@ Server::~Server(void)
 
 }
 
-// TODO
 void  Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
@@ -44,7 +45,7 @@ void  Server::start_server_(void)
       if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end()
           && (_pool_fds[i].revents & POLLIN))
       {
-        accept_new_client_(fd);
+        this->accept_new_client_(fd);
       }
       else if (_clients.find(fd) != _clients.end())
       {
@@ -57,9 +58,7 @@ void  Server::start_server_(void)
       }
     }
     check_timout_();
-    logger(LOG_INFO, "Coucouuuu");
   }
-
 }
 
 // TODO
@@ -85,7 +84,7 @@ void  Server::create_all_listeners_(void)
     this->buildIpv4Sockaddr_(addr, cfg);       // fill struct sockaddr_in for binding
     this->bindSocket_(fd, cfg, addr);
     this->startListener_(fd, cfg);
-    this->registerListenerToPoll_(fd);
+    this->addFdToPoll_(fd);
   }
 }
 
@@ -145,7 +144,7 @@ void Server::startListener_(int fd, const ServerConfig& cfg)
   _listener_fds.push_back(fd);
 }
 
-void  Server::registerListenerToPoll_(int fd)
+void  Server::addFdToPoll_(int fd)
 {
   struct pollfd pfd;
   pfd.fd = fd;
@@ -158,13 +157,57 @@ void  Server::registerListenerToPoll_(int fd)
 // TODO
 void  Server::accept_new_client_(int listener_fd)
 {
-  (void)listener_fd;
+  int client_fd;
+  struct sockaddr_in client_address;
+  socklen_t addr_len = sizeof(client_address);
+
+  client_fd = accept(listener_fd, (struct sockaddr*)&client_address, &addr_len);
+  if (client_fd == -1)
+  {
+    logger(LOG_WARNING, "accept() failed");
+    return ;
+  }
+
+  this->setNonBlocking_(client_fd);
+  _clients[client_fd] = new Client(client_fd);
+
+  this->addFdToPoll_(client_fd);
+}
+
+void  Server::setNonBlocking_(int fd)
+{
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1)
+        throwWithLog(LOG_FATAL, "fcntl(F_GETFL) failed");
+
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+        throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
 }
 
 // TODO
 void  Server::handle_pollin_(int fd)
 {
-  (void)fd;
+  Client *client = this->_clients[fd];
+  (*client).readData();
+  if ((*client).isRequestComplete())
+  {
+    // TODO here we need to add something to prepare the _response (fill private variable)
+    this->setPollOut_(fd);
+  }
+}
+
+void  Server::setPollOut_(int fd)
+{
+  for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
+  {
+    if (it->fd == fd)
+    {
+      it->events = POLL_OUT;
+      return ;
+    }
+
+  }
+  logger(LOG_ERROR, "fd not found");
 }
 
 // TODO

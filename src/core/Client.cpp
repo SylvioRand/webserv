@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 15:23:23 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/22 09:26:03 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,6 @@
 
 Client::Client(int fd) : _fd(fd), _lastActivity(time(NULL))
 {
-  fcntl(_fd, F_SETFL, O_NONBLOCK); // Mode non-bloquant
 }
 
 Client::~Client(void)
