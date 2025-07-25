@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 10:07:50 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/25 09:17:27 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,6 @@ struct ServerConfig {
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
     std::map<std::string, LocationConfig> locations;            // Configs par location
 
-    ServerConfig();
 };
 
 class Config
@@ -51,10 +50,12 @@ class Config
     Config(const Config& other);
     Config& operator=(const Config& other);
 
-    void load_(void);                       // Charge et parse le fichier de configuration
-    bool isValid_(void) const;              // Vérifie si la configuration est valide
-    void parseServerBlock_(void);           // parse de zramahaz
-    void skipWhiteSpace_(void);
+    void  load_(void);                       // Charge et parse le fichier de configuration
+    bool  isValid_(void) const;              // Vérifie si la configuration est valide
+    void  parseServerBlock_(void);           // parse de zramahaz
+    void  skipWhiteSpace_(void);
+    // you can use this function to add manually a serverconfig without parsing
+    void  createServerConfigManually(void);
 
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path;

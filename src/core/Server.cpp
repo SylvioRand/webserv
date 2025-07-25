@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/22 12:29:10 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/25 09:56:56 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,6 +49,7 @@ void  Server::start_server_(void)
       }
       else if (_clients.find(fd) != _clients.end())
       {
+        logger(LOG_INFO, "poll case");
         if (_pool_fds[i].revents & POLLIN)
           this->handle_pollin_(fd);
         if (_pool_fds[i].revents & POLLOUT)
@@ -160,8 +161,12 @@ void  Server::accept_new_client_(int listener_fd)
   int client_fd;
   struct sockaddr_in client_address;
   socklen_t addr_len = sizeof(client_address);
-
   client_fd = accept(listener_fd, (struct sockaddr*)&client_address, &addr_len);
+
+  char ip[INET_ADDRSTRLEN];
+  inet_ntop(AF_INET, &client_address.sin_addr, ip, sizeof(ip));
+  logger(LOG_INFO, std::string("accept from ") + ip);
+
   if (client_fd == -1)
   {
     logger(LOG_WARNING, "accept() failed");

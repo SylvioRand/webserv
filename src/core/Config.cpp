@@ -1,25 +1,27 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   Config.cpp                                         :+:      :+:    :+:   */ /*                                                    +:+ +:+         +:+     */ /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*   Config.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/16 15:28:53 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/25 09:29:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 #include "../../include/core/Config.hpp"
 
 Config::Config(std::string filepath) : _config_path(filepath)
 {
-  load_();
-  isValid_();
-
+  this->load_();
+  // Skip this if the config has been parsed earlier
+  this->createServerConfigManually();
+  this->isValid_();
 }
 
 Config::~Config(void)
-{
-}
-
+{ }
 void Config::skipWhiteSpace_(void)
 {
   // 1. Recherche du premier caractère qui n'est pas un espace ou tabulation
@@ -52,6 +54,7 @@ void Config::load_(void)
 
     if (_current_line.find("server") == 0) {
         this->parseServerBlock_();
+
     }
   }
 
@@ -62,6 +65,30 @@ void Config::load_(void)
   }
   */
 }
+
+
+// you can use this function to add manually a serverconfig without parsing
+void  Config::createServerConfigManually(void)
+{
+  logger(LOG_INFO, "Creating server config manually");
+  ServerConfig  result;
+  result.server_name = "localhost";
+  result.client_max_body_size = 10485760;
+  result.error_pages[404] = "/404.html";
+  result.host = "127.0.0.3";
+  result.port = 8080;
+  this->_servers.push_back(result);
+
+  ServerConfig  result2;
+  result.server_name = "localhost";
+  result.client_max_body_size = 10485760;
+  result.error_pages[404] = "/404.html";
+  result.host = "127.0.0.4";
+  result.port = 8081;
+  this->_servers.push_back(result);
+
+}
+
 
 const std::vector<ServerConfig>& Config::getServers(void) const
 {
@@ -93,7 +120,8 @@ bool Config::isValid_(void) const
 /* Zramahaz’s implementation starts here.     */
 
 // TODO : This function serves as the entry point for the configuration file parser.
-// Don`t forget comment is allowed too on this server bloc
+// Don`t forget comment is allowed too on the server bloc of the file configuration
 void Config::parseServerBlock_(void)
 {
+
 }
