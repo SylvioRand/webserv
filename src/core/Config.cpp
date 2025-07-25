@@ -3,10 +3,7 @@
 /*                                                        :::      ::::::::   */
 /*   Config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/25 09:29:20 by srandria         ###   ########.fr       */
+/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */ /*   Updated: 2025/07/25 09:29:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,16 +42,14 @@ void Config::load_(void)
   }
 
   while (std::getline(_config_file, _current_line))
-  {
-    _line_number++;
-    this->skipWhiteSpace_();
-    if (_current_line.empty() || _current_line[0] == '#') {
+  { _line_number++; this->skipWhiteSpace_(); if (_current_line.empty() || _current_line[0] == '#')
+    {
         continue;
     }
 
-    if (_current_line.find("server") == 0) {
+    if (_current_line.find("server") == 0)
+    {
         this->parseServerBlock_();
-
     }
   }
 

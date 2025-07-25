@@ -6,12 +6,13 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/25 09:56:56 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/25 10:17:21 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
 #include <csignal>
+#include <sstream>
 #include <sys/socket.h>
 
 Server::Server(const Config& config) : _config(config)
@@ -47,7 +48,7 @@ void  Server::start_server_(void)
       {
         this->accept_new_client_(fd);
       }
-      else if (_clients.find(fd) != _clients.end())
+      else if ((this->_clients).find(fd) != _clients.end())
       {
         logger(LOG_INFO, "poll case");
         if (_pool_fds[i].revents & POLLIN)
@@ -192,6 +193,9 @@ void  Server::setNonBlocking_(int fd)
 // TODO
 void  Server::handle_pollin_(int fd)
 {
+  std::ostringstream os;
+  os << "HANDLE POLLIN FD ->" << fd;
+  logger(LOG_INFO, os.str());
   Client *client = this->_clients[fd];
   (*client).readData();
   if ((*client).isRequestComplete())
@@ -203,6 +207,7 @@ void  Server::handle_pollin_(int fd)
 
 void  Server::setPollOut_(int fd)
 {
+  logger(LOG_INFO, "HANDLE POLLOUT");
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
   {
     if (it->fd == fd)
@@ -224,6 +229,7 @@ void  Server::handle_pollout_(int fd)
 // TODO
 void  Server::close_client_(int fd)
 {
+  logger(LOG_INFO, "close client");
   close(fd);
 }
 
