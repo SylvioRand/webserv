@@ -3,7 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */ /*   Updated: 2025/07/25 09:29:20 by srandria         ###   ########.fr       */
+/*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
+/*   Updated: 2025/07/26 16:12:39 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,7 +52,7 @@ void Config::load_(void)
 
     if (_current_line.find("server") == 0)
     {
-        this->parseServerBlock_();
+        this->parseServerBlock_();    // parse de zramahaz
     }
   }
 
@@ -97,15 +100,15 @@ bool Config::isValid_(void) const
     
     // Vérifie que chaque serveur a au moins un port d'écoute
     if (s.port < 1 || s.port > 65535)
-      return false;
+    return false;
     
     // Vérifie les tailles maximales de body
     if (s.client_max_body_size > MAX_BODY_LIMIT)
-      return false;
+    return false;
     
     // Vérifie qu`on a bien location /`
     if (s.locations.find("/") == s.locations.end())
-      return false;
+    return false;
   }
   return true;
 }
@@ -118,5 +121,16 @@ bool Config::isValid_(void) const
 // Don`t forget comment is allowed too on the server bloc of the file configuration
 void Config::parseServerBlock_(void)
 {
-
+  std::cout << _current_line << std::endl;
+  while (std::getline(_config_file, _current_line))
+  { _line_number++; this->skipWhiteSpace_(); if (_current_line.empty() || _current_line[0] == '#')
+    {
+      continue;
+    }
+    if (_current_line.find("server_name") == std::string::npos && _current_line.find("server") != std::string::npos)
+    { std::cout << std::endl;
+      return ;
+    }
+    std::cout << _current_line << std::endl;
+  }
 }
