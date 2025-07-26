@@ -27,7 +27,6 @@ Client::~Client(void)
   }
 }
 
-// TODO
 void  Client::readData(void)
 {
   char buf[4096];
@@ -43,6 +42,12 @@ void  Client::readData(void)
       return ;
     }
     logger(LOG_ERROR, "error while reading fd with recv [at readData(void) function]");
+    return ;
+  }
+  if (bytes == 0)
+  {
+    logger(LOG_INFO, "the client has closed the connection");
+    return ;
   }
   this->_buffer.append(_buffer);
 }
