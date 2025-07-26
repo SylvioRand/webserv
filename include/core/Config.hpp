@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/25 09:17:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/26 14:34:31 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,10 +58,10 @@ class Config
     void  createServerConfigManually(void);
 
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
-    const std::string         _config_path;
-    std::ifstream             _config_file;
-    std::string               _current_line;
-    size_t                    _line_number;
+    const std::string         _config_path; // chemin pour le fichier de configuration
+    std::ifstream             _config_file; // fd pour le fichier
+    std::string               _current_line; // ligne actuelle dans le fichier
+    size_t                    _line_number; // nombre de ligne dans le fichier
 
 
   public:
