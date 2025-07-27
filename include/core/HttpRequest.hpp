@@ -21,12 +21,13 @@ class HttpRequest
     HttpRequest(const HttpRequest& other);
     HttpRequest& operator=(const HttpRequest &other);
 
-    std::string                         _method;      // GET / POST / DELETE
-    std::string                         _path;        // chemin se trouvant juste a cote de la methode dans la requete
-    std::map<std::string, std::string>  _headers;     // entete de la requete http
-    std::string                         _body;        // corps de la requet http
-    std::string                         _version;     // HTTP/1.0, HTTP/1.1 etc...
-    bool                                _isComplete;  // indique si la requete est completement recu
+    std::string                         _method;        // GET / POST / DELETE
+    std::string                         _path;          // chemin se trouvant juste a cote de la methode dans la requete
+    std::map<std::string, std::string>  _headers;       // entete de la requete http
+    std::string                         _body;          // corps de la requet http
+    std::string                         _version;       // HTTP/1.0, HTTP/1.1 etc...
+    bool                                _isComplete;    // indique si la requete est completement recu
+    int                                 _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
 
   public:
     HttpRequest(void);

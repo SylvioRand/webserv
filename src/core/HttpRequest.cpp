@@ -22,13 +22,14 @@ HttpRequest::~HttpRequest(void)
 
 }
 
-// TODO
+// TODO At this part, we need to verify if all content of the body has been read, at the same time and set the variable _isComplete as true if it`s the case`
 void  HttpRequest::parse(const std::string &raw_request)
 {
   (void)raw_request;
+  // we need to add number of bytes for body part on = the variable _bodyBytesRead
+
 }
 
-// TODO
 bool  HttpRequest::isValid(void) const
 {
   return (true);

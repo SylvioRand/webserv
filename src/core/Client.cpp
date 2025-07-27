@@ -49,7 +49,8 @@ void  Client::readData(void)
     logger(LOG_INFO, "the client has closed the connection");
     return ;
   }
-  this->_buffer.append(_buffer);
+  this->_buffer.append(buf);
+  this->_request.parse(_buffer);
 }
 
 // TODO
