@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/26 14:34:31 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/07/28 17:03:35 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,7 @@ struct ServerConfig {
     std::string                           host;                 // Adresse d'écoute (ex: "127.0.0.1")
     int                                   port;                 // Port d'écoute (ex: 8080)
     std::string                           server_name;          // Nom du serveur (ex: "localhost")
-    std::string                           root;                 // Racine par défaut des fichiers
+    std::string                           root;               // Racine par défaut des fichiers
     std::string                           index;                // Fichier index par défaut
     size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
@@ -56,21 +56,31 @@ class Config
     void  skipWhiteSpace_(void);
     // you can use this function to add manually a serverconfig without parsing
     void  createServerConfigManually(void);
-
+    
+    // zramahaz function
+    bool  findServerBrace_(void);
+    void  parseDirectiveAndBloc_(void);
+    void  appendValueDirective_(std::string &token);
+    void  parseDirective_(void);
+    void  addStringValue_(std::istringstream &iss, int id);
+    
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path; // chemin pour le fichier de configuration
     std::ifstream             _config_file; // fd pour le fichier
     std::string               _current_line; // ligne actuelle dans le fichier
     size_t                    _line_number; // nombre de ligne dans le fichier
-
-
-  public:
+    
+    
+    public:
     Config(std::string argv1);
     ~Config(void);
-
+    
     // Getter pour accéder à la configuration parsée
     const std::vector<ServerConfig>& getServers() const;
+    
+    static std::string  trim(const std::string& str);
+    static int          countOccurrence(const std::string& chaine, char c);
 
-};
+  };
 
 #endif
