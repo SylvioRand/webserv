@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 08:04:38 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/28 16:51:14 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,8 @@ class HttpRequest
     std::string                         _version;       // HTTP/1.0, HTTP/1.1 etc...
     bool                                _isComplete;    // indique si la requete est completement recu
     int                                 _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
+    size_t                              _contentLength;
+    void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 
   public:
     HttpRequest(void);
@@ -35,8 +37,11 @@ class HttpRequest
 
     void  parse(const std::string &raw_request);
     bool  isValid(void) const;
-    const std::string &getMethod(void) const;
     bool  isComplete(void) const;
+    void  appendToBody(std::string str);
+    const std::string &getMethod(void) const;
+
+    const std::string& getBody(void) const;
 };
 
 #endif

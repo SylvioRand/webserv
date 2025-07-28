@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/25 10:17:21 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/28 14:19:43 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,9 +21,7 @@ Server::Server(const Config& config) : _config(config)
 }
 
 Server::~Server(void)
-{
-
-}
+{ }
 
 void  Server::start_server_(void)
 {
@@ -140,7 +138,7 @@ void Server::startListener_(int fd, const ServerConfig& cfg)
     throwWithLog(LOG_FATAL, oss.str());
   }
 
-  oss << "🟢 listening on  " << cfg.host << ":" << cfg.port;
+  oss << "🟢 listening on http://" << cfg.host << ":" << cfg.port;
   logger(LOG_INFO, oss.str());
 
   _listener_fds.push_back(fd);

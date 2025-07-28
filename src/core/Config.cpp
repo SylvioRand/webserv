@@ -3,7 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */ /*   Updated: 2025/07/25 09:29:20 by srandria         ###   ########.fr       */
+/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
+/*   Updated: 2025/07/28 16:37:24 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,11 +17,17 @@ Config::Config(std::string filepath) : _config_path(filepath)
   this->load_();
   // Skip this if the config has been parsed earlier
   this->createServerConfigManually();
-  this->isValid_();
+  /*
+  if (!this->isValid_())
+    throwWithLog(LOG_ERROR, "invalid server configuration");
+    */
 }
 
 Config::~Config(void)
-{ }
+{
+
+}
+
 void Config::skipWhiteSpace_(void)
 {
   // 1. Recherche du premier caractère qui n'est pas un espace ou tabulation
@@ -42,7 +51,10 @@ void Config::load_(void)
   }
 
   while (std::getline(_config_file, _current_line))
-  { _line_number++; this->skipWhiteSpace_(); if (_current_line.empty() || _current_line[0] == '#')
+  {
+    _line_number++;
+    this->skipWhiteSpace_();
+    if (_current_line.empty() || _current_line[0] == '#')
     {
         continue;
     }
@@ -50,6 +62,7 @@ void Config::load_(void)
     if (_current_line.find("server") == 0)
     {
         this->parseServerBlock_();
+
     }
   }
 
