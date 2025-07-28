@@ -27,7 +27,7 @@ class HttpRequest
     std::string                         _body;          // corps de la requet http
     std::string                         _version;       // HTTP/1.0, HTTP/1.1 etc...
     bool                                _isComplete;    // indique si la requete est completement recu
-    int                                 _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
+    size_t                              _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
     size_t                              _contentLength;
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 

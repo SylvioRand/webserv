@@ -120,27 +120,14 @@ void  HttpRequest::appendToBody(std::string str)
 {
   if (str.size() + this->_bodyBytesRead > this->_contentLength)
   {
-    std::ostringstream oss2;
-    logger(LOG_INFO, "body saved -> " + this->_body);
-    oss2 << "str.size() = " << str.size() << " _bodyBytesRead = " << this->_bodyBytesRead << " Content-Length = " << this->_contentLength;
-    logger(LOG_INFO, oss2.str());
-    logger(LOG_INFO, "___beaker 01__");
-    this->_bodyBytesRead = this->_contentLength;
-    logger(LOG_INFO, "Before resizing [" + str + "]");
     str.resize(this->_contentLength - this->_bodyBytesRead);
-
-    std::ostringstream oss;
-
-    int res = this->_contentLength - this->_bodyBytesRead;
-    oss << "substract result -> " << res;
-    logger(LOG_INFO, oss.str());
-    this->_isComplete = true;
-    logger(LOG_INFO, "After resizing [" + str + "]");
+    this->_bodyBytesRead = this->_contentLength;
   }
   else
     this->_bodyBytesRead += str.size();
-  logger(LOG_INFO, "___beaker 02__");
   this->_body.append(str);
+  if (this->_bodyBytesRead == this->_contentLength)
+    this->_isComplete = true;
 }
 
 const std::string& HttpRequest::getBody(void) const

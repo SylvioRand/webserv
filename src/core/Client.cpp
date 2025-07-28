@@ -60,6 +60,8 @@ void  Client::readData(void)
     logger(LOG_INFO, "POST detected");
     this->_request.appendToBody(buf);
   }
+
+  // TODO remove this on production
   if (this->_request.isComplete())
   {
     logger(LOG_INFO, "request is completed");
