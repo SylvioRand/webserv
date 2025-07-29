@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/28 17:12:53 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/29 17:30:59 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,15 +21,14 @@ HttpRequest::HttpRequest(void) :_isComplete(false),  _bodyBytesRead(0), _content
 
 }
 
+// TODO verifie for leaks if we need to free something
 HttpRequest::~HttpRequest(void)
 {
 
 }
 
-// TODO At this part, we need to verify if all content of the body has been read, at the same time and set the variable _isComplete as true if it`s the case`
 void  HttpRequest::parse(const std::string &raw_request)
 {
-  // we need to add number of bytes for body part on = the variable _bodyBytesRead
   size_t pos = raw_request.find("\r\n\r\n");
 
   if (pos == std::string::npos)
@@ -39,7 +38,7 @@ void  HttpRequest::parse(const std::string &raw_request)
   return ;
 }
 
-// TODO Need more test for POST
+// TODO Need code formating
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
 {
@@ -56,7 +55,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   std::getline(iss, line);
   if (!this->isValid())
     return ;
-  while (std::getline(iss, line))
+  while (std::getline(iss, line) && line != "\r")
   {
     size_t      pos = line.find(":");
     std::string key;
@@ -66,7 +65,23 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     if (pos == std::string::npos)
       break ;
     value = line.substr(pos + 2);
-    logger(LOG_INFO, "[" + key + "] " + value);
+    for (size_t i = 0; i < value.length(); ++i)
+    {
+      std::cout << "ASCII value of '" << value[i] << "' is: " << static_cast<int>(value[i]) << std::endl;
+    }
+    size_t bsnpos = value.find('\n');
+      std::cout << "********************" << std::endl;
+    if (bsnpos != std::string::npos)
+    {
+    }
+      
+    if (value.at(value.size() - 2) == '\n')
+    {
+      while (1)
+        ;
+      value.erase(value.size() - 1);
+    }
+    logger(LOG_INFO, "[" + key + "] [" + value + "]");
     this->_headers[key] = value;
   }
   if (this->_method == "POST")
@@ -133,5 +148,15 @@ void  HttpRequest::appendToBody(std::string str)
 const std::string& HttpRequest::getBody(void) const
 {
   return (this->_body);
+}
+
+const std::string& HttpRequest::getPath(void) const
+{
+  return (_path);
+}
+
+const std::map<std::string, std::string>& HttpRequest::getHeaders(void) const
+{
+  return (_headers);
 }
 

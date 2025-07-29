@@ -9,6 +9,7 @@ SRC = ./src/main.cpp \
 			./src/utils/Logger.cpp \
 			./src/utils/Fileutils.cpp \
 			./src/utils/throwWithLog.cpp \
+			./src/utils/intToString.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 

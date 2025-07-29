@@ -6,13 +6,14 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/28 14:19:43 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:54:10 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
 #include <csignal>
 #include <sstream>
+#include <string>
 #include <sys/socket.h>
 
 Server::Server(const Config& config) : _config(config)
@@ -21,7 +22,9 @@ Server::Server(const Config& config) : _config(config)
 }
 
 Server::~Server(void)
-{ }
+{
+
+}
 
 void  Server::start_server_(void)
 {
@@ -48,7 +51,6 @@ void  Server::start_server_(void)
       }
       else if ((this->_clients).find(fd) != _clients.end())
       {
-        logger(LOG_INFO, "poll case");
         if (_pool_fds[i].revents & POLLIN)
           this->handle_pollin_(fd);
         if (_pool_fds[i].revents & POLLOUT)
@@ -102,6 +104,11 @@ void  Server::bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& a
 {
   std::ostringstream oss;
 
+  if (cfg.host.empty() || inet_addr(cfg.host.c_str()) == INADDR_NONE)
+  {
+      close(fd);
+      throwWithLog(LOG_FATAL, "Invalid host: {" + cfg.host + "}");
+  }
   if (bind(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)))
   {
     close(fd);
@@ -154,7 +161,6 @@ void  Server::addFdToPoll_(int fd)
   _pool_fds.push_back(pfd);
 }
 
-// TODO
 void  Server::accept_new_client_(int listener_fd)
 {
   int client_fd;
@@ -164,7 +170,7 @@ void  Server::accept_new_client_(int listener_fd)
 
   char ip[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, &client_address.sin_addr, ip, sizeof(ip));
-  logger(LOG_INFO, std::string("accept from ") + ip);
+  logger(LOG_DEBUG, std::string("accept from ") + ip);
 
   if (client_fd == -1)
   {
@@ -183,7 +189,6 @@ void  Server::setNonBlocking_(int fd)
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
         throwWithLog(LOG_FATAL, "fcntl(F_GETFL) failed");
-
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
         throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
 }
@@ -193,12 +198,16 @@ void  Server::handle_pollin_(int fd)
 {
   std::ostringstream os;
   os << "HANDLE POLLIN FD ->" << fd;
-  logger(LOG_INFO, os.str());
+  logger(LOG_DEBUG, os.str());
   Client *client = this->_clients[fd];
   (*client).readData();
   if ((*client).isRequestComplete())
   {
     // TODO here we need to add something to prepare the _response (fill private variable)
+
+    std::string uri = this->_clients[fd]->getRequest().getPath();
+    logger(LOG_INFO, "the path " +  uri);
+    this->buildLocalPath(uri, fd);
     this->setPollOut_(fd);
   }
 }
@@ -210,10 +219,14 @@ void  Server::setPollOut_(int fd)
   {
     if (it->fd == fd)
     {
-      it->events = POLL_OUT;
+      it->events = POLLOUT;
+      std::ostringstream oss;
+
+      oss << "successfultuset event to POLL_OUT for fd [" << fd << "]";
+      logger(LOG_DEBUG, oss.str());
+
       return ;
     }
-
   }
   logger(LOG_ERROR, "fd not found");
 }
@@ -221,7 +234,8 @@ void  Server::setPollOut_(int fd)
 // TODO
 void  Server::handle_pollout_(int fd)
 {
-  (void)fd;
+//  logger(LOG_INFO, "IN POLLOUT FUNCTION");
+  this->_clients[fd]->sendData();
 }
 
 // TODO
@@ -231,8 +245,53 @@ void  Server::close_client_(int fd)
   close(fd);
 }
 
+// TODO 
+std::string Server::buildLocalPath(const std::string& uri, int fd) {
+    const std::vector<ServerConfig>& servers = this->getConfig().getServers();
+    std::string path;
+
+    Client *client = _clients[fd];
+    const HttpRequest& httpreq = client->getRequest();
+    const std::map<std::string, std::string>& headers = httpreq.getHeaders();
+    std::map<std::string, std::string>::const_iterator hostFromRequest = headers.find("Host");
+
+    if (hostFromRequest == headers.end()) {
+        throwWithLog(LOG_ERROR, "The Client Request doesn't have Host in _headers");
+    }
+
+    std::string host = hostFromRequest->second;
+    std::cout << "le host trouve est [" << host << "]" << std::endl;
+
+    for (std::vector<ServerConfig>::const_iterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
+    {
+      std::string hostPort = (*cfg).host + ":" + intToString((*cfg).port);
+      std::cout << "verifions ce hostPort : [" << hostPort << "]" << std::endl;
+      if (hostPort == host)
+      {
+        logger(LOG_INFO, "Config found for corresponding host -> " + host);
+        path = (*cfg).root + uri;
+        if (!path.empty() && path[path.length() - 1] == '/') {
+          path += (*cfg).index;
+        }
+        break; // Add this to exit the loop once the correct config is found
+      }
+    }
+
+    if (path.empty()) {
+        throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + host);
+    }
+
+    return path;
+}
+
 // TODO
 void  Server::check_timout_(void)
 {
 
 }
+
+const Config& Server::getConfig(void)
+{
+  return (_config);
+}
+

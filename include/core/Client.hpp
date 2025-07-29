@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:18:58 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/22 12:29:30 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/29 10:44:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include "../core/HttpRequest.hpp"
 #include "../core/HttpResponse.hpp"
+#include "Config.hpp"
 
 class Client
 {
@@ -22,15 +23,17 @@ class Client
     Client(int fd);
     ~Client(void);
 
-    void readData(void);
-    void sendData(void);
-    bool isRequestComplete(void) const;
+    void  readData(void);
+    void  sendData(void);
+    bool  isRequestComplete(void) const;
+    const HttpRequest& getRequest(void) const;
 
   private:
     Client(void);
     Client(const Client &other);
     Client& operator=(const Client& other);
 
+    //ServerConfig& _cfg;
     int           _fd;
     HttpRequest   _request;
     HttpResponse  _response;

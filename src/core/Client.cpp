@@ -6,10 +6,9 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/28 16:51:21 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/29 15:40:47 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
 #include "../../include/core/Client.hpp"
 #include <cerrno>
 #include <cstddef>
@@ -20,6 +19,7 @@ Client::Client(int fd) : _fd(fd), _lastActivity(time(NULL))
 {
 }
 
+// TODO Make sure we handle everything to avoid memory leaks
 Client::~Client(void)
 {
   if (_fd != -1)
@@ -30,7 +30,7 @@ Client::~Client(void)
 
 void  Client::readData(void)
 {
-  char buf[8];
+  char buf[8192];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
 
@@ -52,6 +52,7 @@ void  Client::readData(void)
   }
   if (!this->_request.getMethod().size())
   {
+
     this->_buffer.append(buf);
     this->_request.parse(_buffer);
   }
@@ -60,22 +61,19 @@ void  Client::readData(void)
     logger(LOG_INFO, "POST detected");
     this->_request.appendToBody(buf);
   }
-
-  // TODO remove this on production
-  if (this->_request.isComplete())
-  {
-    logger(LOG_INFO, "request is completed");
-    logger(LOG_INFO, "print body \n" + this->_request.getBody());
-  }
 }
 
-// TODO
+// TODO by zramahaz
 void  Client::sendData(void)
 {
-
 }
 
 bool  Client::isRequestComplete(void) const
 {
   return (_request.isComplete());
+}
+
+const HttpRequest& Client::getRequest(void) const
+{
+  return (_request);
 }

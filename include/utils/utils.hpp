@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/22 08:46:20 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:48:27 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,8 @@
 #include <cerrno>
 #include <fcntl.h>
 
-void  throwWithLog(LogLevel level, const std::string &msg);
+void        throwWithLog(LogLevel level, const std::string &msg);
+std::string intToString(int value);
+
 
 #endif
