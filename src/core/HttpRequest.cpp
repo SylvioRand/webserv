@@ -65,23 +65,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     if (pos == std::string::npos)
       break ;
     value = line.substr(pos + 2);
-    for (size_t i = 0; i < value.length(); ++i)
-    {
-      std::cout << "ASCII value of '" << value[i] << "' is: " << static_cast<int>(value[i]) << std::endl;
-    }
-    size_t bsnpos = value.find('\n');
-      std::cout << "********************" << std::endl;
-    if (bsnpos != std::string::npos)
-    {
-    }
-      
-    if (value.at(value.size() - 2) == '\n')
-    {
-      while (1)
-        ;
-      value.erase(value.size() - 1);
-    }
-    logger(LOG_INFO, "[" + key + "] [" + value + "]");
+    value.erase(value.size() - 1);
     this->_headers[key] = value;
   }
   if (this->_method == "POST")

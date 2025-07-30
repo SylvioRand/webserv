@@ -222,7 +222,7 @@ void  Server::setPollOut_(int fd)
       it->events = POLLOUT;
       std::ostringstream oss;
 
-      oss << "successfultuset event to POLL_OUT for fd [" << fd << "]";
+      oss << "successfully set event to POLL_OUT for fd [" << fd << "]";
       logger(LOG_DEBUG, oss.str());
 
       return ;
@@ -245,43 +245,36 @@ void  Server::close_client_(int fd)
   close(fd);
 }
 
-// TODO 
-std::string Server::buildLocalPath(const std::string& uri, int fd) {
-    const std::vector<ServerConfig>& servers = this->getConfig().getServers();
-    std::string path;
+std::string Server::buildLocalPath(const std::string& uri, int fd)
+{
+  std::string                       path;
 
-    Client *client = _clients[fd];
-    const HttpRequest& httpreq = client->getRequest();
-    const std::map<std::string, std::string>& headers = httpreq.getHeaders();
-    std::map<std::string, std::string>::const_iterator hostFromRequest = headers.find("Host");
+  const std::map<std::string, std::string>& headers = _clients[fd]->getRequest().getHeaders();
+  std::map<std::string, std::string>::const_iterator hostHeader = headers.find("Host");
 
-    if (hostFromRequest == headers.end()) {
-        throwWithLog(LOG_ERROR, "The Client Request doesn't have Host in _headers");
-    }
+  if (hostHeader == headers.end())
+    throwWithLog(LOG_ERROR, "The Client Request doesn't have Host in _headers");
 
-    std::string host = hostFromRequest->second;
-    std::cout << "le host trouve est [" << host << "]" << std::endl;
+  std::string hostFromRequest = hostHeader->second;
 
-    for (std::vector<ServerConfig>::const_iterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
+  const std::vector<ServerConfig>&  servers = this->getConfig().getServers();
+  for (std::vector<ServerConfig>::const_iterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
+  {
+    std::string hostPort = (*cfg).host + ":" + intToString((*cfg).port);
+    if (hostPort == hostFromRequest)
     {
-      std::string hostPort = (*cfg).host + ":" + intToString((*cfg).port);
-      std::cout << "verifions ce hostPort : [" << hostPort << "]" << std::endl;
-      if (hostPort == host)
-      {
-        logger(LOG_INFO, "Config found for corresponding host -> " + host);
-        path = (*cfg).root + uri;
-        if (!path.empty() && path[path.length() - 1] == '/') {
-          path += (*cfg).index;
-        }
-        break; // Add this to exit the loop once the correct config is found
+      logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
+      path = (*cfg).root + uri;
+      if (!path.empty() && path[path.length() - 1] == '/') {
+        path += (*cfg).index;
       }
+      break;
     }
-
-    if (path.empty()) {
-        throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + host);
-    }
-
-    return path;
+  }
+  if (path.empty())
+      throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + hostFromRequest);
+  logger(LOG_DEBUG, "Local path [" + path + "]");
+  return path;
 }
 
 // TODO
