@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/29 16:48:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/31 07:30:27 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@
 #include <sstream>
 #include <algorithm>
 #include <utility>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <unistd.h>

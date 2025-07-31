@@ -1,4 +1,3 @@
-/* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
@@ -6,7 +5,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/29 16:54:10 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/31 09:52:28 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -72,9 +71,9 @@ void  Server::stop_server(void)
 void  Server::create_all_listeners_(void)
 {
   logger(LOG_INFO, "Create all listeners");
-  const std::vector<ServerConfig>& configs = _config.getServers();
+  const std::vector<ServerConfig>& servers = this->getServers();
 
-  for (std::vector<ServerConfig>::const_iterator it = configs.begin(); it != configs.end(); ++it)
+  for (std::vector<ServerConfig>::const_iterator it = servers.begin(); it != servers.end(); ++it)
   {
     const ServerConfig cfg = *it;
 
@@ -163,12 +162,14 @@ void  Server::addFdToPoll_(int fd)
 
 void  Server::accept_new_client_(int listener_fd)
 {
-  int client_fd;
-  struct sockaddr_in client_address;
+  int                 client_fd;
+  struct sockaddr_in  client_address;
+
   socklen_t addr_len = sizeof(client_address);
   client_fd = accept(listener_fd, (struct sockaddr*)&client_address, &addr_len);
 
   char ip[INET_ADDRSTRLEN];
+
   inet_ntop(AF_INET, &client_address.sin_addr, ip, sizeof(ip));
   logger(LOG_DEBUG, std::string("accept from ") + ip);
 
@@ -206,20 +207,55 @@ void  Server::handle_pollin_(int fd)
     // TODO here we need to add something to prepare the _response (fill private variable)
 
     std::string uri = this->_clients[fd]->getRequest().getPath();
-    logger(LOG_INFO, "the path " +  uri);
-    this->buildLocalPath(uri, fd);
+    logger(LOG_INFO, "the path(uri) [" +  uri + "]");
+    std::string localPath = this->buildLocalPath(uri, fd);
+    logger(LOG_DEBUG, "Local path [" + localPath + "]");
+    if (!filOk(localPath))
+    {
+      logger(LOG_DEBUG, "Invalid file localPath");
+    }
+    else 
+    {
+      logger(LOG_DEBUG, "Valid file localPath");
+    }
+
     this->setPollOut_(fd);
   }
 }
+
+/*
+// Dans la classe Server
+void Server::resolveTarget(Client& client,
+                           const std::string& localPath,
+                           const Location& loc)
+{
+    struct stat st;
+
+    if (stat(localPath.c_str(), &st) != 0) {
+        client.getResponse().setStatus(404);
+        return;
+    }
+
+    if (S_ISDIR(st.st_mode)) {
+        if (!handleDirectory(localPath, loc, &client))
+            return;            // 403 ou 404 déjà placé
+    } else if (S_ISREG(st.st_mode)) {
+        if (!fileOk(localPath))
+            client.getResponse().setStatus(403);
+        else
+            client.getResponse().setFileToServe(localPath); // 200 OK
+    } else {
+        client.getResponse().setStatus(404); // ni fichier ni dossier
+    }
+}
+*/
 
 void  Server::setPollOut_(int fd)
 {
   logger(LOG_INFO, "HANDLE POLLOUT");
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
   {
-    if (it->fd == fd)
-    {
-      it->events = POLLOUT;
+    if (it->fd == fd) { it->events = POLLOUT;
       std::ostringstream oss;
 
       oss << "successfully set event to POLL_OUT for fd [" << fd << "]";
@@ -257,25 +293,48 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
 
   std::string hostFromRequest = hostHeader->second;
 
-  const std::vector<ServerConfig>&  servers = this->getConfig().getServers();
-  for (std::vector<ServerConfig>::const_iterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
+  const std::vector<ServerConfig>&  servers = this->getServers();
+  for (ServerConfigConstIterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
   {
-    std::string hostPort = (*cfg).host + ":" + intToString((*cfg).port);
+    std::string hostPort = cfg->host + ":" + intToString((*cfg).port);
     if (hostPort == hostFromRequest)
     {
       logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
-      path = (*cfg).root + uri;
+      path += cfg->root + uri;
       if (!path.empty() && path[path.length() - 1] == '/') {
-        path += (*cfg).index;
+        path += cfg->index;
       }
+      std::vector<ServerConfig>::const_iterator newcfg = cfg;
+      (void)newcfg;
+
       break;
     }
   }
   if (path.empty())
       throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + hostFromRequest);
-  logger(LOG_DEBUG, "Local path [" + path + "]");
-  return path;
+  return (path);
 }
+
+/*
+void Server::findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg)
+{
+  logger(LOG_DEBUG, "IN findMatchingLocation function");
+  if (uri.find('/') != std::string::npos)
+    logger(LOG_DEBUG, "first / found");
+  size_t slashPos = uri.find('/');
+  if (slashPos != std::string::npos)
+    logger(LOG_DEBUG, "second / found");
+
+  std::map<std::string, LocationConfig> locations = cfg->locations;
+  const LocationConfig& locationResult = locations.find();
+  for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
+  {
+    const LocationConfig& locationResult = it->second;
+    return (locationResult);
+  }
+  return (locationResult);
+}
+*/
 
 // TODO
 void  Server::check_timout_(void)
@@ -288,3 +347,73 @@ const Config& Server::getConfig(void)
   return (_config);
 }
 
+const std::vector<ServerConfig>&  Server::getServers(void)
+{
+  return (this->getConfig().getServers());
+}
+
+bool  Server::filOk(const std::string localPath) const
+{
+  struct stat st;
+  return (stat(localPath.c_str(), &st) == 0 &&
+          S_ISREG(st.st_mode) &&
+          access(localPath.c_str(), R_OK) == 0);
+}
+
+/*
+bool  Server::filOk(const std::string localPath) const
+{
+  struct stat st;
+
+  if (stat(localPath.c_str(), &st) != 0)
+  {
+    std::map<int, Client*>::const_iterator it = _clients.find(fd);
+    if (it == _clients.end())
+      throwWithLog(LOG_FATAL, "client not found for setting up status code");
+    Client* client = it->second;
+    client->getResponse().setStatus(404);
+    logger(LOG_DEBUG, "stat failed");
+    return (false);
+  }
+  // Verify that it’s a file and not a directory.
+  if (!S_ISREG(st.st_mode))
+  {
+    std::map<int, Client*>::const_iterator it = _clients.find(fd);
+    if (it == _clients.end())
+      throwWithLog(LOG_FATAL, "client not found for setting up status code");
+    Client* client = it->second;
+    client->getResponse().setStatus(403);
+    logger(LOG_DEBUG, "not a regular file");
+    return (false);
+  }
+  // Check read permission
+  if (access(localPath.c_str(), R_OK) != 0)
+    return (false);
+  return (true);
+}
+*/
+
+// Dans la classe Server
+/*
+void Server::resolveTarget(Client& client, const std::string& localPath, const Location& loc)
+{
+    struct stat st;
+
+    if (stat(localPath.c_str(), &st) != 0) {
+        client.getResponse().setStatus(404);
+        return;
+    }
+
+    if (S_ISDIR(st.st_mode)) {
+        if (!handleDirectory(localPath, loc, &client))
+            return;            // 403 ou 404 déjà placé
+    } else if (S_ISREG(st.st_mode)) {
+        if (!fileOk(localPath))
+            client.getResponse().setStatus(403);
+        else
+            client.getResponse().setFileToServe(localPath); // 200 OK
+    } else {
+        client.getResponse().setStatus(404); // ni fichier ni dossier
+    }
+}
+*/

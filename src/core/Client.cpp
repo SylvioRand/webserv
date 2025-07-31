@@ -1,6 +1,5 @@
 /* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
+/*                                                                            */ /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
@@ -76,4 +75,10 @@ bool  Client::isRequestComplete(void) const
 const HttpRequest& Client::getRequest(void) const
 {
   return (_request);
+}
+
+
+HttpResponse& Client::getResponse(void)
+{
+  return (_response);
 }

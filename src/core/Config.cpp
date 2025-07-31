@@ -83,6 +83,7 @@ void  Config::createServerConfigManually(void)
   result.error_pages[404] = "/404.html";
   result.host = "127.0.0.3";
   result.port = 8080;
+  result.root = "./srandria";
   this->_servers.push_back(result);
 
   ServerConfig  result2;
