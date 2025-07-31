@@ -84,6 +84,10 @@ void  Config::createServerConfigManually(void)
   result.host = "127.0.0.3";
   result.port = 8080;
   result.root = "./srandria";
+  LocationConfig  loc;
+  LocationConfig  loc2;
+  result.locations["/"] = loc;
+  result.locations["/upload"] = loc2;
   this->_servers.push_back(result);
 
   ServerConfig  result2;

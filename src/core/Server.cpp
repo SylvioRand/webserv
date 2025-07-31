@@ -306,7 +306,7 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
       }
       std::vector<ServerConfig>::const_iterator newcfg = cfg;
       (void)newcfg;
-
+      findMatchingLocation(uri, cfg);
       break;
     }
   }
@@ -315,26 +315,28 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
   return (path);
 }
 
-/*
 void Server::findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg)
 {
-  logger(LOG_DEBUG, "IN findMatchingLocation function");
-  if (uri.find('/') != std::string::npos)
-    logger(LOG_DEBUG, "first / found");
-  size_t slashPos = uri.find('/');
-  if (slashPos != std::string::npos)
-    logger(LOG_DEBUG, "second / found");
+  LocationConfig  best_match;
+  size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
-  const LocationConfig& locationResult = locations.find();
   for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
   {
-    const LocationConfig& locationResult = it->second;
-    return (locationResult);
+    const std::string& path = it->first;
+    if (uri.substr(0, sizeof(path)) == path && path.size() > best_length)
+    {
+      best_match = it->second;
+      best_length = path.size();
+    }
   }
-  return (locationResult);
+  if (best_length == 0)
+  {
+    throwWithLog(LOG_FATAL, "No matching LocationConfig found");
+  }
+  this->setCurrentLocation(best_match);
+  logger(LOG_DEBUG, "matching LocationConfig found, PATH [" + best_match.path + "]");
 }
-*/
 
 // TODO
 void  Server::check_timout_(void)
@@ -360,6 +362,11 @@ bool  Server::filOk(const std::string localPath) const
           access(localPath.c_str(), R_OK) == 0);
 }
 
+
+void  Server::setCurrentLocation(LocationConfig& location)
+{
+  this->_currentLocation = location;
+}
 /*
 bool  Server::filOk(const std::string localPath) const
 {

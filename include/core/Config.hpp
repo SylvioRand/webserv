@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/25 09:17:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/31 12:45:16 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,9 +20,9 @@
 struct LocationConfig {
     std::string               path;           // Chemin de la location (ex: "/", "/upload")
     std::string               root;           // Racine des fichiers pour cette location
+    std::string               upload_dir;     // Dossier pour les uploads (POST)
     bool                      autoindex;      // Si true, liste les répertoires (comme "ls")
     std::string               index;          // Fichier par défaut (ex: "index.html")
-    std::string               upload_dir;     // Dossier pour les uploads (POST)
     std::string               redirect;       // URL de redirection (ex: "301 http://example.com")
     std::string               cgi_extension;  // Extension pour CGI (ex: ".py")
     std::string               cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")

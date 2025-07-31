@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/31 11:30:35 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/31 13:16:02 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,7 +50,7 @@ class Server
     bool  filOk(const std::string localPath) const;
     const std::vector<ServerConfig>&  getServers(void);
     LocationConfig& getLocationConfig(const std::string uri);
-    const LocationConfig& findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg);
+    void  findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg);
     void  setCurrentLocation(LocationConfig& location);
     const LocationConfig& getCurrentLocation(void);
 
@@ -58,7 +58,7 @@ class Server
 
 
     const Config&                 _config;
-    LocationConfig               _currentLocation;
+    LocationConfig                _currentLocation;
     std::map<int, Client*>        _clients;
     std::vector<struct pollfd>    _pool_fds;
     std::vector<int>              _listener_fds;
