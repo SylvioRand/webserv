@@ -204,24 +204,72 @@ void  Server::handle_pollin_(int fd)
   (*client).readData();
   if ((*client).isRequestComplete())
   {
-    // TODO here we need to add something to prepare the _response (fill private variable)
-
-    std::string uri = this->_clients[fd]->getRequest().getPath();
+    std::string uri = this->getUri_(fd);
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
+    ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
+    findMatchingLocation(uri, serverConf);
+///// here
     std::string localPath = this->buildLocalPath(uri, fd);
     logger(LOG_DEBUG, "Local path [" + localPath + "]");
-    if (!filOk(localPath))
+    std::string method = this->getMethod(fd);
+    if (!this->isMethodValid_(method))
+      this->setStatus(405, fd);
+    else if (method == "GET")
     {
-      logger(LOG_DEBUG, "Invalid file localPath");
+      if (this->fileOk(localPath))
+        this->setStatus(202, fd);
+      else
+      {
+        if (this->getCurrentLocation().autoindex)
+          this->setStatus(202, fd);
+        else if (!this->getCurrentLocation().index.empty())
+          this->setStatus(404, fd);
+      }
+      logger(LOG_DEBUG, "statuscode [" + intToString(this->_clients[fd]->getResponse().getStatus()) + "]");
     }
-    else 
+    else if (method == "POST")
     {
-      logger(LOG_DEBUG, "Valid file localPath");
+      // if (getCurrentLocation().upload_dir.empty() )
+
+    }
+    else if (method == "DELETE")
+    {
+
     }
 
     this->setPollOut_(fd);
   }
 }
+const LocationConfig& Server::getCurrentLocation(void)
+{
+  return (this->_currentLocation);
+}
+
+std::string  Server::getMethod(int fd)
+{
+  return (this->_clients[fd]->getRequest().getMethod());
+}
+
+std::string Server::getUri_(int fd)
+{
+  return (this->_clients[fd]->getRequest().getPath());
+}
+
+void  Server::setStatus(int code, int fd)
+{
+  this->_clients[fd]->getResponse().setStatus(code);
+}
+
+void  Server::error405(int fd)
+{
+  (void)fd;
+}
+
+bool  Server::isMethodValid_(std::string method)
+{
+  return (method == "GET" || method == "POST" || method == "DELETE");
+}
+
 
 /*
 // Dans la classe Server
@@ -262,11 +310,7 @@ void  Server::setPollOut_(int fd)
       logger(LOG_DEBUG, oss.str());
 
       return ;
-    }
-  }
-  logger(LOG_ERROR, "fd not found");
-}
-
+    } } logger(LOG_ERROR, "fd not found"); }
 // TODO
 void  Server::handle_pollout_(int fd)
 {
@@ -285,7 +329,7 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
 {
   std::string                       path;
 
-  const std::map<std::string, std::string>& headers = _clients[fd]->getRequest().getHeaders();
+  const std::map<std::string, std::string>& headers = this->getHeaders(fd);
   std::map<std::string, std::string>::const_iterator hostHeader = headers.find("Host");
 
   if (hostHeader == headers.end())
@@ -300,13 +344,18 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
     if (hostPort == hostFromRequest)
     {
       logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
-      path += cfg->root + uri;
+      findMatchingLocation(uri, cfg);
+      if (this->getCurrentLocation().root.empty())
+      {
+        this->setStatus(404, fd);
+        return ("");
+      }
+      path += this->getCurrentLocation().root + uri;
       if (!path.empty() && path[path.length() - 1] == '/') {
         path += cfg->index;
       }
       std::vector<ServerConfig>::const_iterator newcfg = cfg;
       (void)newcfg;
-      findMatchingLocation(uri, cfg);
       break;
     }
   }
@@ -315,9 +364,44 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
   return (path);
 }
 
+
+const std::map<std::string, std::string>& Server::getHeaders(int fd)
+{
+    return (_clients[fd]->getRequest().getHeaders());
+
+}
+
+
+
+Server::ServerConfigConstIterator Server::findMatchingServer(int fd)
+{
+  const std::map<std::string, std::string>& headers = this->getHeaders(fd);
+  std::map<std::string, std::string>::const_iterator hostHeader = headers.find("Host");
+
+  if (hostHeader == headers.end())
+    throwWithLog(LOG_ERROR, "The Client Request doesn't have Host in _headers");
+
+  std::string hostFromRequest = hostHeader->second;
+
+  const std::vector<ServerConfig>&  servers = this->getServers();
+  for (ServerConfigConstIterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
+  {
+    std::string hostPort = cfg->host + ":" + intToString((*cfg).port);
+    if (hostPort == hostFromRequest)
+    {
+      logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
+      return (cfg);
+    }
+  }
+  throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + hostFromRequest);
+  return (servers.end());
+}
+
+
 void Server::findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg)
 {
   LocationConfig  best_match;
+  this->setCurrentLocation(best_match);
   size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
@@ -354,7 +438,7 @@ const std::vector<ServerConfig>&  Server::getServers(void)
   return (this->getConfig().getServers());
 }
 
-bool  Server::filOk(const std::string localPath) const
+bool  Server::fileOk(const std::string localPath) const
 {
   struct stat st;
   return (stat(localPath.c_str(), &st) == 0 &&

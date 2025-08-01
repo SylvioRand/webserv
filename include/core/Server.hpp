@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/31 13:16:02 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/01 12:59:08 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,12 +47,31 @@ class Server
     void  buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& cfg);
     void  setNonBlocking_(int fd);
     void  setPollOut_(int fd);
-    bool  filOk(const std::string localPath) const;
+    bool  fileOk(const std::string localPath) const;
     const std::vector<ServerConfig>&  getServers(void);
     LocationConfig& getLocationConfig(const std::string uri);
-    void  findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg);
     void  setCurrentLocation(LocationConfig& location);
     const LocationConfig& getCurrentLocation(void);
+    bool  isMethodValid_(std::string method);
+    void  setStatus(int code, int fd);
+    void  error404(int fd);
+    void  error403(int fd);
+    void  error405(int fd);
+    void  error400(void);
+    void  error414(void);
+    void  error413(void);
+    void  error201(void);
+    void  error500(void);
+    void  error408(void);
+    void  error505(void);
+    std::string   getMethod(int fd);
+
+
+    void  findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg);
+    ServerConfigConstIterator findMatchingServer(int fd);
+    const std::map<std::string, std::string>& getHeaders(int fd);
+    std::string getUri_(int fd);
+
 
     
 

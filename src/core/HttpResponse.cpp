@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/31 09:20:20 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/01 09:59:57 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 #include "../../include/core/HttpResponse.hpp"
@@ -42,4 +42,9 @@ std::string HttpResponse::build(void) const
 {
   std::string result;
   return (result);
+}
+
+int   HttpResponse::getStatus(void) const
+{
+  return (_status_code);
 }
