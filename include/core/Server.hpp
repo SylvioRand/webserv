@@ -67,10 +67,11 @@ class Server
     std::string   getMethod(int fd);
 
 
-    void  findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg);
+    void  saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg);
     ServerConfigConstIterator findMatchingServer(int fd);
     const std::map<std::string, std::string>& getHeaders(int fd);
     std::string getUri_(int fd);
+    void  GETMethod(std::string& uri);
 
 
     

@@ -204,20 +204,23 @@ void  Server::handle_pollin_(int fd)
   (*client).readData();
   if ((*client).isRequestComplete())
   {
-    std::string uri = this->getUri_(fd);
-    logger(LOG_INFO, "the path(uri) [" +  uri + "]");
-    ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
-    findMatchingLocation(uri, serverConf);
-///// here
-    std::string localPath = this->buildLocalPath(uri, fd);
-    logger(LOG_DEBUG, "Local path [" + localPath + "]");
     std::string method = this->getMethod(fd);
     if (!this->isMethodValid_(method))
       this->setStatus(405, fd);
-    else if (method == "GET")
-    {
-      if (this->fileOk(localPath))
-        this->setStatus(202, fd);
+    std::string uri = this->getUri_(fd);
+    logger(LOG_INFO, "the path(uri) [" +  uri + "]");
+    ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
+    logger(LOG_INFO, "the path(uri) [" +  uri + "]");
+    saveMatchingLocation_(uri, serverConf);
+///// here
+    /*
+    std::string localPath = this->_currentLocation.root;
+    logger(LOG_DEBUG, "Local path [" + localPath + "]");
+    */
+    if (method == "GET")
+    {    
+      this->GETMethod(uri);
+      /*
       else
       {
         if (this->getCurrentLocation().autoindex)
@@ -226,6 +229,7 @@ void  Server::handle_pollin_(int fd)
           this->setStatus(404, fd);
       }
       logger(LOG_DEBUG, "statuscode [" + intToString(this->_clients[fd]->getResponse().getStatus()) + "]");
+      */
     }
     else if (method == "POST")
     {
@@ -236,7 +240,6 @@ void  Server::handle_pollin_(int fd)
     {
 
     }
-
     this->setPollOut_(fd);
   }
 }
@@ -344,7 +347,7 @@ std::string Server::buildLocalPath(const std::string& uri, int fd)
     if (hostPort == hostFromRequest)
     {
       logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
-      findMatchingLocation(uri, cfg);
+      saveMatchingLocation_(uri, cfg);
       if (this->getCurrentLocation().root.empty())
       {
         this->setStatus(404, fd);
@@ -398,18 +401,24 @@ Server::ServerConfigConstIterator Server::findMatchingServer(int fd)
 }
 
 
-void Server::findMatchingLocation(const std::string& uri, ServerConfigConstIterator& cfg)
+void Server::saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg)
 {
   LocationConfig  best_match;
   this->setCurrentLocation(best_match);
   size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
+  std::cout << "verify uri []" << uri << "]" << std::endl;
   for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
   {
+    std::cout << "location root [" << it->second.root << "]" << std::endl;
     const std::string& path = it->first;
-    if (uri.substr(0, sizeof(path)) == path && path.size() > best_length)
+    std::cout << "location path [" << it->first << "]" << std::endl;
+    std::cout << "sizeof(path) [" << sizeof(path) << "]" << std::endl;
+    std::cout << "sub ["<< uri.substr(0, sizeof(path)) << "]" << std::endl;
+    if (uri.substr(0, path.size()) == path && path.size() > best_length)
     {
+      std::cout << "are iU here" << std::endl;
       best_match = it->second;
       best_length = path.size();
     }
@@ -419,7 +428,7 @@ void Server::findMatchingLocation(const std::string& uri, ServerConfigConstItera
     throwWithLog(LOG_FATAL, "No matching LocationConfig found");
   }
   this->setCurrentLocation(best_match);
-  logger(LOG_DEBUG, "matching LocationConfig found, PATH [" + best_match.path + "]");
+  logger(LOG_DEBUG, "matching LocationConfig found, PATH [" + best_match.root + "]");
 }
 
 // TODO
@@ -508,3 +517,12 @@ void Server::resolveTarget(Client& client, const std::string& localPath, const L
     }
 }
 */
+
+void  Server::GETMethod(std::string& uri)
+{
+  LocationConfig  location = this->getCurrentLocation();
+  std::string     path;
+  std::string     extractUri;
+  path = location.root + '/' + uri.substr(location.path.size());
+  logger(LOG_DEBUG, "value of path [" + path + "]");
+}

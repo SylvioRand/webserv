@@ -36,7 +36,7 @@ void  Client::readData(void)
   std::cout << buf << std::endl;
   if (bytes == -1)
   {
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
+    if (errno == EAGAIN || errno == EWOULDBLOCK)    // interdit selon le suket
     {
       logger(LOG_DEBUG, "end of reading content on fd");
       return ;

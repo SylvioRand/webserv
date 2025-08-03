@@ -86,6 +86,10 @@ void  Config::createServerConfigManually(void)
   result.root = "./srandria";
   LocationConfig  loc;
   LocationConfig  loc2;
+  loc.root = "./www/";
+  loc.path = "/";
+  loc2.root = "./www/uploads/";
+  loc2.path = "/upload/";
   result.locations["/"] = loc;
   result.locations["/upload"] = loc2;
   this->_servers.push_back(result);
