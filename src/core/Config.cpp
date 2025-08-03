@@ -3,7 +3,9 @@
 /*                                                        :::      ::::::::   */
 /*   Config.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
+/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
 /*   Updated: 2025/07/28 16:37:24 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
