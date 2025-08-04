@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/31 12:45:16 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/04 15:30:51 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,7 +22,7 @@ struct LocationConfig {
     std::string               root;           // Racine des fichiers pour cette location
     std::string               upload_dir;     // Dossier pour les uploads (POST)
     bool                      autoindex;      // Si true, liste les répertoires (comme "ls")
-    std::string               index;          // Fichier par défaut (ex: "index.html")
+    std::vector<std::string>  indexs;          // Fichier par défaut (ex: "index.html")
     std::string               redirect;       // URL de redirection (ex: "301 http://example.com")
     std::string               cgi_extension;  // Extension pour CGI (ex: ".py")
     std::string               cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")
@@ -36,7 +36,7 @@ struct ServerConfig {
     int                                   port;                 // Port d'écoute (ex: 8080)
     std::string                           server_name;          // Nom du serveur (ex: "localhost")
     std::string                           root;                 // Racine par défaut des fichiers
-    std::string                           index;                // Fichier index par défaut
+    std::vector<std::string>              indexs;               // Fichier index par défaut
     size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
     std::map<std::string, LocationConfig> locations;            // Configs par location

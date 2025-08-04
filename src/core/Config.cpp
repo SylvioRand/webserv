@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 10:50:03 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/28 16:37:24 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/04 11:16:43 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,6 +90,8 @@ void  Config::createServerConfigManually(void)
   LocationConfig  loc2;
   loc.root = "./www/";
   loc.path = "/";
+  loc.methods.push_back("GET");
+  loc.autoindex = false;
   loc2.root = "./www/uploads/";
   loc2.path = "/upload/";
   result.locations["/"] = loc;

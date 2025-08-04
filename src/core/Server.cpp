@@ -10,10 +10,12 @@
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
+#include <algorithm>
 #include <csignal>
 #include <sstream>
 #include <string>
 #include <sys/socket.h>
+#include <unistd.h>
 
 Server::Server(const Config& config) : _config(config)
 {
@@ -29,9 +31,7 @@ void  Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
   this->create_all_listeners_();
-  while (true)
-  {
-    int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
+  while (true) { int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
 
@@ -205,41 +205,30 @@ void  Server::handle_pollin_(int fd)
   if ((*client).isRequestComplete())
   {
     std::string method = this->getMethod(fd);
-    if (!this->isMethodValid_(method))
-      this->setStatus(405, fd);
+    if (!this->isHttpMethodValid_(method))
+    {
+      this->badRequest_(fd);
+      this->setPollOut_(fd);
+      return ;
+    }
     std::string uri = this->getUri_(fd);
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
     ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
     saveMatchingLocation_(uri, serverConf);
-///// here
-    /*
-    std::string localPath = this->_currentLocation.root;
-    logger(LOG_DEBUG, "Local path [" + localPath + "]");
-    */
-    if (method == "GET")
-    {    
-      this->GETMethod(uri);
-      /*
-      else
-      {
-        if (this->getCurrentLocation().autoindex)
-          this->setStatus(202, fd);
-        else if (!this->getCurrentLocation().index.empty())
-          this->setStatus(404, fd);
-      }
-      logger(LOG_DEBUG, "statuscode [" + intToString(this->_clients[fd]->getResponse().getStatus()) + "]");
-      */
-    }
-    else if (method == "POST")
-    {
-      // if (getCurrentLocation().upload_dir.empty() )
-
-    }
-    else if (method == "DELETE")
-    {
-
-    }
+    if (!isSupportedHttpMethod(method))
+      this->methodNotSupported_(fd);
+    else if (getCurrentLocation().methods.empty())
+      this->methodNotAllowed_(fd);
+    else if (method == "GET" && this->isMethodAllowedForLocation("GET"))
+      this->GETMethod_(uri, fd);
+    else if (method == "POST" && this->isMethodAllowedForLocation("POST"))
+      this->POSTMethod_(uri, fd);
+    else if (method == "DELETE" && this->isMethodAllowedForLocation("DELETE"))
+      this->DELETEMethod_(uri, fd);
+    else
+      this->methodNotAllowed_(fd);
+    logger(LOG_DEBUG, "value of status" + intToString(this->_clients[fd]->getResponse().getStatus()));
     this->setPollOut_(fd);
   }
 }
@@ -263,43 +252,43 @@ void  Server::setStatus(int code, int fd)
   this->_clients[fd]->getResponse().setStatus(code);
 }
 
-void  Server::error405(int fd)
+bool  Server::isMethodAllowedForLocation(const std::string method)
 {
-  (void)fd;
+  std::vector<std::string>::const_iterator it = std::find(this->getCurrentLocation().methods.begin(),
+        this->getCurrentLocation().methods.end(), method);
+  if (it != this->getCurrentLocation().methods.end())
+  {
+    std::cout << "method [" << method << "] is detected and allowed" << std::endl;
+    return (true);
+  }
+  std::cout << "method [" << method << "] is detected but not allowed" << std::endl;
+  return (false);
 }
 
-bool  Server::isMethodValid_(std::string method)
+bool  Server::isSupportedHttpMethod(const std::string& method)
 {
-  return (method == "GET" || method == "POST" || method == "DELETE");
+    return (method == "GET" || method == "POST" || method == "DELETE");
 }
 
-
-/*
-// Dans la classe Server
-void Server::resolveTarget(Client& client,
-                           const std::string& localPath,
-                           const Location& loc)
+bool  Server::isHttpMethodValid_(std::string method)
 {
-    struct stat st;
-
-    if (stat(localPath.c_str(), &st) != 0) {
-        client.getResponse().setStatus(404);
-        return;
-    }
-
-    if (S_ISDIR(st.st_mode)) {
-        if (!handleDirectory(localPath, loc, &client))
-            return;            // 403 ou 404 déjà placé
-    } else if (S_ISREG(st.st_mode)) {
-        if (!fileOk(localPath))
-            client.getResponse().setStatus(403);
-        else
-            client.getResponse().setFileToServe(localPath); // 200 OK
-    } else {
-        client.getResponse().setStatus(404); // ni fichier ni dossier
-    }
+  return (method == "GET" || method == "POST" || method == "DELETE" || method == "PUT"
+      || method == "HEAD" || method == "CONNECT" || method == "OPTIONS" || method == "TRACE"
+      || method == "PATCH");
 }
-*/
+
+void  Server::methodNotSupported_(const int fd)
+{
+
+  /*
+  HTTP/1.1 501 Not Implemented
+  Content-Type: text/plain
+  Content-Length: 56
+
+  The HTTP method PUT is recognized but not supported by this server.
+  */
+  this->setStatus(501, fd);
+}
 
 void  Server::setPollOut_(int fd)
 {
@@ -313,7 +302,11 @@ void  Server::setPollOut_(int fd)
       logger(LOG_DEBUG, oss.str());
 
       return ;
-    } } logger(LOG_ERROR, "fd not found"); }
+    }
+  }
+  logger(LOG_ERROR, "fd not found");
+}
+
 // TODO
 void  Server::handle_pollout_(int fd)
 {
@@ -328,53 +321,10 @@ void  Server::close_client_(int fd)
   close(fd);
 }
 
-std::string Server::buildLocalPath(const std::string& uri, int fd)
-{
-  std::string                       path;
-
-  const std::map<std::string, std::string>& headers = this->getHeaders(fd);
-  std::map<std::string, std::string>::const_iterator hostHeader = headers.find("Host");
-
-  if (hostHeader == headers.end())
-    throwWithLog(LOG_ERROR, "The Client Request doesn't have Host in _headers");
-
-  std::string hostFromRequest = hostHeader->second;
-
-  const std::vector<ServerConfig>&  servers = this->getServers();
-  for (ServerConfigConstIterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
-  {
-    std::string hostPort = cfg->host + ":" + intToString((*cfg).port);
-    if (hostPort == hostFromRequest)
-    {
-      logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
-      saveMatchingLocation_(uri, cfg);
-      if (this->getCurrentLocation().root.empty())
-      {
-        this->setStatus(404, fd);
-        return ("");
-      }
-      path += this->getCurrentLocation().root + uri;
-      if (!path.empty() && path[path.length() - 1] == '/') {
-        path += cfg->index;
-      }
-      std::vector<ServerConfig>::const_iterator newcfg = cfg;
-      (void)newcfg;
-      break;
-    }
-  }
-  if (path.empty())
-      throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + hostFromRequest);
-  return (path);
-}
-
-
 const std::map<std::string, std::string>& Server::getHeaders(int fd)
 {
     return (_clients[fd]->getRequest().getHeaders());
-
 }
-
-
 
 Server::ServerConfigConstIterator Server::findMatchingServer(int fd)
 {
@@ -399,7 +349,6 @@ Server::ServerConfigConstIterator Server::findMatchingServer(int fd)
   throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + hostFromRequest);
   return (servers.end());
 }
-
 
 void Server::saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg)
 {
@@ -447,82 +396,336 @@ const std::vector<ServerConfig>&  Server::getServers(void)
   return (this->getConfig().getServers());
 }
 
-bool  Server::fileOk(const std::string localPath) const
+bool  Server::isFile_(const std::string localPath) const
 {
   struct stat st;
   return (stat(localPath.c_str(), &st) == 0 &&
-          S_ISREG(st.st_mode) &&
-          access(localPath.c_str(), R_OK) == 0);
+          S_ISREG(st.st_mode));
 }
 
+bool  Server::isReadable_(const std::string localPath) const
+{
+  return (access(localPath.c_str(), R_OK) == 0);
+}
 
 void  Server::setCurrentLocation(LocationConfig& location)
 {
   this->_currentLocation = location;
 }
-/*
-bool  Server::filOk(const std::string localPath) const
-{
-  struct stat st;
 
-  if (stat(localPath.c_str(), &st) != 0)
-  {
-    std::map<int, Client*>::const_iterator it = _clients.find(fd);
-    if (it == _clients.end())
-      throwWithLog(LOG_FATAL, "client not found for setting up status code");
-    Client* client = it->second;
-    client->getResponse().setStatus(404);
-    logger(LOG_DEBUG, "stat failed");
-    return (false);
-  }
-  // Verify that it’s a file and not a directory.
-  if (!S_ISREG(st.st_mode))
-  {
-    std::map<int, Client*>::const_iterator it = _clients.find(fd);
-    if (it == _clients.end())
-      throwWithLog(LOG_FATAL, "client not found for setting up status code");
-    Client* client = it->second;
-    client->getResponse().setStatus(403);
-    logger(LOG_DEBUG, "not a regular file");
-    return (false);
-  }
-  // Check read permission
-  if (access(localPath.c_str(), R_OK) != 0)
-    return (false);
-  return (true);
-}
-*/
-
-// Dans la classe Server
-/*
-void Server::resolveTarget(Client& client, const std::string& localPath, const Location& loc)
-{
-    struct stat st;
-
-    if (stat(localPath.c_str(), &st) != 0) {
-        client.getResponse().setStatus(404);
-        return;
-    }
-
-    if (S_ISDIR(st.st_mode)) {
-        if (!handleDirectory(localPath, loc, &client))
-            return;            // 403 ou 404 déjà placé
-    } else if (S_ISREG(st.st_mode)) {
-        if (!fileOk(localPath))
-            client.getResponse().setStatus(403);
-        else
-            client.getResponse().setFileToServe(localPath); // 200 OK
-    } else {
-        client.getResponse().setStatus(404); // ni fichier ni dossier
-    }
-}
-*/
-
-void  Server::GETMethod(std::string& uri)
+void  Server::GETMethod_(std::string& uri, const int fd)
 {
   LocationConfig  location = this->getCurrentLocation();
   std::string     path;
   std::string     extractUri;
   path = location.root + '/' + uri.substr(location.path.size());
   logger(LOG_DEBUG, "value of path [" + path + "]");
+  if (this->isFile_(path))
+  {
+    if (this->isReadable_(path))
+      this->processReadableFile_(fd);
+    else
+      this->respondFileNotReadable(fd);
+  }
+  else if (!directoryExists_(path))
+    this->respondNotFound_(fd);
+  else if (hasIndexDirective_(path))
+  {
+    std::string indexPath = this->getAccessibleIndexPath_(path);
+    if (indexPath.empty())
+    {
+      if (this->existsAtLeastOneIndexFile_(path, fd))
+        this->respondIndexFilesUnreadable_(fd);
+      else
+        this->respondNoIndexFileFound_(fd);
+    }
+    else
+      this->serveIndexContent_(indexPath, fd);
+  }
+  else if (this->getCurrentLocation().autoindex)
+    this->buildDirectoryListing_(fd);
+  else if (!this->getCurrentLocation().autoindex)
+    this->respondDirectoryListingForbidden(fd);
+}
+
+void  Server::respondIndexFilesUnreadable_(const int fd)
+{
+  /*
+   HTTP/1.1 403 Forbidden
+  Content-Type: text/plain
+  Content-Length: 53
+
+  403 Forbidden: No readable index file found in this directory.
+  */
+  this->setStatus(403, fd);
+}
+
+void  Server::respondNoIndexFileFound_(const int fd)
+{
+  /*
+   HTTP/1.1 404 Not Found
+  Content-Type: text/plain
+  Content-Length: 43
+
+  404 Not Found: No index file found in this directory.
+  */
+  this->setStatus(404, fd);
+}
+
+
+void  Server::serveIndexContent_(const std::string path, const int fd)
+{
+  /*
+  HTTP/1.1 200 OK
+  Content-Type: [type MIME]
+  Content-Length: [taille du fichier]
+  ...
+
+  [corps du fichier]
+  */
+  this->setStatus(200, fd);
+}
+
+bool  Server::hasIndexDirective_(const std::string& path)
+{
+  if (this->getCurrentLocation().indexs.empty())
+    return (false);
+  return (true);
+}
+
+std::string Server::getAccessibleIndexPath_(const std::string& path)
+{
+  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().indexs.begin();
+      it != this->getCurrentLocation().indexs.end(); it++)
+  {
+    std::string resultPath = path + *it;
+    if (this->isFile_(resultPath) && this->isReadable_(resultPath))
+      return(resultPath);
+  }
+  return ("");
+}
+
+bool  Server::existsAtLeastOneIndexFile_(const std::string path, const int fd)
+{
+  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().indexs.begin();
+      it != this->getCurrentLocation().indexs.end(); it++)
+  {
+    std::string resultPath = path + *it;
+    if (this->isFile_(resultPath))
+      return(true);
+  }
+  return (false);
+}
+
+
+// TODO
+void  Server::POSTMethod_(std::string& uri, const int fd)
+{
+  LocationConfig  location = this->getCurrentLocation();
+  if (location.upload_dir.empty())
+  {
+    this->respondMissingUploadDir(fd);
+    return ;
+  }
+  std::string     localPath;
+  std::string     extractUri;
+  localPath = location.upload_dir + '/' + uri.substr(location.path.size());
+  if (directoryExists_(localPath))
+  {
+    // TODO on doit obligatoirement passer par poll meme si on upload un fichier
+    // atooooooooooo
+    this->saveUploadedFile_(fd);
+  }
+  logger(LOG_DEBUG, "value of path [" + localPath + "]");
+}
+
+void  Server::saveUploadedFile_(const int fd)
+{
+  /*
+  HTTP/1.1 201 Created
+  Content-Type: text/plain
+  Content-Length: 29
+
+  File uploaded successfully.
+  */
+  this->setStatus(201, fd);
+}
+
+void  Server::respondMissingUploadDir(const int fd)
+{
+  /*
+   HTTP/1.1 500 Internal Server Error
+  Content-Type: text/plain
+  Content-Length: 49
+
+  Server misconfiguration: upload_dir not specified.
+  */
+  this->setStatus(500, fd);
+}
+
+
+/// TODO
+void  Server::DELETEMethod_(std::string& uri, const int fd)
+{
+  std::cout << "On delete method" << std::endl;
+  LocationConfig  location = this->getCurrentLocation();
+  std::string     localPath;
+  std::string     extractUri;
+  localPath = location.root + '/' + uri.substr(location.path.size());
+  logger(LOG_DEBUG, "value of path [" + localPath + "]");
+  if (isFile_(localPath))
+  {
+    if (remove(localPath.c_str()) == 0)
+    {
+      logger(LOG_DEBUG, "successfully detele file");
+      this->onDeleteSuccess_(fd);
+    }
+    else
+    {
+      logger(LOG_DEBUG, "cannot delete file");
+      this->cannotDeleteFile_(fd);
+    }
+  }
+  else
+  {
+    logger(LOG_DEBUG, "Cannot delete the resource due to a conflict on the server.");
+    this->respondDeleteDirConflict_(fd);
+  }
+}
+
+bool Server::directoryExists_(const std::string& path)
+{
+    struct stat st;
+    return (stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
+}
+
+// TODO
+void  Server::cannotDeleteFile_(const int fd)
+{
+  /*
+  HTTP/1.1 409 Conflict
+  Content-Type: text/plain
+  Content-Length: 65
+
+  Conflict: Unable to delete '/path/to/file' due to current resource state
+  */
+  this->setStatus(409, fd);
+}
+
+// TODO
+void  Server::respondNotFound_(const int fd)
+{
+  /*
+  HTTP/1.1 404 Not Found
+  Content-Type: text/plain
+  Content-Length: 23
+
+  404 Not Found: Invalid path.
+  */
+  this->setStatus(404, fd);
+}
+
+
+// TODO
+void  Server::respondDirectoryListingForbidden(const int fd)
+{
+  /*
+  HTTP/1.1 403 Forbidden
+  Content-Type: text/plain
+  Content-Length: 35
+
+  403 Forbidden: Directory listing denied.
+  */
+  this->setStatus(403, fd);
+}
+
+// TODO
+void  Server::respondFileNotReadable(const int fd)
+{
+  /*
+  HTTP/1.1 403 Forbidden
+  Content-Type: text/plain
+  Content-Length: 48
+
+  You do not have permission to read the requested file.
+  */
+  this->setStatus(403, fd);
+}
+
+// TODO
+void  Server::respondDeleteDirConflict_(const int fd)
+{
+  /*
+  HTTP/1.1 409 Conflict
+  Content-Type: text/plain
+  Content-Length: XX
+
+  Cannot delete resource due to a conflict with the current state.
+  */
+  this->setStatus(409, fd);
+}
+
+// TODO
+void  Server::buildDirectoryListing_(const int fd)
+{
+  /*
+  HTTP/1.1 200 OK
+  Content-Type: text/html
+  Content-Length: [longueur]
+
+  <html>
+  <head><title>Index of /images</title></head>
+  <body>
+  <h1>Index of /images</h1>
+  <ul>
+    <li><a href="photo1.jpg">photo1.jpg</a></li>
+    <li><a href="photo2.jpg">photo2.jpg</a></li>
+  </ul>
+  </body>
+  </html>
+  */
+  this->setStatus(200, fd);
+}
+
+// TODO
+void  Server::processReadableFile_(const int fd)
+{
+  this->setStatus(200, fd);
+}
+
+// TODO
+void  Server::onDeleteSuccess_(const int fd)
+{
+  /*
+  HTTP/1.1 204 No Content
+  Content-Length: 0
+  */
+  this->setStatus(200, fd);
+}
+
+// TODO
+void  Server::methodNotAllowed_(const int fd)
+{
+  /*
+  HTTP/1.1 405 Method Not Allowed
+  Allow: 
+  Content-Type: text/plain
+  Content-Length: 46
+
+  The method GET is not allowed on /restricted.
+  */
+  this->setStatus(405, fd);
+}
+
+// TODO
+void  Server::badRequest_(const int fd)
+{
+  /*
+  HTTP/1.1 400 Bad Request
+  Content-Type: text/plain
+  Content-Length: 42
+
+  400 Bad Request: Invalid HTTP request syntax.
+  */
+  this->setStatus(405, fd);
 }

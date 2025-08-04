@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/01 12:59:08 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/04 16:50:45 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include "../utils/utils.hpp"
 #include "../core/Config.hpp"
 #include "../core/Client.hpp"
+#include <string>
 
 class Server
 {
@@ -26,7 +27,6 @@ class Server
     ~Server(void);
 
     void  stop_server(void);
-    std::string buildLocalPath(const std::string& uri, int fd);
     const Config& getConfig(void);
 
   private:
@@ -47,35 +47,54 @@ class Server
     void  buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& cfg);
     void  setNonBlocking_(int fd);
     void  setPollOut_(int fd);
-    bool  fileOk(const std::string localPath) const;
-    const std::vector<ServerConfig>&  getServers(void);
-    LocationConfig& getLocationConfig(const std::string uri);
+    //bool  fileOk(const std::string localPath) const;
+    const std::vector<ServerConfig>&
+          getServers(void);
+    LocationConfig&
+          getLocationConfig(const std::string uri);
     void  setCurrentLocation(LocationConfig& location);
-    const LocationConfig& getCurrentLocation(void);
-    bool  isMethodValid_(std::string method);
+    const LocationConfig&
+          getCurrentLocation(void);
+    bool  isHttpMethodValid_(std::string method);
+    bool  isMethodAllowedForLocation(const std::string method);
+    bool  isSupportedHttpMethod(const std::string& method);
     void  setStatus(int code, int fd);
-    void  error404(int fd);
-    void  error403(int fd);
-    void  error405(int fd);
-    void  error400(void);
-    void  error414(void);
-    void  error413(void);
-    void  error201(void);
-    void  error500(void);
-    void  error408(void);
-    void  error505(void);
-    std::string   getMethod(int fd);
-
+    std::string
+          getMethod(int fd);
 
     void  saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg);
-    ServerConfigConstIterator findMatchingServer(int fd);
+    ServerConfigConstIterator
+          findMatchingServer(int fd);
     const std::map<std::string, std::string>& getHeaders(int fd);
-    std::string getUri_(int fd);
-    void  GETMethod(std::string& uri);
+    std::string
+          getUri_(int fd);
+    void  GETMethod_(std::string& uri, const int fd);
+    void  POSTMethod_(std::string& uri, const int fd);
+    void  DELETEMethod_(std::string& uri, const int fd);
+    bool  isFile_(const std::string localPath) const;
+    bool  isReadable_(const std::string localPath) const;
+    void  buildDirectoryListing_(const int fd);
+    void  processReadableFile_(const int fd);
+    bool  directoryExists_(const std::string& path);
+    void  onDeleteSuccess_(const int fd);
+    void  cannotDeleteFile_(const int fd);
+    void  respondDeleteDirConflict_(const int fd);
+    void  respondFileNotReadable(const int fd);
+    void  respondDirectoryListingForbidden(const int fd);
+    void  respondNotFound_(const int fd);
 
-
-    
-
+    void  badRequest_(const int fd);
+    void  methodNotAllowed_(const int fd);
+    void  methodNotSupported_(const int fd);
+    bool  hasIndexDirective_(const std::string& path);
+    std::string
+          getAccessibleIndexPath_(const std::string& path);
+    void  serveIndexContent_(const std::string path, const int fd);
+    bool  existsAtLeastOneIndexFile_(const std::string path, const int fd);
+    void  respondIndexFilesUnreadable_(const int fd);
+    void  respondNoIndexFileFound_(const int fd);
+    void  respondMissingUploadDir(const int fd);
+    void  saveUploadedFile_(const int fd);
 
     const Config&                 _config;
     LocationConfig                _currentLocation;
