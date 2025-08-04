@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/28 17:03:35 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/04 13:27:47 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,16 +52,17 @@ class Config
 
     void  load_(void);                       // Charge et parse le fichier de configuration
     bool  isValid_(void) const;              // Vérifie si la configuration est valide
-    void  parseServerBlock_(std::string &containt);           // parse de zramahaz
+    void  parseServerBlock_(std::string &content);           // parse de zramahaz
     void  skipWhiteSpace_(void);
     // you can use this function to add manually a serverconfig without parsing
     void  createServerConfigManually(void);
     
     // zramahaz function
-    void  parseBlock_(std::string containtServerBlock, int i);
-    int   checkKeyAndAddValue_(std::string &token, int i, std::string &containtServerBlock);
-    int   parseLocation_(std::string containtServerBlock, int i);
-
+    std::string               extractBlockContent(const std::string& block);
+    std::vector<std::string>  extractServerBlocks(const std::string& input);
+    std::vector<std::string>  extractLocationBlocks(const std::string& content);
+    std::string               insertSpaceBeforeBrace(const std::string& line);
+    
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path; // chemin pour le fichier de configuration
     std::ifstream             _config_file; // fd pour le fichier
@@ -75,9 +76,6 @@ class Config
     
     // Getter pour accéder à la configuration parsée
     const std::vector<ServerConfig>& getServers() const;
-    
-    static std::string  trim(const std::string& str);
-    static int          countOccurrence(const std::string& chaine, char c);
 
   };
 

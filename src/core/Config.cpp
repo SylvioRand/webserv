@@ -6,11 +6,13 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/04 09:25:32 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/04 13:33:20 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Config.hpp"
+
+std::string cleanBlock(const std::string& raw);
 
 Config::Config(std::string filepath) : _config_path(filepath)
 {
@@ -41,7 +43,7 @@ void Config::skipWhiteSpace_(void)
 
 void Config::load_(void)
 {
-  std::string containt;
+  std::string content;
   size_t      pos;
 
   _config_file.open(_config_path.c_str());
@@ -59,20 +61,23 @@ void Config::load_(void)
     {
       _current_line = _current_line.substr(0, pos);
     }
-    containt += _current_line;
+    content += _current_line;
+  }
+  
+  // parse de zramahaz
+  // content = insertSpaceBeforeBrace(content);
+  std::vector<std::string> serverBlocks = extractServerBlocks(content);
+  for (size_t i = 0; i < serverBlocks.size(); ++i) {
+    this->parseServerBlock_(serverBlocks[i]);
   }
 
-  std::cout << containt << std::endl;
-  std::cout << "-------------------------" << std::endl;
-  this->parseServerBlock_(containt);    // parse de zramahaz
-  
   // Uncomment this block once the configuration file parsing has been parsed.
   /*
   if (_servers.empty()) {
     throwWithLog(LOG_ERROR, "No server blocks found in config file");
     }
     */
-  }
+}
   
   
   // you can use this function to add manually a serverconfig without parsing
@@ -128,133 +133,104 @@ bool Config::isValid_(void) const
 /* Zramahaz’s implementation starts here.     */
 
 // STATIC FUNCTION
-std::string Config::trim(const std::string& str) {
-  size_t first = str.find_first_not_of(" \t");
-  if (first == std::string::npos)
-  return ""; // La chaîne est vide ou remplie d'espaces
-  
-  size_t last = str.find_last_not_of(" \t");
-  return str.substr(first, last - first + 1);
-}
-
 
 
 // TODO : This function serves as the entry point for the configuration file parser.
 // Don`t forget comment is allowed too on the server bloc of the file configuration
 
-int Config::checkKeyAndAddValue_(std::string &token, int i, std::string &containtServerBlock)
-{
-  std::istringstream iss(token);
-  std::string        key;
-  std::string        value;
-
-  (void)containtServerBlock;
-  iss >> key;
-  if (key == "listen")
-  {
-    std::cout << "---------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
-    return (1);
-  }
-  else if (key == "index")
-  {
-    std::cout << "---------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
-    iss >> value;
-    this->_servers[i].index = value;
-    return (1);
-  }
-  else if (key == "server_name")
-  {
-    std::cout << "---------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
-    iss >> value;
-    this->_servers[i].index = value; 
-    return (1);
-  }
-  else if (key == "root")
-  {
-    std::cout << "---------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
-    iss >> value;
-    this->_servers[i].index = value; 
-    return (1);
-  }
-  else if (key == "error_page")
-  {
-    std::cout << "---------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
-    return (1);
-  }
-  else if (key == "client_max_body_size")
-  {
-    std::cout << "-----------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
-    return (1);
-  }
-  else if (key == "location")
-  {
-    std::cout << "---------key = " << key << std::endl;
-    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(" ") + 1);
-    return (0);
-  }
-  return (1);
+std::string Config::insertSpaceBeforeBrace(const std::string& line) {
+    std::string result;
+    for (size_t i = 0; i < line.size(); ++i) {
+        if (line[i] == '{' && i > 0 && !isspace(line[i - 1])) {
+            result += ' ';
+        }
+        result += line[i];
+    }
+    return result;
 }
 
-int Config::parseLocation_(std::string containtServerBlock, int i)
-{
-  (void)i;
-  std::cout << containtServerBlock << std::endl;
-  std::istringstream iss(containtServerBlock);
-  std::string        path;
+std::string Config::extractBlockContent(const std::string& block) {
+    size_t start = block.find('{');
+    size_t end = block.rfind('}');
+    if (start == std::string::npos || end == std::string::npos || end <= start)
+        throwWithLog(LOG_ERROR, "Invalid server block format");
 
-  iss >> path;
-  if (path[0] != '/')
-    throwWithLog(LOG_ERROR, "location path error");
+    return block.substr(start + 1, end - start - 1);
+}
+
+std::vector<std::string> Config::extractServerBlocks(const std::string& input) {
+    std::vector<std::string> blocks;
+    size_t pos = 0;
+
+    while ((pos = input.find("server", pos)) != std::string::npos) {
+        // Vérifie que "server" est suivi d'une accolade
+        size_t braceStart = input.find("{", pos);
+        if (braceStart == std::string::npos) {
+            throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + 161);
+        }
+
+        // Trouver la fin du bloc avec gestion des accolades imbriquées
+        int depth = 1;
+        size_t i = braceStart + 1;
+        while (i < input.size() && depth > 0) {
+            if (input[i] == '{') depth++;
+            else if (input[i] == '}') depth--;
+            ++i;
+        }
+
+        if (depth != 0) {
+            throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + 174);
+        }
+
+        blocks.push_back(input.substr(pos, i - pos));
+        pos = i; // Continuer après ce bloc
+    }
+
+    return blocks;
+}
+
+std::vector<std::string> Config::extractLocationBlocks(const std::string& content) {
+    std::vector<std::string> locations;
+    size_t pos = 0;
+
+    while ((pos = content.find("location", pos)) != std::string::npos) {
+        size_t braceStart = content.find("{", pos);
+        if (braceStart == std::string::npos) break;
+
+        int depth = 1;
+        size_t i = braceStart + 1;
+        while (i < content.size() && depth > 0) {
+            if (content[i] == '{') depth++;
+            else if (content[i] == '}') depth--;
+            ++i;
+        }
+
+        if (depth != 0) {
+            throwWithLog(LOG_ERROR, "Unmatched braces in location block");
+        }
+
+        locations.push_back(content.substr(pos, i - pos));
+        pos = i;
+    }
+
+    return locations;
+}
+
+void Config::parseServerBlock_(std::string &content)
+{
+  ServerConfig config;
+  content = extractBlockContent(content);
+  std::vector<std::string> locationBlocks = extractLocationBlocks(content);
   
-  return (1);
-}
-
-void  Config::parseBlock_(std::string containtServerBlock, int i)
-{
-  int                 status;
-  std::istringstream  iss(containtServerBlock);
-  std::string         token;
-
-  while (std::getline(iss, token, ';')) {
-    std::cout << "|" << token << "|" << std::endl;
-    status = checkKeyAndAddValue_(token, i, containtServerBlock);
-    if (status == -1)
-      throwWithLog(LOG_ERROR, "directive error");
-    else if (status == 0)
-    {
-      parseLocation_(containtServerBlock, i);
-    }
-  }
-
-
-  // std::cout << containtServerBlock << std::endl;
+  std::cout << "                  content:" << std::endl;
+  std::cout << "|" + content + "|" << std::endl;
+  
+  // Extraire les blocs location
   std::cout << std::endl;
-}
-
-void Config::parseServerBlock_(std::string &containt)
-{
-  size_t      pos = 0;
-  int         i = 0;
-  std::string containtServerBlock;
-
-  pos = containt.find("server{");
-  while (pos != std::string::npos)
-  {
-    this->_servers.push_back(ServerConfig());
-    containtServerBlock = containt.substr(pos + 7);
-    containt = containt.substr(pos + 7);
-    pos = containt.find("server{");
-    if (pos != std::string::npos)
-    {
-      containtServerBlock = containtServerBlock.substr(0, pos);
-    }
-    parseBlock_(containtServerBlock, i);
-    ++i;
+  std::cout << "                  location:" << std::endl;
+  for (size_t i = 0; i < locationBlocks.size(); i++){
+    std::cout << "|" + locationBlocks[i] + "|" << std::endl;
   }
+  std::cout << "----------------------------------------------------------------" << std::endl;
+  std::cout  << std::endl;
 }
