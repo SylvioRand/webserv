@@ -52,18 +52,16 @@ class Config
 
     void  load_(void);                       // Charge et parse le fichier de configuration
     bool  isValid_(void) const;              // Vérifie si la configuration est valide
-    void  parseServerBlock_(void);           // parse de zramahaz
+    void  parseServerBlock_(std::string &containt);           // parse de zramahaz
     void  skipWhiteSpace_(void);
     // you can use this function to add manually a serverconfig without parsing
     void  createServerConfigManually(void);
     
     // zramahaz function
-    bool  findServerBrace_(void);
-    void  parseDirectiveAndBloc_(void);
-    void  appendValueDirective_(std::string &token);
-    void  parseDirective_(void);
-    void  addStringValue_(std::istringstream &iss, int id);
-    
+    void  parseBlock_(std::string containtServerBlock, int i);
+    int   checkKeyAndAddValue_(std::string &token, int i, std::string &containtServerBlock);
+    int   parseLocation_(std::string containtServerBlock, int i);
+
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path; // chemin pour le fichier de configuration
     std::ifstream             _config_file; // fd pour le fichier

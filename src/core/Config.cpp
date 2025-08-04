@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/07/28 17:16:21 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/04 09:25:32 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,9 @@ void Config::skipWhiteSpace_(void)
 
 void Config::load_(void)
 {
+  std::string containt;
+  size_t      pos;
+
   _config_file.open(_config_path.c_str());
   if (!_config_file.is_open()) {
     throwWithLog(LOG_ERROR, "Failed to open config file: " + _config_path);
@@ -51,12 +54,17 @@ void Config::load_(void)
     {
       continue;
     }
-    
-    if (_current_line.find("server") == 0)
+    pos = _current_line.find("#");
+    if (pos != std::string::npos)
     {
-      this->parseServerBlock_();    // parse de zramahaz
+      _current_line = _current_line.substr(0, pos);
     }
+    containt += _current_line;
   }
+
+  std::cout << containt << std::endl;
+  std::cout << "-------------------------" << std::endl;
+  this->parseServerBlock_(containt);    // parse de zramahaz
   
   // Uncomment this block once the configuration file parsing has been parsed.
   /*
@@ -129,136 +137,124 @@ std::string Config::trim(const std::string& str) {
   return str.substr(first, last - first + 1);
 }
 
-int Config::countOccurrence(const std::string& chaine, char c) {
-  return std::count(chaine.begin(), chaine.end(), c);
-}
 
 
 // TODO : This function serves as the entry point for the configuration file parser.
 // Don`t forget comment is allowed too on the server bloc of the file configuration
 
-
-// fonction qui cherche "server {"
-bool  Config::findServerBrace_(void)
+int Config::checkKeyAndAddValue_(std::string &token, int i, std::string &containtServerBlock)
 {
-  size_t brace_pos = _current_line.find("{");
-  
-  // Si "server" et "{" sont dans la meme ligne
-  if (brace_pos != std::string::npos)
-  { std::string before_brace = _current_line.substr(0, brace_pos);
-    std::string after_brace = _current_line.substr(brace_pos + 1);
-    std::cout << "before_brace: " << "|" << before_brace << "|" << std::endl;
-    std::cout << "after_brace: " << "|" << after_brace << "|" << std::endl;
-    if (trim(before_brace) == "server")
-    {
-      return (true);
-    }
-    return (false);
-  } else if (trim(_current_line) == "server")
-  {
-    while (std::getline(_config_file, _current_line))
-    { _line_number++; this->skipWhiteSpace_(); if (_current_line.empty() || _current_line[0] == '#')
-      {
-        continue;
-      }
-      if (_current_line.find("{") != std::string::npos)
-      {
-        return (true);
-      } else
-        return (false);
-    }
-  }
-  return (false);
-}
-
-
-void  Config::addStringValue_(std::istringstream &iss, int id)
-{
-  if (id == 1)
-  {
-    iss >> this->_servers[0].server_name;
-  }
-  else if (id == 2)
-  {
-    iss >> this->_servers[0].root;
-  }
-  else if (id == 3)
-  {
-    iss >> this->_servers[0].index;
-  }
-}
-
-void  Config::appendValueDirective_(std::string &token)
-{
-  int i = 0;
   std::istringstream iss(token);
-  std::string key;
+  std::string        key;
+  std::string        value;
 
+  (void)containtServerBlock;
   iss >> key;
-  std::string keys[6] = {"listen", "server_name", "root", "index", "error_page", "client_max_body_size"};
-  for (i = 0; i < 6; i++) {
-    if (keys[i] == key)
-      break ;
-  }
-  switch (i)
+  if (key == "listen")
   {
-    case 0:
-      /* code */
-      break;
-    case 1:
-      addStringValue_(iss, 1);
-      break;
-    case 2:
-      addStringValue_(iss, 2);
-      break;
-    case 3:
-      addStringValue_(iss, 3);
-      break;
-    case 4:
-      /* code */
-      break;
-    case 5:
-      /* code */
-      break;
-    
-    default:
-      throwWithLog(LOG_ERROR, "mot cle inconnu");
+    std::cout << "---------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
+    return (1);
   }
+  else if (key == "index")
+  {
+    std::cout << "---------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
+    iss >> value;
+    this->_servers[i].index = value;
+    return (1);
+  }
+  else if (key == "server_name")
+  {
+    std::cout << "---------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
+    iss >> value;
+    this->_servers[i].index = value; 
+    return (1);
+  }
+  else if (key == "root")
+  {
+    std::cout << "---------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
+    iss >> value;
+    this->_servers[i].index = value; 
+    return (1);
+  }
+  else if (key == "error_page")
+  {
+    std::cout << "---------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
+    return (1);
+  }
+  else if (key == "client_max_body_size")
+  {
+    std::cout << "-----------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(";") + 1);
+    return (1);
+  }
+  else if (key == "location")
+  {
+    std::cout << "---------key = " << key << std::endl;
+    containtServerBlock = containtServerBlock.substr(containtServerBlock.find(" ") + 1);
+    return (0);
+  }
+  return (1);
 }
 
-
-void  Config::parseDirective_(void)
+int Config::parseLocation_(std::string containtServerBlock, int i)
 {
-  std::istringstream iss(_current_line);
-  std::string token;
-    
+  (void)i;
+  std::cout << containtServerBlock << std::endl;
+  std::istringstream iss(containtServerBlock);
+  std::string        path;
+
+  iss >> path;
+  if (path[0] != '/')
+    throwWithLog(LOG_ERROR, "location path error");
+  
+  return (1);
+}
+
+void  Config::parseBlock_(std::string containtServerBlock, int i)
+{
+  int                 status;
+  std::istringstream  iss(containtServerBlock);
+  std::string         token;
+
   while (std::getline(iss, token, ';')) {
     std::cout << "|" << token << "|" << std::endl;
-    appendValueDirective_(token);
-    }
-}
-
-void  Config::parseDirectiveAndBloc_(void)
-{
-
-  std::cout << "debut dans le bloc, directive" << std::endl;
-  std::cout << "|" << _current_line << "|" << std::endl;
-  while (std::getline(_config_file, _current_line))
-  { _line_number++; this->skipWhiteSpace_(); if (_current_line.empty() || _current_line[0] == '#')
+    status = checkKeyAndAddValue_(token, i, containtServerBlock);
+    if (status == -1)
+      throwWithLog(LOG_ERROR, "directive error");
+    else if (status == 0)
     {
-      continue;
+      parseLocation_(containtServerBlock, i);
     }
-    parseDirective_();
   }
-  std::cout << "fin dans le bloc, directive" << std::endl;
+
+
+  // std::cout << containtServerBlock << std::endl;
+  std::cout << std::endl;
 }
 
-void Config::parseServerBlock_(void)
+void Config::parseServerBlock_(std::string &containt)
 {
-  this->_servers.push_back(ServerConfig());
+  size_t      pos = 0;
+  int         i = 0;
+  std::string containtServerBlock;
 
-  if (!findServerBrace_())
-    throwWithLog(LOG_ERROR, "Error Parsing");
-  parseDirectiveAndBloc_();
-
+  pos = containt.find("server{");
+  while (pos != std::string::npos)
+  {
+    this->_servers.push_back(ServerConfig());
+    containtServerBlock = containt.substr(pos + 7);
+    containt = containt.substr(pos + 7);
+    pos = containt.find("server{");
+    if (pos != std::string::npos)
+    {
+      containtServerBlock = containtServerBlock.substr(0, pos);
+    }
+    parseBlock_(containtServerBlock, i);
+    ++i;
+  }
 }
