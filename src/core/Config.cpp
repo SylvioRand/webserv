@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/04 13:33:20 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/05 14:34:37 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,15 +65,15 @@ void Config::load_(void)
   }
   
   // parse de zramahaz
-  // content = insertSpaceBeforeBrace(content);
   std::vector<std::string> serverBlocks = extractServerBlocks(content);
   for (size_t i = 0; i < serverBlocks.size(); ++i) {
     this->parseServerBlock_(serverBlocks[i]);
   }
+  printServers();
 
   // Uncomment this block once the configuration file parsing has been parsed.
   /*
-  if (_servers.empty()) {
+  if (this->_servers.empty()) {
     throwWithLog(LOG_ERROR, "No server blocks found in config file");
     }
     */
@@ -220,17 +220,142 @@ void Config::parseServerBlock_(std::string &content)
 {
   ServerConfig config;
   content = extractBlockContent(content);
-  std::vector<std::string> locationBlocks = extractLocationBlocks(content);
-  
-  std::cout << "                  content:" << std::endl;
-  std::cout << "|" + content + "|" << std::endl;
   
   // Extraire les blocs location
-  std::cout << std::endl;
-  std::cout << "                  location:" << std::endl;
-  for (size_t i = 0; i < locationBlocks.size(); i++){
-    std::cout << "|" + locationBlocks[i] + "|" << std::endl;
+  std::vector<std::string> locationBlocks = extractLocationBlocks(content);
+
+  // Supprimer les blocs location du contenu principal
+  for (std::vector<std::string>::const_iterator it = locationBlocks.begin(); it != locationBlocks.end(); ++it) {
+    size_t pos = content.find(*it);
+    if (pos != std::string::npos) {
+      content.erase(pos, it->length());
+    }
   }
-  std::cout << "----------------------------------------------------------------" << std::endl;
-  std::cout  << std::endl;
+
+  parseDirectivesIntoConfig(content, config);
+  this->_servers.push_back(config);
 }
+
+void Config::parseDirectivesIntoConfig(const std::string& block, ServerConfig& config) {
+  std::istringstream contentStream(block);
+  std::string directive;
+
+  while (std::getline(contentStream, directive, ';')) {
+    directive = trim(directive);
+        
+    std::istringstream lineStream(directive);
+    std::string key;
+    lineStream >> key;
+
+    std::string value;
+    std::getline(lineStream, value);
+    value = trim(value);
+
+    applyDirectiveToServerConfig(key, value, config);
+  }
+}
+
+void Config::applyDirectiveToServerConfig(const std::string& key, const std::string& value, ServerConfig& config) {
+  if (key == "listen") {
+    size_t colon = value.find(":");
+    if (colon == std::string::npos)
+        throwWithLog(LOG_ERROR, "Invalid listen format: " + value);
+    config.host = value.substr(0, colon);
+    std::string portStr = value.substr(colon + 1);
+    config.port = stringToInt(portStr); // C++98-compatible stoi
+  }
+  else if (key == "server_name") {
+    config.server_name = value;
+  }
+  else if (key == "root") {
+    config.root = value;
+  }
+  else if (key == "index") {
+    std::istringstream iss(value);
+    std::string token;
+    while (iss >> token) {
+        config.index.push_back(token);
+    }
+  }
+  else if (key == "error_page") {
+    std::istringstream iss(value);
+    std::string codeStr, path;
+    iss >> codeStr >> path;
+    int code = stringToInt(codeStr);
+    config.error_pages[code] = path;
+  }
+  else if (key == "client_max_body_size") {
+    config.client_max_body_size = parseSize(value); // gère les suffixes M, K
+  }
+  else if (key == "path") {
+    config.path = value;
+  }
+  else {
+    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in server block");
+  }
+}
+
+std::string Config::trim(const std::string& str)
+{
+    size_t first = str.find_first_not_of(" \t\r\n");
+    size_t last = str.find_last_not_of(" \t\r\n");
+    if (first == std::string::npos || last == std::string::npos)
+        return "";
+    return str.substr(first, last - first + 1);
+}
+
+int     Config::stringToInt(const std::string& str)
+{
+    std::istringstream iss(str);
+    int result = 0;
+    iss >> result;
+    return result;
+}
+
+size_t  Config::parseSize(const std::string& str)
+{
+    if (str.empty()) return 0;
+    char suffix = str[str.size() - 1];
+    std::string number = str;
+
+    if (suffix == 'M' || suffix == 'K') {
+        number = str.substr(0, str.size() - 1);
+    }
+
+    size_t base = stringToInt(number);
+    if (suffix == 'M') return base * 1024 * 1024;
+    if (suffix == 'K') return base * 1024;
+    return base;
+}
+
+void Config::printServers() const {
+    for (size_t i = 0; i < this->_servers.size(); ++i) {
+        const ServerConfig& config = this->_servers[i];
+        std::cout << "server[" << i << "].host = |" << config.host << "|" << std::endl;
+        std::cout << "server[" << i << "].port = |" << config.port << "|" << std::endl;
+        std::cout << "server[" << i << "].server_name = |" << config.server_name << "|" << std::endl;
+        std::cout << "server[" << i << "].root = |" << config.root << "|" << std::endl;
+        std::cout << "server[" << i << "].path = |" << config.path << "|" << std::endl;
+
+        std::cout << "server[" << i << "].index = |";
+        for (size_t j = 0; j < config.index.size(); ++j) {
+            std::cout << config.index[j];
+            if (j + 1 < config.index.size()) std::cout << ", ";
+        }
+        std::cout << "|" << std::endl;
+
+        std::cout << "server[" << i << "].client_max_body_size = |" << config.client_max_body_size << "|" << std::endl;
+
+        for (std::map<int, std::string>::const_iterator it = config.error_pages.begin(); it != config.error_pages.end(); ++it) {
+            std::cout << "server[" << i << "].error_pages[" << it->first << "] = |" << it->second << "|" << std::endl;
+        }
+
+        for (std::map<std::string, LocationConfig>::const_iterator it = config.locations.begin(); it != config.locations.end(); ++it) {
+            std::cout << "server[" << i << "].locations[" << it->first << "] = |LocationConfig|" << std::endl;
+            // Tu peux afficher les détails de LocationConfig ici si nécessaire
+        }
+
+        std::cout << "----------------------------------------" << std::endl;
+    }
+}
+
