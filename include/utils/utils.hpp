@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/31 07:30:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 10:37:08 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,6 +41,8 @@
 
 void        throwWithLog(LogLevel level, const std::string &msg);
 std::string intToString(int value);
+bool        caseInsensitiveEqual(const std::string& a,
+            const std::string& b);
 
 
 #endif

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:07:55 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/01 09:59:11 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 09:42:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ class HttpResponse
     ~HttpResponse(void);
 
     void  setStatus(int code);
+    void  setHeader(const std::string &content);
     void  setBody(const std::string &content);
     void  sendFile(const std::string &path);
     int   getStatus(void) const;

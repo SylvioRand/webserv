@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/04 15:30:51 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 11:53:57 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,17 +18,19 @@
 #include "../utils/utils.hpp"
 
 struct LocationConfig {
-    std::string               path;           // Chemin de la location (ex: "/", "/upload")
-    std::string               root;           // Racine des fichiers pour cette location
-    std::string               upload_dir;     // Dossier pour les uploads (POST)
-    bool                      autoindex;      // Si true, liste les répertoires (comme "ls")
-    std::vector<std::string>  indexs;          // Fichier par défaut (ex: "index.html")
-    std::string               redirect;       // URL de redirection (ex: "301 http://example.com")
-    std::string               cgi_extension;  // Extension pour CGI (ex: ".py")
-    std::string               cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")
-    std::vector<std::string>  methods;        // Méthodes autorisées (GET, POST, DELETE)
+    std::string                 path;           // Chemin de la location (ex: "/", "/upload")
+    std::string                 root;           // Racine des fichiers pour cette location
+    std::string                 upload_dir;     // Dossier pour les uploads (POST)
+    bool                        autoindex;      // Si true, liste les répertoires (comme "ls")
+    std::vector<std::string>    indexs;         // Fichier par défaut (ex: "index.html")
+    std::string                 redirect;       // URL de redirection (ex: "301 http://example.com")
+    int                         redirectCode;
+    std::string                 cgi_extension;  // Extension pour CGI (ex: ".py")
+    std::string                 cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")
+    std::map<int, std::string>  error_pages;    // Pages d'erreur (ex: 404 -> "/404.html")
+    std::vector<std::string>    methods;        // Méthodes autorisées (GET, POST, DELETE)
 
-    LocationConfig() : autoindex(false) {}
+    LocationConfig() : autoindex(false), redirectCode(0) {}
 };
 
 struct ServerConfig {
@@ -40,7 +42,6 @@ struct ServerConfig {
     size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
     std::map<std::string, LocationConfig> locations;            // Configs par location
-
 };
 
 class Config

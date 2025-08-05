@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/29 16:06:57 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 09:06:24 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ class HttpRequest
     bool  isComplete(void) const;
     void  appendToBody(std::string str);
     const std::string &getMethod(void) const;
+    const std::string &getVersion(void) const;
     const std::string& getBody(void) const;
     const std::string& getPath(void) const;
     const std::map<std::string, std::string>& getHeaders(void) const;

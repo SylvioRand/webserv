@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/29 17:30:59 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 09:08:03 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,6 @@ void  HttpRequest::parse(const std::string &raw_request)
   this->parseHeader_(raw_request, pos);
   return ;
 }
-
 // TODO Need code formating
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
@@ -109,6 +108,12 @@ const std::string& HttpRequest::getMethod(void) const
 {
   return (_method);
 }
+
+const std::string& HttpRequest::getVersion(void) const
+{
+  return (_version);
+}
+
 
 bool  HttpRequest::isComplete(void) const
 {

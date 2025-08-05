@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/01 09:59:57 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 09:48:54 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 #include "../../include/core/HttpResponse.hpp"
@@ -28,8 +28,15 @@ void  HttpResponse::setStatus(int code)
 // TODO
 void  HttpResponse::setBody(const std::string &content)
 {
-  (void)content;
+  this->_headers = content;
 }
+
+// TODO
+void  HttpResponse::setHeader(const std::string &content)
+{
+  this->_headers = content;
+}
+
 
 // TODO
 void  HttpResponse::sendFile(const std::string &path)
@@ -40,8 +47,7 @@ void  HttpResponse::sendFile(const std::string &path)
 // TODO
 std::string HttpResponse::build(void) const
 {
-  std::string result;
-  return (result);
+  return (this->_headers + "\r\n" + this->_body);
 }
 
 int   HttpResponse::getStatus(void) const

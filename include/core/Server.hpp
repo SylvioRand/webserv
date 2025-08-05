@@ -6,16 +6,24 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/04 16:50:45 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/05 15:04:26 by srandria         ###   ########.fr       */
 /*                                                                            */
-/* ************************************************************************** */
-
-#ifndef SERVER_HPP
+/* ************************************************************************** */ #ifndef SERVER_HPP
 #define SERVER_HPP
+
+#define CT_HTML "text/html"
+#define CT_JSON "application/json"
+#define CT_PNG  "image/png"
+#define CT_JPEG "image/jpeg"
+#define CT_TEXT "text/plain"
+#define CT "Content-Type:"
+#define CL "Content-Length:"
+
 #include "../utils/utils.hpp"
 #include "../core/Config.hpp"
 #include "../core/Client.hpp"
 #include <string>
+
 
 class Server
 {
@@ -28,11 +36,7 @@ class Server
 
     void  stop_server(void);
     const Config& getConfig(void);
-
-  private:
-    Server(void);
-    Server(const Server &other);
-    Server& operator=(const Server &other);
+private: Server(void); Server(const Server &other); Server& operator=(const Server &other);
 
     int   createTcpSocket_(void); void  start_server_(void); void  create_all_listeners_(void);
     void  accept_new_client_(int listener_fd);
@@ -59,8 +63,12 @@ class Server
     bool  isMethodAllowedForLocation(const std::string method);
     bool  isSupportedHttpMethod(const std::string& method);
     void  setStatus(int code, int fd);
+    int   getStatus(int code);
+
     std::string
           getMethod(int fd);
+    std::string
+          getVersion(int fd);
 
     void  saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg);
     ServerConfigConstIterator
@@ -77,7 +85,7 @@ class Server
     void  processReadableFile_(const int fd);
     bool  directoryExists_(const std::string& path);
     void  onDeleteSuccess_(const int fd);
-    void  cannotDeleteFile_(const int fd);
+    void  cannotDeleteFile_(const int fd, std::string& path);
     void  respondDeleteDirConflict_(const int fd);
     void  respondFileNotReadable(const int fd);
     void  respondDirectoryListingForbidden(const int fd);
@@ -86,15 +94,25 @@ class Server
     void  badRequest_(const int fd);
     void  methodNotAllowed_(const int fd);
     void  methodNotSupported_(const int fd);
-    bool  hasIndexDirective_(const std::string& path);
+    bool  hasIndexDirective_(void);
     std::string
           getAccessibleIndexPath_(const std::string& path);
     void  serveIndexContent_(const std::string path, const int fd);
-    bool  existsAtLeastOneIndexFile_(const std::string path, const int fd);
+    bool  existsAtLeastOneIndexFile_(const std::string path);
     void  respondIndexFilesUnreadable_(const int fd);
     void  respondNoIndexFileFound_(const int fd);
     void  respondMissingUploadDir(const int fd);
     void  saveUploadedFile_(const int fd);
+    std::string
+          getAllowedMethodsForLocation(void);
+    std::string
+          buildConnectionHeader(const int fd);
+    void  handleNoMatchingLocation(const int fd);
+    bool  hasCustomErrorPage(const int code, const int fd);
+    std::string
+          getPageCustomError(const int code, const int& fd);
+    std::string
+          readLocalFileToString(std::string path);
 
     const Config&                 _config;
     LocationConfig                _currentLocation;

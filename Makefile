@@ -10,6 +10,7 @@ SRC = ./src/main.cpp \
 			./src/utils/Fileutils.cpp \
 			./src/utils/throwWithLog.cpp \
 			./src/utils/intToString.cpp \
+			./src/utils/caseInsensitiveEqual.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 
