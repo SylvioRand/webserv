@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 14:21:18 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/05 17:04:42 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,7 +44,6 @@ struct ServerConfig {
     
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
     std::map<std::string, LocationConfig> locations;            // Configs par location
-    std::string                           path;
 };
 
 class Config
@@ -60,19 +59,22 @@ class Config
     void  skipWhiteSpace_(void);
     // you can use this function to add manually a serverconfig without parsing
     void  createServerConfigManually(void);
-    
+
     // zramahaz function
-    std::string               extractBlockContent(const std::string& block);
+    std::string               extractBlockContentServer(const std::string& block);
     std::vector<std::string>  extractServerBlocks(const std::string& input);
     std::vector<std::string>  extractLocationBlocks(const std::string& content);
-    std::string               insertSpaceBeforeBrace(const std::string& line);
     void                      parseDirectivesIntoConfig(const std::string& block, ServerConfig& config);
     void                      applyDirectiveToServerConfig(const std::string& key, const std::string& value, ServerConfig& config);
     std::string               trim(const std::string& str);
     int                       stringToInt(const std::string& str);
     size_t                    parseSize(const std::string& str);
     void                      printServers(void) const;
-    
+    void                      parseLocationBlocks(std::string &block, ServerConfig &config);
+    std::string               extractBlockContentLocation(const std::string &block, std::string &path);
+    std::string               insertSpaceBeforeBrace(const std::string& line);
+    void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
+
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path; // chemin pour le fichier de configuration
     std::ifstream             _config_file; // fd pour le fichier
