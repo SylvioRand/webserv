@@ -90,12 +90,15 @@ void  Config::createServerConfigManually(void)
   LocationConfig  loc2;
   loc.root = "./www/";
   loc.path = "/";
-  loc.methods.push_back("GET");
+  loc.methods.push_back("POST");
   loc.autoindex = false;
   loc2.root = "./www/uploads/";
   loc2.path = "/upload/";
+  loc.error_pages[405] = "/405.html";
   result.locations["/"] = loc;
+  /*
   result.locations["/upload"] = loc2;
+  */
   this->_servers.push_back(result);
 
   ServerConfig  result2;

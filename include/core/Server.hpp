@@ -8,16 +8,10 @@
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
 /*   Updated: 2025/08/05 15:04:26 by srandria         ###   ########.fr       */
 /*                                                                            */
-/* ************************************************************************** */ #ifndef SERVER_HPP
-#define SERVER_HPP
+/* ************************************************************************** */
 
-#define CT_HTML "text/html"
-#define CT_JSON "application/json"
-#define CT_PNG  "image/png"
-#define CT_JPEG "image/jpeg"
-#define CT_TEXT "text/plain"
-#define CT "Content-Type:"
-#define CL "Content-Length:"
+#ifndef SERVER_HPP
+#define SERVER_HPP
 
 #include "../utils/utils.hpp"
 #include "../core/Config.hpp"
@@ -110,16 +104,19 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleNoMatchingLocation(const int fd);
     bool  hasCustomErrorPage(const int code, const int fd);
     std::string
-          getPageCustomError(const int code, const int& fd);
+          getPageCustomError(const int code, const int& fd, std::string& contentType);
     std::string
           readLocalFileToString(std::string path);
+    void loadMimeTypes(void);
+    std::string
+          getContentTypeByFileExtension(std::string path);
 
-    const Config&                 _config;
-    LocationConfig                _currentLocation;
-    std::map<int, Client*>        _clients;
-    std::vector<struct pollfd>    _pool_fds;
-    std::vector<int>              _listener_fds;
-
+    const Config&                       _config;
+    LocationConfig                      _currentLocation;
+    std::map<int, Client*>              _clients;
+    std::vector<struct pollfd>          _pool_fds;
+    std::vector<int>                    _listener_fds;
+    std::map<std::string, std::string>  _mimes;
 };
 
 #endif

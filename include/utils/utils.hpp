@@ -14,6 +14,7 @@
 #define UTILS_HPP
 
 #include "../utils/Logger.hpp"
+#include "../utils/contentType.hpp"
 
 #include <iostream>
 #include <string.h>

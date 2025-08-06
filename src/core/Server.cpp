@@ -22,6 +22,7 @@
 
 Server::Server(const Config& config) : _config(config)
 {
+  this->loadMimeTypes();
   this->start_server_();
 }
 
@@ -233,7 +234,7 @@ void  Server::handle_pollin_(int fd)
       this->DELETEMethod_(uri, fd);
     else
       this->methodNotAllowed_(fd);
-    logger(LOG_DEBUG, "value of status" + intToString(this->_clients[fd]->getResponse().getStatus()));
+    logger(LOG_DEBUG, "value of status '" + intToString(this->_clients[fd]->getResponse().getStatus()) + "'");
     this->setPollOut_(fd);
   }
 }
@@ -306,10 +307,11 @@ void  Server::methodNotSupported_(const int fd)
   The HTTP method PUT is recognized but not supported by this server.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(501, fd);
   if (this->hasCustomErrorPage(501, fd))
-    body = this->getPageCustomError(501, fd);
+    body = this->getPageCustomError(501, fd, contentType);
   else
     body = "The HTTP method PUT is recognized but not supported by this server.";
 
@@ -317,7 +319,7 @@ void  Server::methodNotSupported_(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 501 Not Implemented\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -392,17 +394,14 @@ void Server::saveMatchingLocation_(const std::string& uri, ServerConfigConstIter
   size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
-  std::cout << "verify uri []" << uri << "]" << std::endl;
+  std::cout << "verify uri [" << uri << "]" << std::endl;
   for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
   {
     std::cout << "location root [" << it->second.root << "]" << std::endl;
     const std::string& path = it->first;
     std::cout << "location path [" << it->first << "]" << std::endl;
-    std::cout << "sizeof(path) [" << sizeof(path) << "]" << std::endl;
-    std::cout << "sub ["<< uri.substr(0, sizeof(path)) << "]" << std::endl;
     if (uri.substr(0, path.size()) == path && path.size() > best_length)
     {
-      std::cout << "are iU here" << std::endl;
       best_match = it->second;
       best_length = path.size();
     }
@@ -412,7 +411,7 @@ void Server::saveMatchingLocation_(const std::string& uri, ServerConfigConstIter
     throwWithLog(LOG_FATAL, "No matching LocationConfig found");
   }
   this->setCurrentLocation(best_match);
-  logger(LOG_DEBUG, "matching LocationConfig found, PATH [" + best_match.root + "]");
+  logger(LOG_DEBUG, "matching LocationConfig found, root [" + best_match.root + "]");
 }
 
 // TODO
@@ -493,10 +492,11 @@ void  Server::respondIndexFilesUnreadable_(const int fd)
   403 Forbidden: No readable index file found in this directory.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(403, fd);
   if (this->hasCustomErrorPage(403, fd))
-    body = this->getPageCustomError(403, fd);
+    body = this->getPageCustomError(403, fd, contentType);
   else
     body = "403 Forbidden: No readable index file found in this directory.";
 
@@ -504,7 +504,7 @@ void  Server::respondIndexFilesUnreadable_(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 403 Forbidden\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -523,10 +523,11 @@ void  Server::respondNoIndexFileFound_(const int fd)
   404 Not Found: No index file found in this directory.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(404, fd);
   if (this->hasCustomErrorPage(404, fd))
-    body = this->getPageCustomError(404, fd);
+    body = this->getPageCustomError(404, fd, contentType);
   else
     body = "404 Not Found: No index file found in this directory.";
 
@@ -534,7 +535,7 @@ void  Server::respondNoIndexFileFound_(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 404 Not Found\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -543,7 +544,7 @@ void  Server::respondNoIndexFileFound_(const int fd)
   response.setBody(body);
 }
 
-// TODO
+// TODO Zramahaz
 void  Server::serveIndexContent_(const std::string path, const int fd)
 {
   /*
@@ -623,10 +624,7 @@ void  Server::saveUploadedFile_(const int fd)
   std::string body;
 
   this->setStatus(201, fd);
-  if (this->hasCustomErrorPage(201, fd))
-    body = this->getPageCustomError(201, fd);
-  else
-    body = "File uploaded successfully.";
+  body = "File uploaded successfully.";
 
   std::string contentLength = intToString(body.size());
   std::ostringstream headers;
@@ -651,10 +649,11 @@ void  Server::respondMissingUploadDir(const int fd)
   Server misconfiguration: upload_dir not specified.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(500, fd);
   if (this->hasCustomErrorPage(500, fd))
-    body = this->getPageCustomError(500, fd);
+    body = this->getPageCustomError(500, fd, contentType);
   else
     body = "Server misconfiguration: upload_dir not specified.";
 
@@ -662,7 +661,7 @@ void  Server::respondMissingUploadDir(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -716,10 +715,11 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
   Conflict: Unable to delete '/path/to/file' due to current resource state
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(409, fd);
   if (this->hasCustomErrorPage(409, fd))
-    body = this->getPageCustomError(409, fd);
+    body = this->getPageCustomError(409, fd, contentType);
   else
     body = "Conflict: Unable to delete '" + path + "' due to current resource state";
 
@@ -727,7 +727,7 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 409 Conflict\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -746,10 +746,11 @@ void  Server::respondNotFound_(const int fd)
   404 Not Found: Invalid path.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(404, fd);
   if (this->hasCustomErrorPage(404, fd))
-    body = this->getPageCustomError(404, fd);
+    body = this->getPageCustomError(404, fd, contentType);
   else
     body = "404 Not Found: Invalid path.";
 
@@ -757,7 +758,7 @@ void  Server::respondNotFound_(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 404 Not Found\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -777,10 +778,11 @@ void  Server::respondDirectoryListingForbidden(const int fd)
   403 Forbidden: Directory listing denied.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(403, fd);
   if (this->hasCustomErrorPage(403, fd))
-    body = this->getPageCustomError(403, fd);
+    body = this->getPageCustomError(403, fd, contentType);
   else
     body = "403 Forbidden: Directory listing denied.";
 
@@ -788,7 +790,7 @@ void  Server::respondDirectoryListingForbidden(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 403 Forbidden\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -807,10 +809,11 @@ void  Server::respondFileNotReadable(const int fd)
   You do not have permission to read the requested file.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(403, fd);
   if (this->hasCustomErrorPage(403, fd))
-    body = this->getPageCustomError(403, fd);
+    body = this->getPageCustomError(403, fd, contentType);
   else
     body = "You do not have permission to read the requested file.";
 
@@ -818,7 +821,7 @@ void  Server::respondFileNotReadable(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 403 Forbidden\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -836,11 +839,13 @@ void  Server::respondDeleteDirConflict_(const int fd)
 
   Cannot delete resource due to a conflict with the current state.
   */
-  this->setStatus(409, fd);
   std::string body;
+  std::string contentType = CT_TEXT;
 
+
+  this->setStatus(409, fd);
   if (this->hasCustomErrorPage(409, fd))
-    body = this->getPageCustomError(409, fd);
+    body = this->getPageCustomError(409, fd, contentType);
   else
     body = "Cannot delete resource due to a conflict with the current state.";
 
@@ -848,7 +853,7 @@ void  Server::respondDeleteDirConflict_(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 409 Conflict\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -891,24 +896,18 @@ void  Server::onDeleteSuccess_(const int fd)
   HTTP/1.1 204 No Content
   Content-Length: 0
   */
-  std::string body;
 
   this->setStatus(204, fd);
-  if (this->hasCustomErrorPage(204, fd))
-    body = this->getPageCustomError(204, fd);
-  else
-    body = "";
 
-  std::string contentLength = intToString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 204 No Content\r\n"
-    << CL << " " << contentLength << "\r\n"
+    << CL << " " << "0" << "\r\n"
     << this->buildConnectionHeader(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
-  response.setBody(body);
+  response.setBody("");
 }
 
 void  Server::methodNotAllowed_(const int fd)
@@ -922,10 +921,13 @@ void  Server::methodNotAllowed_(const int fd)
   The method GET is not allowed on /restricted.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(405, fd);
   if (this->hasCustomErrorPage(405, fd))
-    body = this->getPageCustomError(405, fd);
+  {
+    body = this->getPageCustomError(405, fd, contentType);
+  }
   else
     body = "The method " + this->getMethod(fd) + " is not allowed on " + this->getCurrentLocation().path;
 
@@ -934,7 +936,7 @@ void  Server::methodNotAllowed_(const int fd)
 
   headers << this->getVersion(fd) << " 405 Method Not Allowed\r\n"
     << "Allow: " << this->getAllowedMethodsForLocation() << "\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -973,10 +975,11 @@ void  Server::badRequest_(const int fd)
   400 Bad Request: Invalid HTTP request syntax.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(400, fd);
   if (this->hasCustomErrorPage(400, fd))
-    body = this->getPageCustomError(400, fd);
+    body = this->getPageCustomError(400, fd, contentType);
   else
     body = "400 Bad Request: Invalid HTTP request syntax.";
 
@@ -984,7 +987,7 @@ void  Server::badRequest_(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 400 Bad Request\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -993,7 +996,6 @@ void  Server::badRequest_(const int fd)
   response.setBody(body);
 }
 
-// TODO
 void  Server::handleNoMatchingLocation(const int fd)
 {
   /*
@@ -1005,10 +1007,11 @@ void  Server::handleNoMatchingLocation(const int fd)
   404 Not Found: The requested resource does not exist.
   */
   std::string body;
+  std::string contentType = CT_TEXT;
 
   this->setStatus(404, fd);
   if (this->hasCustomErrorPage(404, fd))
-    body = this->getPageCustomError(404, fd);
+    body = this->getPageCustomError(404, fd, contentType);
   else
     body = "404 Not Found: The requested resource does not exist.";
 
@@ -1016,7 +1019,7 @@ void  Server::handleNoMatchingLocation(const int fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 404 Not Found\r\n"
-    << CT << " " << CT_TEXT << "\r\n"
+    << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
@@ -1025,8 +1028,9 @@ void  Server::handleNoMatchingLocation(const int fd)
   response.setBody(body);
 }
 
-// TODO
-std::string Server::getPageCustomError(const int code, const int& fd)
+// TODO need more test
+std::string Server::getPageCustomError(const int code, const int& fd,
+    std::string& contentType)
 {
   if (this->getCurrentLocation().path.empty())
   {
@@ -1037,6 +1041,7 @@ std::string Server::getPageCustomError(const int code, const int& fd)
       if (it->first == code)
       {
         std::string path = serverConf->root + '/' + it->second;
+        contentType = this->getContentTypeByFileExtension(path);
         return (this->readLocalFileToString(path));
       }
     }
@@ -1049,11 +1054,13 @@ std::string Server::getPageCustomError(const int code, const int& fd)
       if (it->first == code)
       {
         std::string path = this->getCurrentLocation().root + '/' + it->second;
+        contentType = this->getContentTypeByFileExtension(path);
         return (this->readLocalFileToString(path));
       }
     }
   }
   logger(LOG_ERROR, "⚠️ Inconsistency detected: the error_page directive for status code 504 previously pointed to an accessible file, but the file can no longer be opened or read. Please verify that the file still exists and has the correct permissions.");
+  contentType = CT_TEXT;
   return ("");
 }
 
@@ -1064,6 +1071,7 @@ std::string Server::readLocalFileToString(std::string path)
   {
     std::stringstream buffer;
     buffer << file.rdbuf();
+    file.close();
     return (buffer.str());
   }
   logger(LOG_ERROR, "⚠️ Inconsistency detected: the error_page directive for status code 504 previously pointed to an accessible file, but the file can no longer be opened or read. Please verify that the file still exists and has the correct permissions.");
@@ -1100,7 +1108,7 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
         if (file.is_open())
         {
           file.close();
-          logger(LOG_INFO, "Error page found and readable: [" + intToString(code) + "]");
+          logger(LOG_INFO, intToString(code) + " page found and readable: [" + intToString(code) + "]");
           return (true);
         }
         break ;
@@ -1119,8 +1127,8 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
         std::ifstream file(path.c_str());
         if (file.is_open())
         {
-          logger(LOG_INFO, "Error page found and readable: [" + intToString(code) + "]");
           file.close();
+          logger(LOG_INFO, intToString(code) + " page found and readable: [" + intToString(code) + "]");
           return (true);
         }
         break ;
@@ -1130,3 +1138,79 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
   return (false);
 }
 
+void Server::loadMimeTypes(void)
+{
+  std::ifstream file("./config/mimes.types");
+  if (!file.is_open())
+    throwWithLog(LOG_ERROR, "Failed to load MIME types: file 'config/mimes.types' not found.");
+
+  std::string line;
+  std::string header;
+
+  std::getline(file, header);
+  if (header != "# mime.types - basic MIME type mappings")
+  {
+    file.close();
+    return ;
+  }
+  while (std::getline(file, line))
+  {
+    std::istringstream  iss(line);
+    std::string         key;
+    std::string         value;
+
+    iss >> value >> key;
+    if (value.empty())
+      continue ;
+    if (key.empty())
+    {
+      file.close();
+      throwWithLog(LOG_ERROR, "invalid file format[" + line + "]");
+    }
+    this->_mimes[key]  = value;
+    while (1)
+    {
+      key = "";
+      iss >> key;
+      if  (key.empty())
+        break ;
+      this->_mimes[key]  = value;
+    }
+  }
+  logger(LOG_INFO, "mimes.type has been correctly load");
+  file.close();
+}
+
+std::string Server::getContentTypeByFileExtension(std::string path)
+{
+  std::string fileName;
+  size_t      slashPos;
+
+  slashPos = path.rfind('/');
+  if (slashPos == std::string::npos)
+  {
+    fileName = path;
+    logger(LOG_WARNING, "Error detected, the path need to have at least one '/'");
+  }
+  else
+    fileName = path.substr(slashPos + 1);
+
+  size_t extStart = path.rfind('.');
+  if (extStart == std::string::npos)
+    return (CT_TEXT);
+  else
+  {
+    std::string::iterator it = path.begin() + extStart + 1;
+    if (it == path.end())
+      return (CT_TEXT);
+
+    std::string ext = path.substr(extStart + 1);
+    for (std::map<std::string, std::string>::iterator it = this->_mimes.begin();
+        it != this->_mimes.end(); ++it)
+    {
+      if (it->first == ext)
+        return (it->second);
+    }
+  }
+  return (CT_TEXT);
+}

@@ -6,9 +6,10 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 08:01:59 by srandria         ###   ########.fr       */
+/*   Updated: 2025/07/29 15:40:47 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 #include "../../include/core/Client.hpp"
 #include <cerrno>
 #include <cstddef>
