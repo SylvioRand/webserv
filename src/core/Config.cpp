@@ -83,14 +83,14 @@ void  Config::createServerConfigManually(void)
   result.server_name = "localhost";
   result.client_max_body_size = 10485760;
   result.error_pages[404] = "/404.html";
-  result.host = "127.0.0.3";
+  result.host = "127.0.0.1";
   result.port = 8080;
   result.root = "./srandria";
   LocationConfig  loc;
   LocationConfig  loc2;
   loc.root = "./www/";
   loc.path = "/";
-  loc.methods.push_back("POST");
+  loc.methods.push_back("GET");
   loc.autoindex = false;
   loc2.root = "./www/uploads/";
   loc2.path = "/upload/";
@@ -105,8 +105,8 @@ void  Config::createServerConfigManually(void)
   result.server_name = "localhost";
   result.client_max_body_size = 10485760;
   result.error_pages[404] = "/404.html";
-  result.host = "127.0.0.4";
-  result.port = 8081;
+  result.host = "127.0.0.2";
+  result.port = 8080;
   this->_servers.push_back(result);
 
 }

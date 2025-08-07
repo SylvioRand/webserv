@@ -88,7 +88,7 @@ void  Server::create_all_listeners_(void)
 
     this->buildIpv4Sockaddr_(addr, cfg);       // fill struct sockaddr_in for binding
     this->bindSocket_(fd, cfg, addr);
-    this->startListener_(fd, cfg);
+    this->startListener_(fd, it);
     this->addFdToPoll_(fd);
   }
 }
@@ -137,21 +137,22 @@ void  Server::setSocketReuseAddr_(int fd)
 }
 
 
-void Server::startListener_(int fd, const ServerConfig& cfg)
+void Server::startListener_(int fd, ServerConfigConstIterator cfg)
 {
   std::ostringstream oss;
 
   if (listen(fd, 128))
   {
     close(fd);
-    oss << "listen() failed : " << cfg.host << ":" << cfg.port;
+    oss << "listen() failed : " << cfg->host << ":" << cfg->port;
     throwWithLog(LOG_FATAL, oss.str());
   }
 
-  oss << "🟢 listening on http://" << cfg.host << ":" << cfg.port;
+  oss << "🟢 listening on http://" << cfg->host << ":" << cfg->port;
   logger(LOG_INFO, oss.str());
 
   _listener_fds.push_back(fd);
+  _serverListeners[fd] = cfg;
 }
 
 void  Server::addFdToPoll_(int fd)
@@ -184,8 +185,8 @@ void  Server::accept_new_client_(int listener_fd)
   }
 
   this->setNonBlocking_(client_fd);
-  _clients[client_fd] = new Client(client_fd);
-
+  _clients[client_fd] = new Client(client_fd, this->_serverListeners[listener_fd]);
+  _clients[client_fd];
   this->addFdToPoll_(client_fd);
 }
 
@@ -217,7 +218,7 @@ void  Server::handle_pollin_(int fd)
     }
     std::string uri = this->getUri_(fd);
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
-    ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
+    ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
     saveMatchingLocation_(uri, serverConf);
     if (this->getCurrentLocation().path.empty())
@@ -364,29 +365,6 @@ const std::map<std::string, std::string>& Server::getHeaders(int fd)
     return (_clients[fd]->getRequest().getHeaders());
 }
 
-Server::ServerConfigConstIterator Server::findMatchingServer(int fd)
-{
-  const std::map<std::string, std::string>& headers = this->getHeaders(fd);
-  std::map<std::string, std::string>::const_iterator hostHeader = headers.find("Host");
-
-  if (hostHeader == headers.end())
-    throwWithLog(LOG_ERROR, "The Client Request doesn't have Host in _headers");
-
-  std::string hostFromRequest = hostHeader->second;
-
-  const std::vector<ServerConfig>&  servers = this->getServers(); for (ServerConfigConstIterator cfg = servers.begin(); cfg != servers.end(); ++cfg)
-  {
-    std::string hostPort = cfg->host + ":" + intToString((*cfg).port);
-    if (hostPort == hostFromRequest)
-    {
-      logger(LOG_INFO, "Config found for corresponding host -> " + hostFromRequest);
-      return (cfg);
-    }
-  }
-  throwWithLog(LOG_ERROR, "No matching server configuration found for host: " + hostFromRequest);
-  return (servers.end());
-}
-
 void Server::saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg)
 {
   LocationConfig  best_match;
@@ -480,6 +458,8 @@ void  Server::GETMethod_(std::string& uri, const int fd)
     this->buildDirectoryListing_(fd);
   else if (!this->getCurrentLocation().autoindex)
     this->respondDirectoryListingForbidden(fd);
+
+  std::cout << this->_clients[fd]->getResponse().build() << std::endl;
 }
 
 void  Server::respondIndexFilesUnreadable_(const int fd)
@@ -1034,7 +1014,7 @@ std::string Server::getPageCustomError(const int code, const int& fd,
 {
   if (this->getCurrentLocation().path.empty())
   {
-    ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
+    ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     std::map<int, std::string> errorPages = serverConf->error_pages;
     for (std::map<int, std::string>::iterator it = errorPages.begin(); it != errorPages.end(); it++)
     {
@@ -1096,7 +1076,7 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
 {
   if (this->getCurrentLocation().path.empty())
   {
-    ServerConfigConstIterator serverConf = this->findMatchingServer(fd);
+    ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     std::map<int, std::string> errorPages = serverConf->error_pages;
 
     for (std::map<int, std::string>::iterator it = errorPages.begin(); it != errorPages.end(); it++)

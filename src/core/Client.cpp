@@ -16,7 +16,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-Client::Client(int fd) : _fd(fd), _lastActivity(time(NULL))
+Client::Client(int fd, ServerConfigConstIterator cfg) : _fd(fd),
+  _lastActivity(time(NULL)), _cfg(cfg)
 {
 }
 
@@ -84,3 +85,9 @@ HttpResponse& Client::getResponse(void)
 {
   return (_response);
 }
+
+Client::ServerConfigConstIterator Client::getServerConfig(void) const
+{
+  return (_cfg);
+}
+

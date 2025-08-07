@@ -20,7 +20,8 @@
 class Client
 {
   public:
-    Client(int fd);
+    typedef typename std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
+    Client(int fd, ServerConfigConstIterator cfg_ite);
     ~Client(void);
 
     void  readData(void);
@@ -28,17 +29,19 @@ class Client
     bool  isRequestComplete(void) const;
     const HttpRequest& getRequest(void) const;
     HttpResponse& getResponse(void);
+    ServerConfigConstIterator getServerConfig(void) const;
 
   private:
     Client(void);
     Client(const Client &other);
     Client& operator=(const Client& other);
 
-    int           _fd;
-    HttpRequest   _request;
-    HttpResponse  _response;
-    std::string   _buffer;
-    time_t        _lastActivity; // Pour timeout
+    int                       _fd;
+    HttpRequest               _request;
+    HttpResponse              _response;
+    std::string               _buffer;
+    time_t                    _lastActivity; // Pour timeout
+    ServerConfigConstIterator _cfg;
 
 };
 

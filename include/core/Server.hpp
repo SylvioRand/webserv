@@ -39,7 +39,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  close_client_(int fd);
     void  check_timout_(void);
     void  addFdToPoll_(int fd);
-    void  startListener_(int fd, const ServerConfig &cfg);
+    //void  startListener_(int fd, const ServerConfig &cfg);
+    void  startListener_(int fd, ServerConfigConstIterator );
     void  bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& addr);
     void  setSocketReuseAddr_(int fd);
     void  buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& cfg);
@@ -65,8 +66,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
           getVersion(int fd);
 
     void  saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg);
-    ServerConfigConstIterator
-          findMatchingServer(int fd);
     const std::map<std::string, std::string>& getHeaders(int fd);
     std::string
           getUri_(int fd);
@@ -111,12 +110,13 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::string
           getContentTypeByFileExtension(std::string path);
 
-    const Config&                       _config;
-    LocationConfig                      _currentLocation;
-    std::map<int, Client*>              _clients;
-    std::vector<struct pollfd>          _pool_fds;
-    std::vector<int>                    _listener_fds;
-    std::map<std::string, std::string>  _mimes;
+    const Config&                             _config;
+    LocationConfig                            _currentLocation;
+    std::map<int, Client*>                    _clients;
+    std::vector<struct pollfd>                _pool_fds;
+    std::vector<int>                          _listener_fds;
+    std::map<std::string, std::string>        _mimes;
+    std::map<int, ServerConfigConstIterator>  _serverListeners;
 };
 
 #endif

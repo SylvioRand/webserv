@@ -25,13 +25,11 @@ void  HttpResponse::setStatus(int code)
   _status_code = code;
 }
 
-// TODO
 void  HttpResponse::setBody(const std::string &content)
 {
-  this->_headers = content;
+  this->_body= content;
 }
 
-// TODO
 void  HttpResponse::setHeader(const std::string &content)
 {
   this->_headers = content;
@@ -44,7 +42,6 @@ void  HttpResponse::sendFile(const std::string &path)
   (void)path;
 }
 
-// TODO
 std::string HttpResponse::build(void) const
 {
   return (this->_headers + "\r\n" + this->_body);
