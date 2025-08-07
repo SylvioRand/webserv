@@ -432,7 +432,11 @@ void  Server::GETMethod_(std::string& uri, const int fd)
   std::string     extractUri;
   path = location.root + '/' + uri.substr(location.path.size());
   logger(LOG_DEBUG, "value of path [" + path + "]");
-  if (this->isFile_(path))
+  if( this->getFIleExtension_(path) == this->getCurrentLocation().cgi_extension
+      && !this->getCurrentLocation().cgi_extension.empty()
+      && !this->getCurrentLocation().cgi_path.empty())
+    this->handleCgiGetRequest_(path, fd);
+  else if (this->isFile_(path))
   {
     if (this->isReadable_(path))
       this->processReadableFile_(fd);
@@ -461,6 +465,43 @@ void  Server::GETMethod_(std::string& uri, const int fd)
 
   std::cout << this->_clients[fd]->getResponse().build() << std::endl;
 }
+
+std::string Server::getFIleExtension_(std::string& path)
+{
+  std::string fileName;
+  size_t      slashPos;
+
+  slashPos = path.rfind('/');
+  if (slashPos == std::string::npos)
+  {
+    fileName = path;
+    logger(LOG_WARNING, "Error detected, the path need to have at least one '/'");
+  }
+  else
+    fileName = path.substr(slashPos + 1);
+
+  size_t extStart = path.rfind('.');
+  if (extStart == std::string::npos)
+    return ("");
+  else
+    return (path.substr(extStart));
+  return ("");
+}
+
+bool Server::is_executable_file_(const std::string& path) {
+    struct stat st;
+    if (stat(path.c_str(), &st) == 0) {
+        // Vérifie si c'est un fichier régulier
+        if (S_ISREG(st.st_mode)) {
+            // Vérifie s'il est exécutable par quelqu’un (propriétaire, groupe ou autres)
+            if (st.st_mode & S_IXUSR || st.st_mode & S_IXGRP || st.st_mode & S_IXOTH) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 
 void  Server::respondIndexFilesUnreadable_(const int fd)
 {
@@ -583,7 +624,11 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
   std::string     localPath;
   std::string     extractUri;
   localPath = location.upload_dir + '/' + uri.substr(location.path.size());
-  if (directoryExists_(localPath))
+  if( this->getFIleExtension_(localPath) == this->getCurrentLocation().cgi_extension
+      && !this->getCurrentLocation().cgi_extension.empty()
+      && !this->getCurrentLocation().cgi_path.empty())
+    this->handleCgiPostRequest_(localPath, fd);
+  else if (directoryExists_(localPath))
   {
     // TODO on doit obligatoirement passer par poll meme si on upload un fichier
     // atooooooooooo

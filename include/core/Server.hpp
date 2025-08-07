@@ -117,6 +117,14 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::vector<int>                          _listener_fds;
     std::map<std::string, std::string>        _mimes;
     std::map<int, ServerConfigConstIterator>  _serverListeners;
+
+
+    // for cgi
+    void  handleCgiGetRequest_(std::string& path, const int fd);
+    void  handleCgiPostRequest_(std::string& path, const int fd);
+    std::string
+          getFIleExtension_(std::string& path);
+    bool  is_executable_file_(const std::string& path);
 };
 
 #endif

@@ -108,7 +108,6 @@ void  Config::createServerConfigManually(void)
   result.host = "127.0.0.2";
   result.port = 8080;
   this->_servers.push_back(result);
-
 }
 
 

@@ -6,6 +6,7 @@ SRC = ./src/main.cpp \
 			./src/core/Config.cpp \
 			./src/core/HttpRequest.cpp \
 			./src/core/HttpResponse.cpp \
+			./src/core/ServerCGI.cpp \
 			./src/utils/Logger.cpp \
 			./src/utils/Fileutils.cpp \
 			./src/utils/throwWithLog.cpp \
