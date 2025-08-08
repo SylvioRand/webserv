@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 14:56:20 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:36:16 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,7 +100,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
           getAllowedMethodsForLocation(void);
     std::string
           buildConnectionHeader(const int fd);
-    void  handleNoMatchingLocation(const int fd);
+    void  handleNoMatchingLocation_(const int fd);
     bool  hasCustomErrorPage(const int code, const int fd);
     std::string
           getPageCustomError(const int code, const int& fd, std::string& contentType);

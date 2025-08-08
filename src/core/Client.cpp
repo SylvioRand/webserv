@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 15:06:50 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:48:58 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,14 +70,18 @@ void  Client::sendData(std::string &localPath)
 {
   (void)localPath;
   logger(LOG_INFO, "Sending Data ...");
-    while (1)
-      ;
+  std::cout << "Status value [" << this->_response.getStatus() << "]" << std::endl;
   if (this->_response.getStatus() == 200)
   {
-    std::cout << "Status value [" << this->_response.getStatus() << std::endl;
-    while (1)
-      ;
   }
+  else
+  {
+    std::cout << "------------------------------------" << std::endl;
+    std::cout << this->_response.build() << std::endl;
+    std::cout << "------------------------------------" << std::endl;
+  }
+   while (1)
+    ;
 }
 
 bool  Client::isRequestComplete(void) const

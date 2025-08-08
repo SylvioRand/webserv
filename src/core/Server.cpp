@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 15:02:29 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:49:27 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -221,7 +221,7 @@ void  Server::handle_pollin_(int fd)
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
     saveMatchingLocation_(uri, serverConf);
     if (this->getCurrentLocation().path.empty())
-      this->handleNoMatchingLocation(fd);
+      this->handleNoMatchingLocation_(fd);
     else if (!isSupportedHttpMethod(method))
       this->methodNotSupported_(fd);
     else if (getCurrentLocation().methods.empty())
@@ -304,7 +304,7 @@ bool  Server::isHttpMethodValid_(std::string method)
 
 void  Server::methodNotSupported_(const int fd)
 {
-
+  logger(LOG_DEBUG, "In function methodNotSupported_");
   /*
   HTTP/1.1 501 Not Implemented
   Content-Type: text/plain
@@ -469,8 +469,6 @@ void  Server::GETMethod_(std::string& uri, const int fd)
     this->buildDirectoryListing_(fd);
   else if (!this->getCurrentLocation().autoindex)
     this->respondDirectoryListingForbidden(fd);
-
-  std::cout << this->_clients[fd]->getResponse().build() << std::endl;
 }
 
 std::string Server::getFileExtension_(std::string& path)
@@ -512,6 +510,7 @@ bool Server::is_executable_file_(const std::string& path) {
 
 void  Server::respondIndexFilesUnreadable_(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondIndexFilesUnreadable_");
   /*
    HTTP/1.1 403 Forbidden
   Content-Type: text/plain
@@ -543,6 +542,7 @@ void  Server::respondIndexFilesUnreadable_(const int fd)
 
 void  Server::respondNoIndexFileFound_(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondNoIndexFileFound_");
   /*
    HTTP/1.1 404 Not Found
   Content-Type: text/plain
@@ -575,6 +575,7 @@ void  Server::respondNoIndexFileFound_(const int fd)
 // TODO Zramahaz
 void  Server::serveIndexContent_(const std::string path, const int fd)
 {
+  logger(LOG_DEBUG, "In function serveIndexContent_");
   /*
   HTTP/1.1 200 OK
   Content-Type: [type MIME]
@@ -647,6 +648,7 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
 
 void  Server::saveUploadedFile_(const int fd)
 {
+  logger(LOG_DEBUG, "In function saveUploadedFile_");
   /*
   HTTP/1.1 201 Created
   Content-Type: text/plain
@@ -674,6 +676,7 @@ void  Server::saveUploadedFile_(const int fd)
 
 void  Server::respondMissingUploadDir(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondMissingUploadDir");
   /*
    HTTP/1.1 500 Internal Server Error
   Content-Type: text/plain
@@ -741,6 +744,7 @@ bool Server::directoryExists_(const std::string& path)
 
 void  Server::cannotDeleteFile_(const int fd, std::string& path)
 {
+  logger(LOG_DEBUG, "In function cannotDeleteFile_");
   /*
   HTTP/1.1 409 Conflict
   Content-Type: text/plain
@@ -772,6 +776,7 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
 
 void  Server::respondNotFound_(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondNotFound_");
   /*
   HTTP/1.1 404 Not Found
   Content-Type: text/plain
@@ -784,9 +789,13 @@ void  Server::respondNotFound_(const int fd)
 
   this->setStatus(404, fd);
   if (this->hasCustomErrorPage(404, fd))
+  {
     body = this->getPageCustomError(404, fd, contentType);
+  }
   else
+  {
     body = "404 Not Found: Invalid path.";
+  }
 
   std::string contentLength = toString(body.size());
   std::ostringstream headers;
@@ -804,6 +813,7 @@ void  Server::respondNotFound_(const int fd)
 
 void  Server::respondDirectoryListingForbidden(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondDirectoryListingForbidden");
   /*
   HTTP/1.1 403 Forbidden
   Content-Type: text/plain
@@ -835,6 +845,7 @@ void  Server::respondDirectoryListingForbidden(const int fd)
 
 void  Server::respondFileNotReadable(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondFileNotReadable");
   /*
   HTTP/1.1 403 Forbidden
   Content-Type: text/plain
@@ -866,6 +877,7 @@ void  Server::respondFileNotReadable(const int fd)
 
 void  Server::respondDeleteDirConflict_(const int fd)
 {
+  logger(LOG_DEBUG, "In function respondDeleteDirConflict_");
   /*
   HTTP/1.1 409 Conflict
   Content-Type: text/plain
@@ -899,6 +911,7 @@ void  Server::respondDeleteDirConflict_(const int fd)
 // TODO Zramahaz
 void  Server::buildDirectoryListing_(const int fd)
 {
+  logger(LOG_DEBUG, "In function buildDirectoryListing_");
   /*
   HTTP/1.1 200 OK
   Content-Type: text/html
@@ -941,6 +954,7 @@ void  Server::processReadableFile_(const int fd, const std::string& path)
 
 void  Server::onDeleteSuccess_(const int fd)
 {
+  logger(LOG_DEBUG, "In function onDeleteSuccess_");
   /*
   HTTP/1.1 204 No Content
   Content-Length: 0
@@ -961,6 +975,7 @@ void  Server::onDeleteSuccess_(const int fd)
 
 void  Server::methodNotAllowed_(const int fd)
 {
+  logger(LOG_DEBUG, "In function methodNotAllowed_");
   /*
   HTTP/1.1 405 Method Not Allowed
   Allow: 
@@ -1016,6 +1031,7 @@ std::string Server::getAllowedMethodsForLocation(void)
 
 void  Server::badRequest_(const int fd)
 {
+  logger(LOG_DEBUG, "In function badRequest_");
   /*
   HTTP/1.1 400 Bad Request
   Content-Type: text/plain
@@ -1045,8 +1061,9 @@ void  Server::badRequest_(const int fd)
   response.setBody(body);
 }
 
-void  Server::handleNoMatchingLocation(const int fd)
+void  Server::handleNoMatchingLocation_(const int fd)
 {
+  logger(LOG_DEBUG, "In function handleNoMatchingLocation_");
   /*
    HTTP/1.1 404 Not Found
   Content-Type: text/plain

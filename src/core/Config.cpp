@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/08 15:12:16 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:50:40 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,7 +71,7 @@ void Config::load_(void)
   }
   std::cout << std::endl;
   std::cout << std::endl;
-  printServers();
+  // printServers();
 
   // Uncomment this block once the configuration file parsing has been parsed.
   /*
@@ -83,24 +83,39 @@ void Config::load_(void)
   
   
   // you can use this function to add manually a serverconfig without parsing
-  void  Config::createServerConfigManually(void)
-  {
-    logger(LOG_INFO, "Creating server config manually");
-    ServerConfig  result;
-    result.server_name = "localhost";
-    result.client_max_body_size = 10485760;
-    result.error_pages[404] = "/404.html";
-    result.host = "127.0.0.3";
-    result.port = 8080;
-    this->_servers.push_back(result);
-    
-    ServerConfig  result2;
-    result.server_name = "localhost";
-    result.client_max_body_size = 10485760;
-    result.error_pages[404] = "/404.html";
-    result.host = "127.0.0.4";
-    result.port = 8080;
-    this->_servers.push_back(result);
+void  Config::createServerConfigManually(void)
+{
+  logger(LOG_INFO, "Creating server config manually");
+  ServerConfig  result;
+  result.server_name = "localhost";
+  result.client_max_body_size = 10485760;
+  result.error_pages[404] = "/404.html";
+  result.host = "127.0.0.1";
+  result.port = 8080;
+  result.root = "./srandria";
+  LocationConfig  loc;
+  LocationConfig  loc2;
+  loc.root = "./www/";
+  loc.path = "/";
+  loc.methods.push_back("GET");
+  loc.autoindex = false;
+  loc2.root = "./www/uploads/";
+  loc2.path = "/upload/";
+  loc.error_pages[405] = "/405.html";
+  result.locations["/"] = loc;
+  /*
+  result.locations["/upload"] = loc2;
+  */
+  this->_servers.push_back(result);
+
+  ServerConfig  result2;
+  result.server_name = "localhost";
+  result.client_max_body_size = 10485760;
+  result.error_pages[404] = "/404.html";
+  result.host = "127.0.0.2";
+  result.port = 8080;
+  this->_servers.push_back(result);
+
 }
 
 const std::vector<ServerConfig>& Config::getServers(void) const
