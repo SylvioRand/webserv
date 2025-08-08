@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 16:49:04 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 09:48:30 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 #include <cctype>
 #include <csignal>
 #include <fstream>
+#include <ios>
 #include <sstream>
 #include <string>
 #include <sys/socket.h>
@@ -28,7 +29,6 @@ Server::Server(const Config& config) : _config(config)
 
 Server::~Server(void)
 {
-
 }
 
 void  Server::start_server_(void)
@@ -235,9 +235,15 @@ void  Server::handle_pollin_(int fd)
       this->DELETEMethod_(uri, fd);
     else
       this->methodNotAllowed_(fd);
-    logger(LOG_DEBUG, "value of status '" + intToString(this->_clients[fd]->getResponse().getStatus()) + "'");
+    logger(LOG_DEBUG, "value of status '" + toString(this->_clients[fd]->getResponse().getStatus()) + "'");
+    this->saveHeaderAndBodySize(fd);
     this->setPollOut_(fd);
   }
+}
+
+void  Server::saveHeaderAndBodySize(const int& fd)
+{
+  this->_clients[fd]->getResponse().saveHeadersBodySize();
 }
 
 const LocationConfig& Server::getCurrentLocation(void)
@@ -316,7 +322,7 @@ void  Server::methodNotSupported_(const int fd)
   else
     body = "The HTTP method PUT is recognized but not supported by this server.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 501 Not Implemented\r\n"
@@ -350,6 +356,7 @@ void  Server::setPollOut_(int fd)
 void  Server::handle_pollout_(int fd)
 {
 //  logger(LOG_INFO, "IN POLLOUT FUNCTION");
+  
   this->_clients[fd]->sendData();
 }
 
@@ -432,14 +439,14 @@ void  Server::GETMethod_(std::string& uri, const int fd)
   std::string     extractUri;
   path = location.root + '/' + uri.substr(location.path.size());
   logger(LOG_DEBUG, "value of path [" + path + "]");
-  if( this->getFIleExtension_(path) == this->getCurrentLocation().cgi_extension
+  if (this->getFIleExtension_(path) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
     this->handleCgiGetRequest_(path, fd);
   else if (this->isFile_(path))
   {
     if (this->isReadable_(path))
-      this->processReadableFile_(fd);
+      this->processReadableFile_(fd, path);
     else
       this->respondFileNotReadable(fd);
   }
@@ -521,7 +528,7 @@ void  Server::respondIndexFilesUnreadable_(const int fd)
   else
     body = "403 Forbidden: No readable index file found in this directory.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 403 Forbidden\r\n"
@@ -552,7 +559,7 @@ void  Server::respondNoIndexFileFound_(const int fd)
   else
     body = "404 Not Found: No index file found in this directory.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 404 Not Found\r\n"
@@ -651,7 +658,7 @@ void  Server::saveUploadedFile_(const int fd)
   this->setStatus(201, fd);
   body = "File uploaded successfully.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 201 Created\r\n"
@@ -682,7 +689,7 @@ void  Server::respondMissingUploadDir(const int fd)
   else
     body = "Server misconfiguration: upload_dir not specified.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
@@ -748,7 +755,7 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
   else
     body = "Conflict: Unable to delete '" + path + "' due to current resource state";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 409 Conflict\r\n"
@@ -779,7 +786,7 @@ void  Server::respondNotFound_(const int fd)
   else
     body = "404 Not Found: Invalid path.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 404 Not Found\r\n"
@@ -811,7 +818,7 @@ void  Server::respondDirectoryListingForbidden(const int fd)
   else
     body = "403 Forbidden: Directory listing denied.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 403 Forbidden\r\n"
@@ -842,7 +849,7 @@ void  Server::respondFileNotReadable(const int fd)
   else
     body = "You do not have permission to read the requested file.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 403 Forbidden\r\n"
@@ -874,7 +881,7 @@ void  Server::respondDeleteDirConflict_(const int fd)
   else
     body = "Cannot delete resource due to a conflict with the current state.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 409 Conflict\r\n"
@@ -910,8 +917,23 @@ void  Server::buildDirectoryListing_(const int fd)
 }
 
 // TODO Zramahaz
-void  Server::processReadableFile_(const int fd)
+void  Server::processReadableFile_(const int fd, const std::string& path)
 {
+  std::string body;
+  std::string contentType = CT_TEXT;
+
+  std::string contentLength = toString(getFileSize(path));
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 200 Conflict\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+
   this->setStatus(200, fd);
 }
 
@@ -956,7 +978,7 @@ void  Server::methodNotAllowed_(const int fd)
   else
     body = "The method " + this->getMethod(fd) + " is not allowed on " + this->getCurrentLocation().path;
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 405 Method Not Allowed\r\n"
@@ -1008,7 +1030,7 @@ void  Server::badRequest_(const int fd)
   else
     body = "400 Bad Request: Invalid HTTP request syntax.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 400 Bad Request\r\n"
@@ -1040,7 +1062,7 @@ void  Server::handleNoMatchingLocation(const int fd)
   else
     body = "404 Not Found: The requested resource does not exist.";
 
-  std::string contentLength = intToString(body.size());
+  std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 404 Not Found\r\n"
@@ -1091,7 +1113,7 @@ std::string Server::getPageCustomError(const int code, const int& fd,
 
 std::string Server::readLocalFileToString(std::string path)
 {
-  std::ifstream file(path.c_str());
+  std::ifstream file(path.c_str(), std::ios::binary);
   if (file.is_open())
   {
     std::stringstream buffer;
@@ -1099,7 +1121,7 @@ std::string Server::readLocalFileToString(std::string path)
     file.close();
     return (buffer.str());
   }
-  logger(LOG_ERROR, "⚠️ Inconsistency detected: the error_page directive for status code 504 previously pointed to an accessible file, but the file can no longer be opened or read. Please verify that the file still exists and has the correct permissions.");
+  logger(LOG_ERROR, "⚠️ Could not open file: " + path);
   return ("");
 }
 
@@ -1133,7 +1155,7 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
         if (file.is_open())
         {
           file.close();
-          logger(LOG_INFO, intToString(code) + " page found and readable: [" + intToString(code) + "]");
+          logger(LOG_INFO, toString(code) + " page found and readable: [" + toString(code) + "]");
           return (true);
         }
         break ;
@@ -1153,7 +1175,7 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
         if (file.is_open())
         {
           file.close();
-          logger(LOG_INFO, intToString(code) + " page found and readable: [" + intToString(code) + "]");
+          logger(LOG_INFO, toString(code) + " page found and readable: [" + toString(code) + "]");
           return (true);
         }
         break ;

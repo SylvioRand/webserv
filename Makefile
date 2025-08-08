@@ -10,8 +10,8 @@ SRC = ./src/main.cpp \
 			./src/utils/Logger.cpp \
 			./src/utils/Fileutils.cpp \
 			./src/utils/throwWithLog.cpp \
-			./src/utils/intToString.cpp \
 			./src/utils/caseInsensitiveEqual.cpp \
+			./src/utils/getFileSize.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 

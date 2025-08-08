@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 15:04:26 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 10:44:44 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,7 +75,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isFile_(const std::string localPath) const;
     bool  isReadable_(const std::string localPath) const;
     void  buildDirectoryListing_(const int fd);
-    void  processReadableFile_(const int fd);
+    void  processReadableFile_(const int fd, const std::string& path);
     bool  directoryExists_(const std::string& path);
     void  onDeleteSuccess_(const int fd);
     void  cannotDeleteFile_(const int fd, std::string& path);
@@ -117,6 +117,9 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::vector<int>                          _listener_fds;
     std::map<std::string, std::string>        _mimes;
     std::map<int, ServerConfigConstIterator>  _serverListeners;
+    std::string
+          getFileContent(const std::string& path);
+    void  saveHeaderAndBodySize(const int& fd);
 
 
     // for cgi
