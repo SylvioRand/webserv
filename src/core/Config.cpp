@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/08 15:50:40 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 18:09:59 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,7 +71,7 @@ void Config::load_(void)
   }
   std::cout << std::endl;
   std::cout << std::endl;
-  // printServers();
+  printServers();
 
   // Uncomment this block once the configuration file parsing has been parsed.
   /*
@@ -185,7 +185,7 @@ std::vector<std::string>      Config::extractServerBlocks(const std::string& inp
         }
 
         if (depth != 0) {
-            throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + 174);
+            throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + toString(174));
         }
 
         blocks.push_back(input.substr(pos, i - pos));
@@ -265,6 +265,9 @@ void                          Config::applyDirectiveTolocationConfig(const std::
   if (key == "root") {
     location_config.root = value;
   }
+  else if (key == "client_max_body_size") {
+    location_config.client_max_body_size = parseSize(value);
+  }
   else if (key == "upload_dir") {
     location_config.upload_dir = value;
   }
@@ -309,6 +312,20 @@ void                          Config::applyDirectiveTolocationConfig(const std::
   }
 }
 
+void  Config::appendHeritedDirective(ServerConfig &config,
+    LocationConfig &location_config)
+{
+  location_config.root = config.root;
+  for (std::vector<std::string>::iterator it = config.index.begin();
+      it != config.index.end(); ++it){
+    location_config.indexs.push_back(*it);
+  }
+  for (std::map<int, std::string>::iterator it = config.error_pages.begin(); 
+      it != config.error_pages.end(); ++it){
+    location_config.error_pages[it->first] = it->second;
+  }
+  location_config.client_max_body_size = config.client_max_body_size;
+}
 
 void                          Config::parseLocationBlocks(std::string &block, ServerConfig &config)
 {
@@ -321,6 +338,7 @@ void                          Config::parseLocationBlocks(std::string &block, Se
   std::istringstream contentStream(block);
   std::string directive;
 
+  appendHeritedDirective(config, location_config);
   while (std::getline(contentStream, directive, ';')) {
     directive = trim(directive);
         

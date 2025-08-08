@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 17:04:42 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/08 18:04:27 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ struct LocationConfig {
     std::string                 cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")
     std::vector<std::string>    methods;        // Méthodes autorisées (GET, POST, DELETE)
     std::map<int, std::string>  error_pages;
+    size_t                      client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
 
     LocationConfig() : autoindex(false) {}
 };
@@ -74,6 +75,9 @@ class Config
     std::string               extractBlockContentLocation(const std::string &block, std::string &path);
     std::string               insertSpaceBeforeBrace(const std::string& line);
     void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
+
+void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
+
 
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path; // chemin pour le fichier de configuration
