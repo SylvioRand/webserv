@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/05 17:27:00 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:12:16 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ Config::Config(std::string filepath) : _config_path(filepath)
 {
   this->load_();
   // Skip this if the config has been parsed earlier
-  //this->createServerConfigManually();
+  this->createServerConfigManually();
   this->isValid_();
 }
 
@@ -90,18 +90,17 @@ void Config::load_(void)
     result.server_name = "localhost";
     result.client_max_body_size = 10485760;
     result.error_pages[404] = "/404.html";
-  result.host = "127.0.0.3";
-  result.port = 8080;
-  this->_servers.push_back(result);
-  
-  ServerConfig  result2;
-  result.server_name = "localhost";
-  result.client_max_body_size = 10485760;
-  result.error_pages[404] = "/404.html";
-  result.host = "127.0.0.4";
-  result.port = 8081;
-  this->_servers.push_back(result);
-  
+    result.host = "127.0.0.3";
+    result.port = 8080;
+    this->_servers.push_back(result);
+    
+    ServerConfig  result2;
+    result.server_name = "localhost";
+    result.client_max_body_size = 10485760;
+    result.error_pages[404] = "/404.html";
+    result.host = "127.0.0.4";
+    result.port = 8080;
+    this->_servers.push_back(result);
 }
 
 const std::vector<ServerConfig>& Config::getServers(void) const

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 09:47:40 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 14:24:42 by srandria         ###   ########.fr       */
 /*                                                                            */ /* ************************************************************************** */
 #include "../../include/core/HttpResponse.hpp"
 
@@ -51,7 +51,7 @@ int   HttpResponse::getStatus(void) const
   return (_status_code);
 }
 
-void  HttpResponse::saveHeadersBodySize(void)
+void  HttpResponse::saveHeadersAndBodySize(void)
 {
   if (!this->_bodySize)
     this->_bodySize = this->_body.size();

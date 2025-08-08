@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:07:55 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 09:44:11 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 14:26:47 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,8 +37,9 @@ class HttpResponse
     void  setBody(const std::string &content);
     void  sendFile(const std::string &path);
     int   getStatus(void) const;
-    void  saveHeadersBodySize(void);
-    std::string build(void) const;  // Retourne la réponse HTTP complète
+    void  saveHeadersAndBodySize(void);
+    std::string
+          build(void) const;  // Retourne la réponse HTTP complète
 };
 
 #endif

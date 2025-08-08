@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 09:48:30 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:02:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -192,8 +192,7 @@ void  Server::accept_new_client_(int listener_fd)
 
 void  Server::setNonBlocking_(int fd)
 {
-    int flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1)
+    int flags = fcntl(fd, F_GETFL, 0); if (flags == -1)
         throwWithLog(LOG_FATAL, "fcntl(F_GETFL) failed");
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
         throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
@@ -243,7 +242,7 @@ void  Server::handle_pollin_(int fd)
 
 void  Server::saveHeaderAndBodySize(const int& fd)
 {
-  this->_clients[fd]->getResponse().saveHeadersBodySize();
+  this->_clients[fd]->getResponse().saveHeadersAndBodySize();
 }
 
 const LocationConfig& Server::getCurrentLocation(void)
@@ -357,7 +356,7 @@ void  Server::handle_pollout_(int fd)
 {
 //  logger(LOG_INFO, "IN POLLOUT FUNCTION");
   
-  this->_clients[fd]->sendData();
+  this->_clients[fd]->sendData(this->_localPath);
 }
 
 // TODO
@@ -438,8 +437,9 @@ void  Server::GETMethod_(std::string& uri, const int fd)
   std::string     path;
   std::string     extractUri;
   path = location.root + '/' + uri.substr(location.path.size());
+  this->_localPath = path;
   logger(LOG_DEBUG, "value of path [" + path + "]");
-  if (this->getFIleExtension_(path) == this->getCurrentLocation().cgi_extension
+  if (this->getFileExtension_(path) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
     this->handleCgiGetRequest_(path, fd);
@@ -473,7 +473,7 @@ void  Server::GETMethod_(std::string& uri, const int fd)
   std::cout << this->_clients[fd]->getResponse().build() << std::endl;
 }
 
-std::string Server::getFIleExtension_(std::string& path)
+std::string Server::getFileExtension_(std::string& path)
 {
   std::string fileName;
   size_t      slashPos;
@@ -631,7 +631,8 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
   std::string     localPath;
   std::string     extractUri;
   localPath = location.upload_dir + '/' + uri.substr(location.path.size());
-  if( this->getFIleExtension_(localPath) == this->getCurrentLocation().cgi_extension
+  this->_localPath = localPath;
+  if( this->getFileExtension_(localPath) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
     this->handleCgiPostRequest_(localPath, fd);
@@ -710,6 +711,7 @@ void  Server::DELETEMethod_(std::string& uri, const int fd)
   std::string     localPath;
   std::string     extractUri;
   localPath = location.root + '/' + uri.substr(location.path.size());
+  this->_localPath = localPath;
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
   if (isFile_(localPath))
   {
@@ -919,20 +921,20 @@ void  Server::buildDirectoryListing_(const int fd)
 // TODO Zramahaz
 void  Server::processReadableFile_(const int fd, const std::string& path)
 {
-  std::string body;
-  std::string contentType = CT_TEXT;
+  std::cout << "it`s readable file " << std::endl;
+  std::string contentType = this->getContentTypeByFileExtension(path);
+  std::cout << "value of Content-Type " << contentType << std::endl;
 
   std::string contentLength = toString(getFileSize(path));
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 200 Conflict\r\n"
+  headers << this->getVersion(fd) << " 200 OK\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
-  response.setBody(body);
 
   this->setStatus(200, fd);
 }

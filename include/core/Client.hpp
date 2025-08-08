@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:18:58 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/31 09:27:24 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 15:02:15 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ class Client
     ~Client(void);
 
     void  readData(void);
-    void  sendData(void);
+    void  sendData(std::string& localPath);
     bool  isRequestComplete(void) const;
     const HttpRequest& getRequest(void) const;
     HttpResponse& getResponse(void);

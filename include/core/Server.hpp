@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 10:44:44 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/08 14:56:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,14 +109,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void loadMimeTypes(void);
     std::string
           getContentTypeByFileExtension(std::string path);
-
-    const Config&                             _config;
-    LocationConfig                            _currentLocation;
-    std::map<int, Client*>                    _clients;
-    std::vector<struct pollfd>                _pool_fds;
-    std::vector<int>                          _listener_fds;
-    std::map<std::string, std::string>        _mimes;
-    std::map<int, ServerConfigConstIterator>  _serverListeners;
     std::string
           getFileContent(const std::string& path);
     void  saveHeaderAndBodySize(const int& fd);
@@ -126,8 +118,17 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleCgiGetRequest_(std::string& path, const int fd);
     void  handleCgiPostRequest_(std::string& path, const int fd);
     std::string
-          getFIleExtension_(std::string& path);
+          getFileExtension_(std::string& path);
     bool  is_executable_file_(const std::string& path);
+
+    const Config&                             _config;
+    LocationConfig                            _currentLocation;
+    std::map<int, Client*>                    _clients;
+    std::vector<struct pollfd>                _pool_fds;
+    std::vector<int>                          _listener_fds;
+    std::map<std::string, std::string>        _mimes;
+    std::string                               _localPath;
+    std::map<int, ServerConfigConstIterator>  _serverListeners;
 };
 
 #endif
