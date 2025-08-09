@@ -65,16 +65,18 @@ void  Client::readData(void)
   }
 }
 
-// TODO by zramahaz
+// TODO
 void  Client::sendData(std::string &localPath)
 {
   (void)localPath;
   logger(LOG_INFO, "Sending Data ...");
-  std::cout << "Status value [" << this->_response.getStatus() << "]" << std::endl;
-  if (this->_response.getStatus() == 200)
-  {
-  }
-  else
+  logger(LOG_DEBUG, "Status value [" + toString(this->_response.getStatus()) + "]");
+  if (!this->_response.areHeadersFullySent())
+    this->_response.sendHeaders(this->_fd);
+  else if (!this->_response.isBodyFullySent())
+    this->_response.sendBody(this->_fd);
+
+  if (this->_response.getStatus())
   {
     std::cout << "------------------------------------" << std::endl;
     std::cout << this->_response.build() << std::endl;

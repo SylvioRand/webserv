@@ -198,7 +198,6 @@ void  Server::setNonBlocking_(int fd)
         throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
 }
 
-// TODO
 void  Server::handle_pollin_(int fd)
 {
   std::ostringstream os;
@@ -222,6 +221,8 @@ void  Server::handle_pollin_(int fd)
     saveMatchingLocation_(uri, serverConf);
     if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
+    else if (!this->getCurrentLocation().redirect.empty())
+      this->handleRedirect(fd);
     else if (!isSupportedHttpMethod(method))
       this->methodNotSupported_(fd);
     else if (getCurrentLocation().methods.empty())
@@ -300,7 +301,6 @@ bool  Server::isHttpMethodValid_(std::string method)
       || method == "HEAD" || method == "CONNECT" || method == "OPTIONS" || method == "TRACE"
       || method == "PATCH");
 }
-
 
 void  Server::methodNotSupported_(const int fd)
 {
@@ -572,7 +572,6 @@ void  Server::respondNoIndexFileFound_(const int fd)
   response.setBody(body);
 }
 
-// TODO Zramahaz
 void  Server::serveIndexContent_(const std::string path, const int fd)
 {
   logger(LOG_DEBUG, "In function serveIndexContent_");
@@ -584,7 +583,20 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
 
   [corps du fichier]
   */
-  (void)path;
+  std::string contentType = this->getContentTypeByFileExtension(path);
+  std::cout << "value of Content-Type " << contentType << std::endl;
+
+  std::string contentLength = toString(getFileSize(path));
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 200 OK\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+
   this->setStatus(200, fd);
 }
 
@@ -619,8 +631,6 @@ bool  Server::existsAtLeastOneIndexFile_(const std::string path)
   return (false);
 }
 
-
-// TODO On doit juste stoquer le contenu de body dan un fichier mais aussi on doit gerer le cgi
 void  Server::POSTMethod_(std::string& uri, const int fd)
 {
   LocationConfig  location = this->getCurrentLocation();
@@ -639,8 +649,7 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
     this->handleCgiPostRequest_(localPath, fd);
   else if (directoryExists_(localPath))
   {
-    // TODO on doit obligatoirement passer par poll meme si on upload un fichier
-    // atooooooooooo
+    // TODO Need to parse the body before saving correct data to save in specific file
     this->saveUploadedFile_(fd);
   }
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
@@ -789,13 +798,9 @@ void  Server::respondNotFound_(const int fd)
 
   this->setStatus(404, fd);
   if (this->hasCustomErrorPage(404, fd))
-  {
     body = this->getPageCustomError(404, fd, contentType);
-  }
   else
-  {
     body = "404 Not Found: Invalid path.";
-  }
 
   std::string contentLength = toString(body.size());
   std::ostringstream headers;
@@ -931,10 +936,9 @@ void  Server::buildDirectoryListing_(const int fd)
   this->setStatus(200, fd);
 }
 
-// TODO Zramahaz
 void  Server::processReadableFile_(const int fd, const std::string& path)
 {
-  std::cout << "it`s readable file " << std::endl;
+  logger(LOG_DEBUG, "In function processReadableFile_");
   std::string contentType = this->getContentTypeByFileExtension(path);
   std::cout << "value of Content-Type " << contentType << std::endl;
 
@@ -989,9 +993,7 @@ void  Server::methodNotAllowed_(const int fd)
 
   this->setStatus(405, fd);
   if (this->hasCustomErrorPage(405, fd))
-  {
     body = this->getPageCustomError(405, fd, contentType);
-  }
   else
     body = "The method " + this->getMethod(fd) + " is not allowed on " + this->getCurrentLocation().path;
 
@@ -1279,4 +1281,82 @@ std::string Server::getContentTypeByFileExtension(std::string path)
     }
   }
   return (CT_TEXT);
+}
+
+// TODO
+void  Server::handleRedirect(const int& fd)
+{
+  if (this->getCurrentLocation().redirect.size() > 1)
+    logger(LOG_WARNING, "Parsing error: invalid or unexpected configuration format.");
+  std::map<int, std::string>::const_iterator it = this->getCurrentLocation().redirect.begin();
+  if (this->isRedirectCode(it->first))
+  {
+    if (it->second.empty())
+      this->handleReturnWithoutUrl(fd);
+    else
+      this->respondRedirect_(fd, it);
+  }
+  else
+    ;
+}
+
+bool  Server::isRedirectCode(int statusCode)
+{
+    return (statusCode >= 300 && statusCode < 400);
+}
+
+void  Server::respondRedirect_(const int& fd,
+    const std::map<int, std::string>::const_iterator it)
+{
+  logger(LOG_DEBUG, "In function respondRedirect_");
+  /*
+  HTTP/1.1 Code Moved Permanently
+  Location: http://example.com/new-path
+  Content-Length: 0
+  Connection: close
+  */
+  std::ostringstream headers;
+
+  //headers << this->getVersion(fd) << " 200 OK\r\n"
+  headers << this->getVersion(fd) << " " << it->first << " Moved Permanently\r\n"
+    << "Location: " << it->second << "\r\n"
+    << CL << " " << "0" << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+
+  this->setStatus(it->first, fd);
+}
+
+void  Server::handleReturnWithoutUrl(const int& fd)
+{
+  logger(LOG_DEBUG, "In function handleReturnWithoutUrl");
+  /*
+  HTTP/1.1 403 Forbidden
+  Content-Type: text/plain
+  Content-Length: 24
+
+  Access denied: Forbidden.
+  */
+  std::string body;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(403, fd);
+  if (this->hasCustomErrorPage(403, fd))
+    body = this->getPageCustomError(403, fd, contentType);
+  else
+    body = "Access denied: Forbidden.";
+
+  std::string contentLength = toString(body.size());
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 403 Forbidden\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
 }

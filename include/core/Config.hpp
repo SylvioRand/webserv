@@ -23,7 +23,7 @@ struct LocationConfig {
     bool                        autoindex;      // Si true, liste les répertoires (comme "ls")
     std::vector<std::string>    indexs;          // Fichier par défaut (ex: "index.html")
     std::string                 upload_dir;     // Dossier pour les uploads (POST)
-    std::string                 redirect;       // URL de redirection (ex: "301 http://example.com")
+    std::map<int, std::string>  redirect;       // URL de redirection (ex: "301 http://example.com")
     std::string                 cgi_extension;  // Extension pour CGI (ex: ".py")
     std::string                 cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")
     std::vector<std::string>    methods;        // Méthodes autorisées (GET, POST, DELETE)

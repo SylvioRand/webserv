@@ -14,6 +14,7 @@
 #define HTTPRESPONSE_HPP
 
 #include "../utils/utils.hpp"
+#include <sys/types.h>
 
 class HttpResponse
 {
@@ -23,10 +24,13 @@ class HttpResponse
 
     int         _status_code;
     std::string _body;
+    std::string _bodyPath;
     std::string _headers;
-    size_t      _headersSize;
-    size_t      _bodySize;
-    size_t      _totalSent;
+    ssize_t     _headersSize;
+    ssize_t     _bodySize;
+    ssize_t     _headersOffset;
+    ssize_t     _bodyOffset;
+
 
   public:
     HttpResponse(void);
@@ -40,6 +44,11 @@ class HttpResponse
     void  saveHeadersAndBodySize(void);
     std::string
           build(void) const;  // Retourne la réponse HTTP complète
+    void  sendHeaders(const int& fd);
+    void  sendBody(const int& fd);
+    bool  areHeadersFullySent();
+    bool  isBodyFullySent();
+    void  setBodyPath(const std::string path);
 };
 
 #endif

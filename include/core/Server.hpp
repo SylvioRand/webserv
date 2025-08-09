@@ -112,6 +112,11 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::string
           getFileContent(const std::string& path);
     void  saveHeaderAndBodySize(const int& fd);
+    void  handleRedirect(const int& fd);
+    bool  isRedirectCode(int statusCode);
+    void  respondRedirect_(const int& fd,
+        const std::map<int, std::string>::const_iterator it);
+    void  handleReturnWithoutUrl(const int& fd);
 
 
     // for cgi

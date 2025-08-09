@@ -7,10 +7,14 @@
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
 /*   Updated: 2025/08/08 14:24:42 by srandria         ###   ########.fr       */
-/*                                                                            */ /* ************************************************************************** */
-#include "../../include/core/HttpResponse.hpp"
+/*                                                                            */
+/* ************************************************************************** */
 
-HttpResponse::HttpResponse(void) : _status_code(200)
+#include "../../include/core/HttpResponse.hpp"
+#include <sys/socket.h>
+
+HttpResponse::HttpResponse(void) : _status_code(200), _headersSize(0), 
+  _bodySize(0), _headersOffset(0), _bodyOffset(0)
 {
 }
 
@@ -58,3 +62,38 @@ void  HttpResponse::saveHeadersAndBodySize(void)
   this->_headersSize = this->_headers.size();
 }
 
+// TODO
+void HttpResponse::sendHeaders(const int& fd)
+{
+  logger(LOG_DEBUG, " -> Sendind HEADERS <-");
+  ssize_t bytesSent = send(fd, this->_headers.data() + this->_headersOffset,
+      _headers.size() - this->_headersOffset, 0);
+  if (bytesSent > 0)
+    this->_headersOffset += bytesSent;
+}
+
+// TODO
+void HttpResponse::sendBody(const int& fd)
+{
+  (void)fd;
+  logger(LOG_DEBUG, " -> Sending BODY <-");
+}
+
+bool  HttpResponse::areHeadersFullySent(void)
+{
+  if (this->_headersOffset == this->_headersSize)
+    return (true);
+  return (false);
+}
+
+bool  HttpResponse::isBodyFullySent(void)
+{
+  if (this->_bodyOffset == this->_bodySize)
+    return (true);
+  return (false);
+}
+
+void  HttpResponse::setBodyPath(const std::string path)
+{
+  this->_bodyPath = path;
+}
