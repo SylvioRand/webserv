@@ -46,7 +46,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& cfg);
     void  setNonBlocking_(int fd);
     void  setPollOut_(int fd);
-    //bool  fileOk(const std::string localPath) const;
     const std::vector<ServerConfig>&
           getServers(void);
     LocationConfig&
@@ -59,12 +58,10 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isSupportedHttpMethod(const std::string& method);
     void  setStatus(int code, int fd);
     int   getStatus(int code);
-
     std::string
           getMethod(int fd);
     std::string
           getVersion(int fd);
-
     void  saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg);
     const std::map<std::string, std::string>& getHeaders(int fd);
     std::string
@@ -83,7 +80,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  respondFileNotReadable(const int fd);
     void  respondDirectoryListingForbidden(const int fd);
     void  respondNotFound_(const int fd);
-
     void  badRequest_(const int fd);
     void  methodNotAllowed_(const int fd);
     void  methodNotSupported_(const int fd);
@@ -112,11 +108,14 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::string
           getFileContent(const std::string& path);
     void  saveHeaderAndBodySize(const int& fd);
-    void  handleRedirect(const int& fd);
-    bool  isRedirectCode(int statusCode);
+    void  handleRedirect_(const int& fd);
+    bool  isRedirectCode_(int statusCode);
     void  respondRedirect_(const int& fd,
         const std::map<int, std::string>::const_iterator it);
-    void  handleReturnWithoutUrl(const int& fd);
+    void  handleReturnWithoutUrl_(const int& fd);
+    bool  isValidHttpStatusCode_(const int& code);
+    void  respondNotImplemented_(const int& fd);
+
 
 
     // for cgi

@@ -1283,24 +1283,56 @@ std::string Server::getContentTypeByFileExtension(std::string path)
   return (CT_TEXT);
 }
 
-// TODO
-void  Server::handleRedirect(const int& fd)
+void  Server::handleRedirect_(const int& fd)
 {
   if (this->getCurrentLocation().redirect.size() > 1)
     logger(LOG_WARNING, "Parsing error: invalid or unexpected configuration format.");
   std::map<int, std::string>::const_iterator it = this->getCurrentLocation().redirect.begin();
-  if (this->isRedirectCode(it->first))
+  if (this->isRedirectCode_(it->first))
   {
     if (it->second.empty())
-      this->handleReturnWithoutUrl(fd);
+      this->handleReturnWithoutUrl_(fd);
     else
       this->respondRedirect_(fd, it);
   }
-  else
-    ;
+  else if (this->isValidHttpStatusCode_(it->first))
+    this->respondNotImplemented_(fd);
 }
 
-bool  Server::isRedirectCode(int statusCode)
+void  Server::respondNotImplemented_(const int& fd)
+{
+  logger(LOG_DEBUG, "In function respondNotImplemented_");
+  /*
+  HTTP/1.1 501 Not Implemented
+  Content-Type: text/plain
+  Content-Length: 35
+  Connection: close
+
+  501 Not Implemented: Unsupported return code
+  */
+  std::string body;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(501, fd);
+  if (this->hasCustomErrorPage(501, fd))
+    body = this->getPageCustomError(501, fd, contentType);
+  else
+    body = "501 Not Implemented: Unsupported return code";
+
+  std::string contentLength = toString(body.size());
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 501 Not Implemented\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+}
+
+bool  Server::isRedirectCode_(int statusCode)
 {
     return (statusCode >= 300 && statusCode < 400);
 }
@@ -1310,14 +1342,13 @@ void  Server::respondRedirect_(const int& fd,
 {
   logger(LOG_DEBUG, "In function respondRedirect_");
   /*
-  HTTP/1.1 Code Moved Permanently
+  HTTP/1.1 [Code] Moved Permanently
   Location: http://example.com/new-path
   Content-Length: 0
   Connection: close
   */
   std::ostringstream headers;
 
-  //headers << this->getVersion(fd) << " 200 OK\r\n"
   headers << this->getVersion(fd) << " " << it->first << " Moved Permanently\r\n"
     << "Location: " << it->second << "\r\n"
     << CL << " " << "0" << "\r\n"
@@ -1329,7 +1360,7 @@ void  Server::respondRedirect_(const int& fd,
   this->setStatus(it->first, fd);
 }
 
-void  Server::handleReturnWithoutUrl(const int& fd)
+void  Server::handleReturnWithoutUrl_(const int& fd)
 {
   logger(LOG_DEBUG, "In function handleReturnWithoutUrl");
   /*
@@ -1360,3 +1391,9 @@ void  Server::handleReturnWithoutUrl(const int& fd)
   response.setHeader(headers.str());
   response.setBody(body);
 }
+
+bool  Server::isValidHttpStatusCode_(const int& code)
+{
+  return (code >= 100 && code <= 599);
+}
+
