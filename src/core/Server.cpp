@@ -222,7 +222,7 @@ void  Server::handle_pollin_(int fd)
     if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
     else if (!this->getCurrentLocation().redirect.empty())
-      this->handleRedirect(fd);
+      this->handleRedirect_(fd);
     else if (!isSupportedHttpMethod(method))
       this->methodNotSupported_(fd);
     else if (getCurrentLocation().methods.empty())
@@ -235,7 +235,8 @@ void  Server::handle_pollin_(int fd)
       this->DELETEMethod_(uri, fd);
     else
       this->methodNotAllowed_(fd);
-    logger(LOG_DEBUG, "value of status '" + toString(this->_clients[fd]->getResponse().getStatus()) + "'");
+    logger(LOG_DEBUG,
+        "value of status '" + toString(this->_clients[fd]->getResponse().getStatus()) + "'");
     this->saveHeaderAndBodySize(fd);
     this->setPollOut_(fd);
   }

@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../../include/core/Config.hpp"
+#include <string>
 
 std::string cleanBlock(const std::string& raw);
 
@@ -130,15 +131,14 @@ bool Config::isValid_(void) const
     
     // Vérifie que chaque serveur a au moins un port d'écoute
     if (s.port < 1 || s.port > 65535)
-    return false;
+      return false;
     
     // Vérifie les tailles maximales de body
     if (s.client_max_body_size > MAX_BODY_LIMIT)
-    return false;
-    
+      return false;
     // Vérifie qu`on a bien location /`
     if (s.locations.find("/") == s.locations.end())
-    return false;
+      return false;
   }
   return true;
 }
@@ -171,60 +171,65 @@ std::vector<std::string>      Config::extractServerBlocks(const std::string& inp
     while ((pos = input.find("server", pos)) != std::string::npos) {
         // Vérifie que "server" est suivi d'une accolade
         size_t braceStart = input.find("{", pos);
-        if (braceStart == std::string::npos) {
-            throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + 161);
-        }
+      if (braceStart == std::string::npos)
+      {
+        throwWithLog(LOG_ERROR,
+            "Expected '{' after 'server' at position " + toString(161));
+      }
 
-        // Trouver la fin du bloc avec gestion des accolades imbriquées
-        int depth = 1;
-        size_t i = braceStart + 1;
-        while (i < input.size() && depth > 0) {
-            if (input[i] == '{') depth++;
-            else if (input[i] == '}') depth--;
-            ++i;
-        }
+      // Trouver la fin du bloc avec gestion des accolades imbriquées
+      int depth = 1;
+      size_t i = braceStart + 1;
+      while (i < input.size() && depth > 0) {
+        if (input[i] == '{') depth++;
+        else if (input[i] == '}') depth--;
+        ++i;
+      }
 
-        if (depth != 0) {
-            throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + toString(174));
-        }
+      if (depth != 0)
+      {
+        throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + toString(174));
+      }
 
-        blocks.push_back(input.substr(pos, i - pos));
-        pos = i; // Continuer après ce bloc
+      blocks.push_back(input.substr(pos, i - pos));
+      pos = i; // Continuer après ce bloc
     }
 
     return blocks;
 }
 
 
-std::vector<std::string>      Config::extractLocationBlocks(const std::string& content) {
-    std::vector<std::string> locations;
-    size_t pos = 0;
+std::vector<std::string>  Config::extractLocationBlocks(const std::string& content)
+{
+  std::vector<std::string> locations;
+  size_t pos = 0;
 
-    while ((pos = content.find("location", pos)) != std::string::npos) {
-        size_t braceStart = content.find("{", pos);
-        if (braceStart == std::string::npos) break;
+  while ((pos = content.find("location", pos)) != std::string::npos)
+  {
+    size_t braceStart = content.find("{", pos);
+    if (braceStart == std::string::npos) break;
 
-        int depth = 1;
-        size_t i = braceStart + 1;
-        while (i < content.size() && depth > 0) {
-            if (content[i] == '{') depth++;
-            else if (content[i] == '}') depth--;
-            ++i;
-        }
-
-        if (depth != 0) {
-            throwWithLog(LOG_ERROR, "Unmatched braces in location block");
-        }
-
-        locations.push_back(content.substr(pos, i - pos));
-        pos = i;
+    int depth = 1;
+    size_t i = braceStart + 1;
+    while (i < content.size() && depth > 0) {
+      if (content[i] == '{') depth++;
+      else if (content[i] == '}') depth--;
+      ++i;
     }
 
-    return locations;
+    if (depth != 0) {
+      throwWithLog(LOG_ERROR, "Unmatched braces in location block");
+    }
+
+    locations.push_back(content.substr(pos, i - pos));
+    pos = i;
+  }
+
+  return locations;
 }
 
 
-std::string                   Config::extractBlockContentLocation(const std::string &block, std::string &path)
+std::string Config::extractBlockContentLocation(const std::string &block, std::string &path)
 {
   size_t start = block.find('{');
   size_t end = block.rfind('}');
@@ -244,23 +249,25 @@ std::string                   Config::extractBlockContentLocation(const std::str
 }
 
 
-std::string                   Config::insertSpaceBeforeBrace(const std::string& line)
+std::string Config::insertSpaceBeforeBrace(const std::string& line)
 {
-    std::string result;
-    for (size_t i = 0; i < line.size(); ++i) {
-        if (line[i] == '{') {
-            // Si le caractère précédent n'est pas un espace
-            if (i > 0 && line[i - 1] != ' ') {
-                result += ' ';
-            }
-        }
-        result += line[i];
+  std::string result;
+  for (size_t i = 0; i < line.size(); ++i)
+  {
+    if (line[i] == '{')
+    {
+      // Si le caractère précédent n'est pas un espace
+      if (i > 0 && line[i - 1] != ' ') {
+        result += ' ';
+      }
     }
-    return result;
+    result += line[i];
+  }
+  return result;
 }
 
 
-void                          Config::applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config)
+void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config)
 {
   if (key == "root") {
     location_config.root = value;
@@ -278,7 +285,7 @@ void                          Config::applyDirectiveTolocationConfig(const std::
     location_config.cgi_path = value;
   }
   else if (key == "return") {
-    location_config.redirect = value;
+    //location_config.redirect = value; // TODO
   }
   else if (key == "autoindex" && value == "on") {
     location_config.autoindex = true;
@@ -520,7 +527,8 @@ void                          Config::printServers() const {
             std::cout << "|" << std::endl;
 
             std::cout << "server[" << i << "].locations[" << path << "].upload_dir = |" << lcfg.upload_dir << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].redirect = |" << lcfg.redirect << "|" << std::endl;
+            // TODO redirect has been modified on config.hpp file
+            //std::cout << "server[" << i << "].locations[" << path << "].redirect = |" << lcfg.redirect << "|" << std::endl;
             std::cout << "server[" << i << "].locations[" << path << "].cgi_extension = |" << lcfg.cgi_extension << "|" << std::endl;
             std::cout << "server[" << i << "].locations[" << path << "].cgi_path = |" << lcfg.cgi_path << "|" << std::endl;
 
