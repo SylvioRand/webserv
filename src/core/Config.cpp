@@ -17,6 +17,7 @@ std::string cleanBlock(const std::string& raw);
 
 Config::Config(std::string filepath) : _config_path(filepath)
 {
+  // TODO Uncoment this line when parsing fixed
   this->load_();
   // Skip this if the config has been parsed earlier
   this->createServerConfigManually();
@@ -304,7 +305,7 @@ void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::
     std::istringstream iss(value);
     std::string token;
     while (iss >> token) {
-        location_config.indexs.push_back(token);
+        location_config.methods.push_back(token);
     }
   }
   else if (key == "error_page") {

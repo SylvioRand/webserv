@@ -106,4 +106,3 @@ Client::ServerConfigConstIterator Client::getServerConfig(void) const
 {
   return (_cfg);
 }
-
