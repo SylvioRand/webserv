@@ -16,6 +16,7 @@
 #include "../core/HttpRequest.hpp"
 #include "../core/HttpResponse.hpp"
 #include "Config.hpp"
+#include <string>
 
 class Client
 {

@@ -1,15 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Client.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 15:48:58 by srandria         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
+/* ************************************************************************** */ /*                                                                            */ /*                                                        :::      ::::::::   */ /*   Client.cpp                                         :+:      :+:    :+:   */ /*                                                    +:+ +:+         +:+     */ /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */ /*   Updated: 2025/08/08 15:48:58 by srandria         ###   ########.fr       */ /*                                                                            */ /* ************************************************************************** */
 #include "../../include/core/Client.hpp"
 #include <cerrno>
 #include <cstddef>
@@ -76,12 +65,17 @@ void  Client::sendData(std::string &localPath)
   else if (!this->_response.isBodyFullySent())
     this->_response.sendBody(this->_fd);
 
-  if (this->_response.getStatus())
-  {
-    std::cout << "------------------------------------" << std::endl;
-    std::cout << this->_response.build() << std::endl;
-    std::cout << "------------------------------------" << std::endl;
-  }
+  // just to verify
+  std::cout << "------------------------------------" << std::endl;
+  std::cout << this->_response.build() << std::endl;
+  std::cout << "------------------------------------" << std::endl;
+
+  std::cout << "=======================" << std::endl;
+  std::cout << "file body path [" << this->_response.getBodyFilePath()
+    << "]"<< std::endl;
+  std::cout << "file body fd [" << this->_response.getBodyFileFd()
+    << "]"<< std::endl;
+  std::cout << "=======================" << std::endl;
    while (1)
     ;
 }

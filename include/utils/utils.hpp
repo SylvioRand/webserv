@@ -50,6 +50,6 @@ void        throwWithLog(LogLevel level, const std::string &msg);
 std::string intToString(int value);
 bool        caseInsensitiveEqual(const std::string& a,
             const std::string& b);
-off_t getFileSize(const std::string& path);
+off_t       getFileSize(const std::string& path);
 
 #endif

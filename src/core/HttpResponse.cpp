@@ -11,9 +11,10 @@
 /* ************************************************************************** */
 
 #include "../../include/core/HttpResponse.hpp"
+#include <string>
 #include <sys/socket.h>
 
-HttpResponse::HttpResponse(void) : _status_code(200), _headersSize(0), 
+HttpResponse::HttpResponse(void) : _status_code(200), _bodyFileFd(-1), _headersSize(0), 
   _bodySize(0), _headersOffset(0), _bodyOffset(0)
 {
 }
@@ -77,6 +78,19 @@ void HttpResponse::sendBody(const int& fd)
 {
   (void)fd;
   logger(LOG_DEBUG, " -> Sending BODY <-");
+  if (this->_bodyFilePath.empty())
+  {
+    logger(LOG_DEBUG, "you can directly send() body");
+  }
+  else if (this->_bodyFileFd != -1)
+  {
+    // TODO we need to close the client here
+    logger(LOG_WARNING, "Can't open the file to serve in HTTP response body.");
+  }
+  else
+  {
+    logger(LOG_DEBUG, "you can read() and send() body file content");
+  }
 }
 
 bool  HttpResponse::areHeadersFullySent(void)
@@ -93,7 +107,22 @@ bool  HttpResponse::isBodyFullySent(void)
   return (false);
 }
 
-void  HttpResponse::setBodyPath(const std::string path)
+void  HttpResponse::setBodyFilePath(const std::string path)
 {
-  this->_bodyPath = path;
+  this->_bodyFilePath = path;
+}
+
+void  HttpResponse::setBodyFileFd(const int& fd)
+{
+  this->_bodyFileFd = fd;
+}
+
+std::string& HttpResponse::getBodyFilePath(void)
+{
+  return (this->_bodyFilePath);
+}
+
+int& HttpResponse::getBodyFileFd(void)
+{
+  return (this->_bodyFileFd);
 }

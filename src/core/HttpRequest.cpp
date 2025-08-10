@@ -1,4 +1,4 @@
-/* ************************************************************************** */
+/* ***********************************else *************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   HttpRequest.cpp                                    :+:      :+:    :+:   */
@@ -37,6 +37,7 @@ void  HttpRequest::parse(const std::string &raw_request)
   this->parseHeader_(raw_request, pos);
   return ;
 }
+
 // TODO Need code formating
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
@@ -53,7 +54,10 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 
   std::getline(iss, line);
   if (!this->isValid())
+  {
+    this->_isComplete = true;
     return ;
+  }
   while (std::getline(iss, line) && line != "\r")
   {
     size_t      pos = line.find(":");

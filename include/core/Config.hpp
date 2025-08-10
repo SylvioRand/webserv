@@ -18,15 +18,15 @@
 #include "../utils/utils.hpp"
 
 struct LocationConfig {
-    std::string                 path;           // Chemin de la location (ex: "/", "/upload")
-    std::string                 root;           // Racine des fichiers pour cette location
-    bool                        autoindex;      // Si true, liste les répertoires (comme "ls")
-    std::vector<std::string>    indexs;          // Fichier par défaut (ex: "index.html")
-    std::string                 upload_dir;     // Dossier pour les uploads (POST)
-    std::map<int, std::string>  redirect;       // URL de redirection (ex: "301 http://example.com")
-    std::string                 cgi_extension;  // Extension pour CGI (ex: ".py")
-    std::string                 cgi_path;       // Chemin de l'interpréteur (ex: "/usr/bin/python3")
-    std::vector<std::string>    methods;        // Méthodes autorisées (GET, POST, DELETE)
+    std::string                 path;                 // Chemin de la location (ex: "/", "/upload")
+    std::string                 root;                 // Racine des fichiers pour cette location
+    bool                        autoindex;            // Si true, liste les répertoires (comme "ls")
+    std::vector<std::string>    indexs;               // Fichier par défaut (ex: "index.html")
+    std::string                 upload_dir;           // Dossier pour les uploads (POST)
+    std::map<int, std::string>  redirect;             // URL de redirection (ex: "301 http://example.com")
+    std::string                 cgi_extension;        // Extension pour CGI (ex: ".py")
+    std::string                 cgi_path;             // Chemin de l'interpréteur (ex: "/usr/bin/python3")
+    std::vector<std::string>    methods;              // Méthodes autorisées (GET, POST, DELETE)
     std::map<int, std::string>  error_pages;
     size_t                      client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
 
@@ -37,9 +37,11 @@ struct ServerConfig {
     std::string                           host;                 // Adresse d'écoute (ex: "127.0.0.1")
     int                                   port;                 // Port d'écoute (ex: 8080)
     std::string                           server_name;          // Nom du serveur (ex: "localhost")
-    std::string                           root;               // Racine par défaut des fichiers
-    std::vector<std::string>              index;                // Fichier index par défaut    
-    
+    bool                                  autoindex;            // Si true, liste les répertoires (comme "ls")
+    std::string                           upload_dir;           // Dossier pour les uploads (POST)
+    std::string                           root;                 // Racine par défaut des fichiers
+    std::vector<std::string>              indexs;                // Fichier index par défaut    
+    std::vector<std::string>              methods;              // Méthodes autorisées (GET, POST, DELETE)
     size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
     
     
@@ -54,9 +56,9 @@ class Config
     Config(const Config& other);
     Config& operator=(const Config& other);
 
-    void  load_(void);                       // Charge et parse le fichier de configuration
-    bool  isValid_(void) const;              // Vérifie si la configuration est valide
-    void  parseServerBlock_(std::string &content);           // parse de zramahaz
+    void  load_(void);                              // Charge et parse le fichier de configuration
+    bool  isValid_(void) const;                     // Vérifie si la configuration est valide
+    void  parseServerBlock_(std::string &content);  // parse de zramahaz
     void  skipWhiteSpace_(void);
     // you can use this function to add manually a serverconfig without parsing
     void  createServerConfigManually(void);

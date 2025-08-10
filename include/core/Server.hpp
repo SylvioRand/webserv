@@ -98,15 +98,13 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
           buildConnectionHeader(const int fd);
     void  handleNoMatchingLocation_(const int fd);
     bool  hasCustomErrorPage(const int code, const int fd);
-    std::string
-          getPageCustomError(const int code, const int& fd, std::string& contentType);
+    void  saveErrorBodyFilePath(const int code, const int& fd,
+        std::string& contentType, std::string& contentLength);
     std::string
           readLocalFileToString(std::string path);
     void loadMimeTypes(void);
     std::string
           getContentTypeByFileExtension(std::string path);
-    std::string
-          getFileContent(const std::string& path);
     void  saveHeaderAndBodySize(const int& fd);
     void  handleRedirect_(const int& fd);
     bool  isRedirectCode_(int statusCode);
@@ -115,6 +113,9 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleReturnWithoutUrl_(const int& fd);
     bool  isValidHttpStatusCode_(const int& code);
     void  respondNotImplemented_(const int& fd);
+    void  setBodyFilePath(const int& fd, const std::string& path);
+    void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
+    void  openAndSaveBodyFileFd(const std::string& path, const int& fd);
 
 
 

@@ -324,8 +324,8 @@ void  Config::appendHeritedDirective(ServerConfig &config,
     LocationConfig &location_config)
 {
   location_config.root = config.root;
-  for (std::vector<std::string>::iterator it = config.index.begin();
-      it != config.index.end(); ++it){
+  for (std::vector<std::string>::iterator it = config.indexs.begin();
+      it != config.indexs.end(); ++it){
     location_config.indexs.push_back(*it);
   }
   for (std::map<int, std::string>::iterator it = config.error_pages.begin(); 
@@ -433,7 +433,7 @@ void                          Config::applyDirectiveToServerConfig(const std::st
     std::istringstream iss(value);
     std::string token;
     while (iss >> token) {
-        config.index.push_back(token);
+        config.indexs.push_back(token);
     }
   }
   else if (key == "error_page") {
@@ -500,9 +500,9 @@ void                          Config::printServers() const {
         std::cout << "server[" << i << "].root = |" << config.root << "|" << std::endl;
 
         std::cout << "server[" << i << "].index = |";
-        for (size_t j = 0; j < config.index.size(); ++j) {
-            std::cout << config.index[j];
-            if (j + 1 < config.index.size()) std::cout << ", ";
+        for (size_t j = 0; j < config.indexs.size(); ++j) {
+            std::cout << config.indexs[j];
+            if (j + 1 < config.indexs.size()) std::cout << ", ";
         }
         std::cout << "|" << std::endl;
 
