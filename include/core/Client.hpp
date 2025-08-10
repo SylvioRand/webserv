@@ -28,9 +28,10 @@ class Client
     void  readData(void);
     void  sendData(std::string& localPath);
     bool  isRequestComplete(void) const;
-    const HttpRequest& getRequest(void) const;
+    HttpRequest& getRequest(void);
     HttpResponse& getResponse(void);
     ServerConfigConstIterator getServerConfig(void) const;
+    void  clearBuffer(void);
 
   private:
     Client(void);

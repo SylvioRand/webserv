@@ -13,6 +13,8 @@
 #ifndef HTTPRESPONSE_HPP
 #define HTTPRESPONSE_HPP
 
+#define READ_CHUNK_SIZE 8192
+
 #include "../utils/utils.hpp"
 #include <string>
 #include <sys/types.h>
@@ -29,9 +31,13 @@ class HttpResponse
     std::string _body;
     std::string _headers;
     ssize_t     _headersSize;
-    ssize_t     _bodySize;
     ssize_t     _headersOffset;
-    ssize_t     _bodyOffset;
+    ssize_t     _bodySize;
+    char        _bodyBuffer[READ_CHUNK_SIZE];
+    ssize_t     _bufferSize;
+    ssize_t     _bufferOffset;
+    ssize_t     _bodyBytesSent;
+    bool        _keepAlive;
 
 
   public:
@@ -41,7 +47,6 @@ class HttpResponse
     void  setStatus(int code);
     void  setHeader(const std::string &content);
     void  setBody(const std::string &content);
-    void  sendFile(const std::string &path);
     int   getStatus(void) const;
     void  saveHeadersAndBodySize(void);
     std::string
@@ -54,7 +59,11 @@ class HttpResponse
     void  setBodyFileFd(const int& fd);
     std::string&
           getBodyFilePath(void);
-    int&   getBodyFileFd(void);
+    int&  getBodyFileFd(void);
+    void  setBodySize(const ssize_t& bodySize);
+    void  initializeState(void);
+    void  setKeepAliveStatus(bool value);
+    bool  isKeepAlive(void);
 };
 
 #endif

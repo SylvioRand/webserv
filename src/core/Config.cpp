@@ -73,7 +73,7 @@ void Config::load_(void)
   }
   std::cout << std::endl;
   std::cout << std::endl;
-  printServers();
+  //printServers();
 
   // Uncomment this block once the configuration file parsing has been parsed.
   /*

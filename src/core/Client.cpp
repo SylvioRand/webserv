@@ -76,8 +76,6 @@ void  Client::sendData(std::string &localPath)
   std::cout << "file body fd [" << this->_response.getBodyFileFd()
     << "]"<< std::endl;
   std::cout << "=======================" << std::endl;
-   while (1)
-    ;
 }
 
 bool  Client::isRequestComplete(void) const
@@ -85,7 +83,7 @@ bool  Client::isRequestComplete(void) const
   return (_request.isComplete());
 }
 
-const HttpRequest& Client::getRequest(void) const
+HttpRequest& Client::getRequest(void)
 {
   return (_request);
 }
@@ -99,4 +97,10 @@ HttpResponse& Client::getResponse(void)
 Client::ServerConfigConstIterator Client::getServerConfig(void) const
 {
   return (_cfg);
+}
+
+
+void  Client::clearBuffer(void)
+{
+  this->_buffer.clear();
 }

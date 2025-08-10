@@ -153,3 +153,15 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders(void) const
   return (_headers);
 }
 
+void HttpRequest::shiftBufferAfterRequest()
+{
+  this->_method.clear();
+  this->_path.clear();
+  this->_headers.clear();
+  this->_body.clear();
+  this->_version.clear();
+  this->_isComplete = false;
+  this->_bodyBytesRead = 0;
+  this->_contentLength = 0;
+}
+

@@ -29,6 +29,7 @@ class HttpRequest
     bool                                _isComplete;    // indique si la requete est completement recu
     size_t                              _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
     size_t                              _contentLength;
+
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 
   public:
@@ -44,6 +45,7 @@ class HttpRequest
     const std::string& getBody(void) const;
     const std::string& getPath(void) const;
     const std::map<std::string, std::string>& getHeaders(void) const;
+    void  shiftBufferAfterRequest(void);
 
 };
 

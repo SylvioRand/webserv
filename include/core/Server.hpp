@@ -116,6 +116,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  setBodyFilePath(const int& fd, const std::string& path);
     void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
     void  openAndSaveBodyFileFd(const std::string& path, const int& fd);
+    void  setBodySize(const int& fd, const ssize_t& bodySize);
+    void  setPollIn_(int fd);
 
 
 

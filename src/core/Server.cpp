@@ -36,7 +36,9 @@ void  Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
   this->create_all_listeners_();
-  while (true) { int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
+  while (true)
+  {
+    int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
 
@@ -187,7 +189,6 @@ void  Server::accept_new_client_(int listener_fd)
 
   this->setNonBlocking_(client_fd);
   _clients[client_fd] = new Client(client_fd, this->_serverListeners[listener_fd]);
-  _clients[client_fd];
   this->addFdToPoll_(client_fd);
 }
 
@@ -208,11 +209,12 @@ void  Server::handle_pollin_(int fd)
   (*client).readData();
   if ((*client).isRequestComplete())
   {
-    logger(LOG_FATAL, "request completed");
+    logger(LOG_DEBUG, "request completed");
     std::string method = this->getMethod(fd);
     if (!this->isHttpMethodValid_(method))
     {
       this->badRequest_(fd);
+      this->saveHeaderAndBodySize(fd);
       this->setPollOut_(fd);
       return ;
     }
@@ -237,8 +239,6 @@ void  Server::handle_pollin_(int fd)
       this->DELETEMethod_(uri, fd);
     else
       this->methodNotAllowed_(fd);
-    logger(LOG_DEBUG,
-        "value of status '" + toString(this->_clients[fd]->getResponse().getStatus()) + "'");
     this->saveHeaderAndBodySize(fd);
     this->setPollOut_(fd);
   }
@@ -286,10 +286,10 @@ bool  Server::isMethodAllowedForLocation(const std::string method)
         this->getCurrentLocation().methods.end(), method);
   if (it != this->getCurrentLocation().methods.end())
   {
-    std::cout << "method [" << method << "] is detected and allowed" << std::endl;
+    logger(LOG_DEBUG, "method [" + method + "] is detected and allowed");
     return (true);
   }
-  std::cout << "method [" << method << "] is detected but not allowed" << std::endl;
+  logger(LOG_DEBUG, "method [" + method + "] is detected but not allowed");
   return (false);
 }
 
@@ -357,20 +357,80 @@ void  Server::setPollOut_(int fd)
   logger(LOG_ERROR, "fd not found");
 }
 
+void  Server::setPollIn_(int fd)
+{
+  logger(LOG_INFO, "HANDLE POLL_IN");
+  this->_clients[fd]->getRequest().shiftBufferAfterRequest();
+  this->_clients[fd]->clearBuffer();
+  for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
+  {
+    if (it->fd == fd) { it->events = POLLIN;
+      std::ostringstream oss;
+
+      oss << "successfully set event to POLL_IN for fd [" << fd << "]";
+      logger(LOG_DEBUG, oss.str());
+
+      return ;
+    }
+  }
+  logger(LOG_ERROR, "fd not found");
+}
+
+
 // TODO
 void  Server::handle_pollout_(int fd)
 {
 //  logger(LOG_INFO, "IN POLLOUT FUNCTION");
   
   this->_clients[fd]->sendData(this->_localPath);
+  if (this->_clients[fd]->getResponse().areHeadersFullySent() &&
+      this->_clients[fd]->getResponse().isBodyFullySent())
+  {
+    std::cout << "tokony efa vita eh" << std::endl;
+    if (this->_clients[fd]->getResponse().isKeepAlive())
+    {
+      this->setPollIn_(fd);
+      this->_clients[fd]->getResponse().initializeState();
+    }
+    else
+      close_client_(fd);
+  }
 }
 
 // TODO
-void  Server::close_client_(int fd)
+void Server::close_client_(int fd)
 {
-  logger(LOG_INFO, "close client");
-  close(fd);
+    logger(LOG_INFO, "close client");
+
+    // 1. Chercher et supprimer le client
+    std::map<int, Client*>::iterator it = _clients.find(fd);
+    if (it != _clients.end())
+    {
+        delete it->second;  // Libère l'objet Client
+        _clients.erase(it); // Supprime l'entrée de la map
+    }
+
+    // 2. Fermer le fd système (fermer avant de l'enlever du poll)
+    close(fd);
+
+    // 3. Retirer le pollfd correspondant dans _pool_fds
+    std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
+    while (itPollFd != this->_pool_fds.end())
+    {
+        if (itPollFd->fd == fd)
+        {
+            // Supprimer cet élément du vecteur et arrêter la boucle
+            itPollFd = this->_pool_fds.erase(itPollFd);
+            break;  // Le fd ne doit être qu'une fois dans _pool_fds
+        }
+        else
+        {
+            ++itPollFd;
+        }
+    }
+    std::cout << "fin de la partie" << std::endl;
 }
+
 
 const std::map<std::string, std::string>& Server::getHeaders(int fd)
 {
@@ -981,6 +1041,7 @@ void  Server::processReadableFile_(const int fd, const std::string& path)
   std::cout << "value of Content-Type " << contentType << std::endl;
 
   std::string contentLength = toString(getFileSize(path));
+  this->setBodySize(fd, getFileSize(path));
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 200 OK\r\n"
@@ -1090,11 +1151,14 @@ void  Server::badRequest_(const int fd)
 
   this->setStatus(400, fd);
   if (this->hasCustomErrorPage(400, fd))
+  {
     this->saveErrorBodyFilePath(400, fd, contentType, contentLength);
+  }
   else
   {
     body = "400 Bad Request: Invalid HTTP request syntax.";
     contentLength = toString(body.size());
+    //this->setBodySize(fd, body.size());
   }
 
   std::ostringstream headers;
@@ -1154,16 +1218,17 @@ void Server::saveErrorBodyFilePath(const int code, const int& fd,
   {
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     std::map<int, std::string> errorPages = serverConf->error_pages;
-    for (std::map<int, std::string>::iterator it = errorPages.begin(); it != errorPages.end(); it++)
+    for (std::map<int, std::string>::iterator it = errorPages.begin();
+        it != errorPages.end(); it++)
     {
       if (it->first == code)
       {
         std::string path = serverConf->root + '/' + it->second;
         contentType = this->getContentTypeByFileExtension(path);
         contentLength = toString(getFileSize(path));
-        //this->_clients[fd]->getResponse().setBodyFilePath(path);
-        this->setBodyFilePath(fd, path);
         this->openAndSaveBodyFileFd(path, fd);
+        this->setBodySize(fd, getFileSize(path));
+        this->setBodyFilePath(fd, path);
         return ;
       }
     }
@@ -1171,16 +1236,17 @@ void Server::saveErrorBodyFilePath(const int code, const int& fd,
   else
   {
     std::map<int, std::string> errorPages = this->getCurrentLocation().error_pages;
-    for (std::map<int, std::string>::iterator it = errorPages.begin(); it != errorPages.end(); it++)
+    for (std::map<int, std::string>::iterator it = errorPages.begin();
+        it != errorPages.end(); it++)
     {
       if (it->first == code)
       {
         std::string path = this->getCurrentLocation().root + '/' + it->second;
         contentType = this->getContentTypeByFileExtension(path);
         contentLength = toString(getFileSize(path));
-        //this->_clients[fd]->getResponse().setBodyFilePath(path);
-        this->setBodyFilePath(fd, path);
         this->openAndSaveBodyFileFd(path, fd);
+        this->setBodySize(fd, getFileSize(path));
+        this->setBodyFilePath(fd, path);
         return ;
       }
     }
@@ -1207,14 +1273,30 @@ std::string Server::readLocalFileToString(std::string path)
 std::string Server::buildConnectionHeader(const int fd)
 {
   if (this->getVersion(fd) == "HTTP/1.0")
+  {
+    this->_clients[fd]->getResponse().setKeepAliveStatus(false);
     return "Connection: close\r\n\r\n";
+  }
 
   const std::map<std::string, std::string>& headers = this->getHeaders(fd);
   for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
   {
     if (caseInsensitiveEqual(it->first, "connection"))
-      return "Connection: " + it->second + "\r\n\r\n";
+    {
+      if (caseInsensitiveEqual(it->second, "close"))
+      {
+        this->_clients[fd]->getResponse().setKeepAliveStatus(false);
+        return "Connection: close\r\n\r\n";
+        //return "Connection: " + it->second + "\r\n\r\n";
+      }
+      else
+      {
+        this->_clients[fd]->getResponse().setKeepAliveStatus(true);
+        return "Connection: keep-alive\r\n\r\n";
+      }
+    }
   }
+  this->_clients[fd]->getResponse().setKeepAliveStatus(true);
   return "Connection: keep-alive\r\n\r\n";
 }
 
@@ -1487,11 +1569,6 @@ void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
   rootLocation.upload_dir = cfg->upload_dir;
   rootLocation.path = "root";
   rootLocation.root = cfg->root;
-
-  for (std::vector<std::string>::const_iterator it = rootLocation.indexs.begin();
-      it != rootLocation.indexs.end(); it++)
-    std::cout << "let`s verify the index" << *it << std::endl;
-  this->setCurrentLocation(rootLocation);
 }
 
 void  Server::openAndSaveBodyFileFd(const std::string& path, const int& clientFd)
@@ -1504,4 +1581,9 @@ void  Server::openAndSaveBodyFileFd(const std::string& path, const int& clientFd
     logger(LOG_FATAL,
         "Warning: The file should be readable but an issue was detected.");
   this->_clients[clientFd]->getResponse().setBodyFileFd(fd);
+}
+
+void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
+{
+  this->_clients[fd]->getResponse().setBodySize(bodySize);
 }
