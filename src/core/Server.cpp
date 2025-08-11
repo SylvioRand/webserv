@@ -32,105 +32,52 @@ Server::~Server(void)
 {
 }
 
-/*
-void  Server::start_server_(void)
+void Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
   this->create_all_listeners_();
+
   while (true)
   {
+    logger(LOG_DEBUG, "Waiting on poll...");
     int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
 
-    for (size_t i = 0; i < _pool_fds.size() && ready > 0; ++i)
+    // On itère à l'envers pour éviter les problèmes avec erase()
+    for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
     {
       if (_pool_fds[i].revents == 0)
         continue;
+
       --ready;
-
       int fd = _pool_fds[i].fd;
+      short revents = _pool_fds[i].revents;
 
-      if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end()
-          && (_pool_fds[i].revents & POLLIN))
+
+      // Si c'est un listener
+      if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end())
       {
-        this->accept_new_client_(fd);
+        if (revents & POLLIN)
+          this->accept_new_client_(fd);
       }
-      else if ((this->_clients).find(fd) != _clients.end())
+      // Sinon, c'est un client connu
+      else if (_clients.find(fd) != _clients.end())
       {
-        if (_pool_fds[i].revents & POLLIN)
+        if (revents & POLLIN)
           this->handle_pollin_(fd);
-        else if (_pool_fds[i].revents & POLLOUT)
-        {
+        if (revents & POLLOUT)
           this->handle_pollout_(fd);
-          while (1)
-            ;
-        }
-        else if (_pool_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
-        {
-          while (1)
-            ;
+        if (revents & (POLLERR | POLLHUP | POLLNVAL))
           this->close_client_(fd);
-        }
       }
+      else
+        this->close_client_(fd);
     }
+
+    logger(LOG_DEBUG, "Checking timeouts...");
     check_timout_();
-  }
 }
-*/
-
-void Server::start_server_(void)
-{
-    logger(LOG_INFO, "Server is starting");
-    this->create_all_listeners_();
-
-    while (true)
-    {
-        logger(LOG_DEBUG, "Waiting on poll...");
-        int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
-        if (ready == -1)
-            throwWithLog(LOG_FATAL, "poll() failed");
-
-        // On itère à l'envers pour éviter les problèmes avec erase()
-        for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
-        {
-            if (_pool_fds[i].revents == 0)
-                continue;
-
-            --ready;
-            int fd = _pool_fds[i].fd;
-            short revents = _pool_fds[i].revents;
-
-
-            // Si c'est un listener
-            if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end())
-            {
-                if (revents & POLLIN)
-                    this->accept_new_client_(fd);
-                else if (revents & (POLLERR | POLLHUP | POLLNVAL))
-                {
-                    // Rare, mais on pourrait recréer le listener ici si nécessaire
-                }
-            }
-            // Sinon, c'est un client connu
-            else if (_clients.find(fd) != _clients.end())
-            {
-                //bool close_needed = false;
-
-                if (revents & POLLIN)
-                    this->handle_pollin_(fd);
-                if (revents & POLLOUT)
-                    this->handle_pollout_(fd);
-                if (revents & (POLLERR | POLLHUP | POLLNVAL))
-                    this->close_client_(fd);
-            }
-            else
-                this->close_client_(fd);
-        }
-
-        logger(LOG_DEBUG, "Checking timeouts...");
-        check_timout_();
-    }
 }
 
 
