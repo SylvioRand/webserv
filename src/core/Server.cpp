@@ -32,6 +32,7 @@ Server::~Server(void)
 {
 }
 
+/*
 void  Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
@@ -59,15 +60,79 @@ void  Server::start_server_(void)
       {
         if (_pool_fds[i].revents & POLLIN)
           this->handle_pollin_(fd);
-        if (_pool_fds[i].revents & POLLOUT)
+        else if (_pool_fds[i].revents & POLLOUT)
+        {
           this->handle_pollout_(fd);
-        if (_pool_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+          while (1)
+            ;
+        }
+        else if (_pool_fds[i].revents & (POLLERR | POLLHUP | POLLNVAL))
+        {
+          while (1)
+            ;
           this->close_client_(fd);
+        }
       }
     }
     check_timout_();
   }
 }
+*/
+
+void Server::start_server_(void)
+{
+    logger(LOG_INFO, "Server is starting");
+    this->create_all_listeners_();
+
+    while (true)
+    {
+        logger(LOG_DEBUG, "Waiting on poll...");
+        int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
+        if (ready == -1)
+            throwWithLog(LOG_FATAL, "poll() failed");
+
+        // On itère à l'envers pour éviter les problèmes avec erase()
+        for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
+        {
+            if (_pool_fds[i].revents == 0)
+                continue;
+
+            --ready;
+            int fd = _pool_fds[i].fd;
+            short revents = _pool_fds[i].revents;
+
+
+            // Si c'est un listener
+            if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end())
+            {
+                if (revents & POLLIN)
+                    this->accept_new_client_(fd);
+                else if (revents & (POLLERR | POLLHUP | POLLNVAL))
+                {
+                    // Rare, mais on pourrait recréer le listener ici si nécessaire
+                }
+            }
+            // Sinon, c'est un client connu
+            else if (_clients.find(fd) != _clients.end())
+            {
+                //bool close_needed = false;
+
+                if (revents & POLLIN)
+                    this->handle_pollin_(fd);
+                if (revents & POLLOUT)
+                    this->handle_pollout_(fd);
+                if (revents & (POLLERR | POLLHUP | POLLNVAL))
+                    this->close_client_(fd);
+            }
+            else
+                this->close_client_(fd);
+        }
+
+        logger(LOG_DEBUG, "Checking timeouts...");
+        check_timout_();
+    }
+}
+
 
 // TODO
 void  Server::stop_server(void)
@@ -203,11 +268,13 @@ void  Server::setNonBlocking_(int fd)
 void  Server::handle_pollin_(int fd)
 {
   std::ostringstream os;
-  os << "HANDLE POLLIN FD ->" << fd;
+  os << "HANDLE POLLIN FD -> " << fd;
   logger(LOG_DEBUG, os.str());
+  this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   Client *client = this->_clients[fd];
   if (!(*client).readData())
   {
+    logger(LOG_DEBUG, "Cant` read data with readData()");
     close_client_(fd);
     return ;
   }
@@ -384,9 +451,10 @@ void  Server::setPollIn_(int fd)
 // TODO
 void  Server::handle_pollout_(int fd)
 {
-//  logger(LOG_INFO, "IN POLLOUT FUNCTION");
+  logger(LOG_INFO, "In handle_pollout_ FUNCTION");
   
   this->_clients[fd]->sendData(this->_localPath);
+  logger(LOG_DEBUG, "in handle_pollout_ function");
   if (this->_clients[fd]->getResponse().areHeadersFullySent() &&
       this->_clients[fd]->getResponse().isBodyFullySent())
   {
@@ -411,19 +479,22 @@ void Server::close_client_(int fd)
     delete it->second;
     _clients.erase(it);
   }
+  std::cout << "after removing client in _clients maps" << std::endl;
   close(fd);
-
+  std::cout << "after close(fd)" << std::endl;
   std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
   while (itPollFd != this->_pool_fds.end())
   {
     if (itPollFd->fd == fd)
     {
       itPollFd = this->_pool_fds.erase(itPollFd);
+      std::cout << "after removing client in poll" << std::endl;
       break;
     }
     else
       ++itPollFd;
   }
+  logger(LOG_DEBUG, "Out");
 }
 
 const std::map<std::string, std::string>& Server::getHeaders(int fd)
@@ -670,6 +741,8 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
   this->setStatus(200, fd);
   this->setBodyFilePath(fd, path);
   this->openAndSaveBodyFileFd(path, fd);
+  this->setBodySize(fd, getFileSize(path));
+  this->setBodyFilePath(fd, path);
 }
 
 bool  Server::hasIndexDirective_(void)

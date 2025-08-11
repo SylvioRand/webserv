@@ -155,6 +155,7 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders(void) const
 
 void HttpRequest::shiftBufferAfterRequest()
 {
+  logger(LOG_DEBUG, "in shiftBufferAfterRequest");
   this->_method.clear();
   this->_path.clear();
   this->_headers.clear();

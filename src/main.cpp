@@ -16,7 +16,7 @@
 
 int main(int argc, char **argv)
 {
-    // signal(SIGPIPE, SIG_IGN); // don`t need this`
+  signal(SIGPIPE, SIG_IGN); // don`t need this`
   (void)argv;
   if (argc != 2)
   {
