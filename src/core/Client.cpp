@@ -19,31 +19,26 @@ Client::~Client(void)
   }
 }
 
-void  Client::readData(void)
+bool  Client::readData(void)
 {
   char buf[8192];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
 
   std::cout << buf << std::endl;
+  // TODO verifier la valeur de retourn 
   if (bytes == -1)
   {
-    if (errno == EAGAIN || errno == EWOULDBLOCK)    // interdit selon le suket
-    {
-      logger(LOG_DEBUG, "end of reading content on fd");
-      return ;
-    }
-    logger(LOG_ERROR, "error while reading fd with recv [at readData(void) function]");
-    return ;
+    logger(LOG_ERROR, "[RECV] Failed to receive data from client");
+    return (false);
   }
-  if (bytes == 0)
+  else if (bytes == 0)
   {
-    logger(LOG_INFO, "the client has closed the connection");
-    return ;
+    logger(LOG_INFO, "Client closed the connection");
+    return (false);
   }
-  if (!this->_request.getMethod().size())
+  if (this->_request.getMethod().empty())
   {
-
     this->_buffer.append(buf);
     this->_request.parse(_buffer);
   }
@@ -52,6 +47,7 @@ void  Client::readData(void)
     logger(LOG_INFO, "POST detected");
     this->_request.appendToBody(buf);
   }
+  return (true);
 }
 
 // TODO

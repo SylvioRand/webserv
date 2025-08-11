@@ -206,7 +206,11 @@ void  Server::handle_pollin_(int fd)
   os << "HANDLE POLLIN FD ->" << fd;
   logger(LOG_DEBUG, os.str());
   Client *client = this->_clients[fd];
-  (*client).readData();
+  if (!(*client).readData())
+  {
+    close_client_(fd);
+    return ;
+  }
   if ((*client).isRequestComplete())
   {
     logger(LOG_DEBUG, "request completed");
@@ -397,40 +401,30 @@ void  Server::handle_pollout_(int fd)
   }
 }
 
-// TODO
 void Server::close_client_(int fd)
 {
-    logger(LOG_INFO, "close client");
+  logger(LOG_INFO, "close client");
 
-    // 1. Chercher et supprimer le client
-    std::map<int, Client*>::iterator it = _clients.find(fd);
-    if (it != _clients.end())
+  std::map<int, Client*>::iterator it = _clients.find(fd);
+  if (it != _clients.end())
+  {
+    delete it->second;
+    _clients.erase(it);
+  }
+  close(fd);
+
+  std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
+  while (itPollFd != this->_pool_fds.end())
+  {
+    if (itPollFd->fd == fd)
     {
-        delete it->second;  // Libère l'objet Client
-        _clients.erase(it); // Supprime l'entrée de la map
+      itPollFd = this->_pool_fds.erase(itPollFd);
+      break;
     }
-
-    // 2. Fermer le fd système (fermer avant de l'enlever du poll)
-    close(fd);
-
-    // 3. Retirer le pollfd correspondant dans _pool_fds
-    std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
-    while (itPollFd != this->_pool_fds.end())
-    {
-        if (itPollFd->fd == fd)
-        {
-            // Supprimer cet élément du vecteur et arrêter la boucle
-            itPollFd = this->_pool_fds.erase(itPollFd);
-            break;  // Le fd ne doit être qu'une fois dans _pool_fds
-        }
-        else
-        {
-            ++itPollFd;
-        }
-    }
-    std::cout << "fin de la partie" << std::endl;
+    else
+      ++itPollFd;
+  }
 }
-
 
 const std::map<std::string, std::string>& Server::getHeaders(int fd)
 {

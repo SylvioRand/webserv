@@ -25,7 +25,7 @@ class Client
     Client(int fd, ServerConfigConstIterator cfg_ite);
     ~Client(void);
 
-    void  readData(void);
+    bool  readData(void);
     void  sendData(std::string& localPath);
     bool  isRequestComplete(void) const;
     HttpRequest& getRequest(void);
