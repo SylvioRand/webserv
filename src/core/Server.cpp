@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 12:41:47 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 15:17:32 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -53,7 +53,6 @@ void Server::start_server_(void)
       --ready;
       int fd = _pool_fds[i].fd;
       short revents = _pool_fds[i].revents;
-
 
       // Si c'est un listener
       if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end())

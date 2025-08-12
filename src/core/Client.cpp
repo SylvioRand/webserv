@@ -6,15 +6,17 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 12:59:19 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 15:35:36 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Client.hpp"
 #include <cerrno>
 #include <cstddef>
+#include <cstdio>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 
 Client::Client(int fd, ServerConfigConstIterator cfg) : _fd(fd),
