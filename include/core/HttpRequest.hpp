@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 09:06:24 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 10:30:07 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,9 +14,12 @@
 #define HTTPREQUEST_HPP
 
 #include "../utils/utils.hpp"
+#include "../../include/core/Config.hpp"
 
 class HttpRequest
 {
+
+  typedef typename std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
   private:
     HttpRequest(const HttpRequest& other);
     HttpRequest& operator=(const HttpRequest &other);
@@ -29,6 +32,7 @@ class HttpRequest
     bool                                _isComplete;    // indique si la requete est completement recu
     size_t                              _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
     size_t                              _contentLength;
+    ServerConfigConstIterator           _serverConf;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 
@@ -46,7 +50,15 @@ class HttpRequest
     const std::string& getPath(void) const;
     const std::map<std::string, std::string>& getHeaders(void) const;
     void  shiftBufferAfterRequest(void);
-
+    bool  isBodySizeAllowed(void);
+    void  markRequestComplete(void);
+    void  setServerConf(ServerConfigConstIterator serverConf);
+    ServerConfigConstIterator
+      getServerConf(void);
+    LocationConfig
+      getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg);
+    LocationConfig
+      createAndReturnRootLocation_(const ServerConfigConstIterator& cfg);
 };
 
 #endif

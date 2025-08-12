@@ -6,14 +6,12 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 18:04:27 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/12 08:22:17 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
-
-#define MAX_BODY_LIMIT (100 * 1024 * 1024) 
 
 #include "../utils/utils.hpp"
 

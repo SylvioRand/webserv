@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 15:36:16 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 09:02:08 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -117,7 +117,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
     void  openAndSaveBodyFileFd(const std::string& path, const int& fd);
     void  setBodySize(const int& fd, const ssize_t& bodySize);
-    void  setPollIn_(int fd);
+    void  setPollIn_(const int& fd);
+    void  respondPayloadTooLarge(const int& fd);
 
 
 

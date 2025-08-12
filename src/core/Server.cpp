@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 17:45:37 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 12:41:47 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,7 +77,7 @@ void Server::start_server_(void)
 
     logger(LOG_DEBUG, "Checking timeouts...");
     check_timout_();
-}
+  }
 }
 
 
@@ -227,6 +227,14 @@ void  Server::handle_pollin_(int fd)
   }
   if ((*client).isRequestComplete())
   {
+    this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
+    if (this->getMethod(fd) == "POST" && !this->_clients[fd]->getRequest().isBodySizeAllowed())
+    {
+      this->respondPayloadTooLarge(fd);
+      this->saveHeaderAndBodySize(fd);
+      this->setPollOut_(fd);
+      return ;
+    }
     logger(LOG_DEBUG, "request completed");
     std::string method = this->getMethod(fd);
     if (!this->isHttpMethodValid_(method))
@@ -375,7 +383,7 @@ void  Server::setPollOut_(int fd)
   logger(LOG_ERROR, "fd not found");
 }
 
-void  Server::setPollIn_(int fd)
+void  Server::setPollIn_(const int& fd)
 {
   logger(LOG_INFO, "HANDLE POLL_IN");
   this->_clients[fd]->getRequest().shiftBufferAfterRequest();
@@ -704,7 +712,7 @@ std::string Server::getAccessibleIndexPath_(const std::string& path)
   for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().indexs.begin();
       it != this->getCurrentLocation().indexs.end(); it++)
   {
-    std::string resultPath = path + *it;
+    std::string resultPath = path + '/' + *it;
     if (this->isFile_(resultPath) && this->isReadable_(resultPath))
       return(resultPath);
   }
@@ -716,7 +724,7 @@ bool  Server::existsAtLeastOneIndexFile_(const std::string path)
   for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().indexs.begin();
       it != this->getCurrentLocation().indexs.end(); it++)
   {
-    std::string resultPath = path + "/" + *it;
+    std::string resultPath = path + '/' + *it;
     if (this->isFile_(resultPath))
       return(true);
   }
@@ -1165,14 +1173,11 @@ void  Server::badRequest_(const int fd)
 
   this->setStatus(400, fd);
   if (this->hasCustomErrorPage(400, fd))
-  {
     this->saveErrorBodyFilePath(400, fd, contentType, contentLength);
-  }
   else
   {
     body = "400 Bad Request: Invalid HTTP request syntax.";
     contentLength = toString(body.size());
-    //this->setBodySize(fd, body.size());
   }
 
   std::ostringstream headers;
@@ -1286,7 +1291,8 @@ std::string Server::readLocalFileToString(std::string path)
 
 std::string Server::buildConnectionHeader(const int fd)
 {
-  if (this->getVersion(fd) == "HTTP/1.0")
+  if (this->getVersion(fd) == "HTTP/1.0"
+      || !this->_clients[fd]->getRequest().isBodySizeAllowed())
   {
     this->_clients[fd]->getResponse().setKeepAliveStatus(false);
     return "Connection: close\r\n\r\n";
@@ -1583,6 +1589,7 @@ void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
   rootLocation.upload_dir = cfg->upload_dir;
   rootLocation.path = "root";
   rootLocation.root = cfg->root;
+  this->setCurrentLocation(rootLocation);
 }
 
 void  Server::openAndSaveBodyFileFd(const std::string& path, const int& clientFd)
@@ -1600,4 +1607,39 @@ void  Server::openAndSaveBodyFileFd(const std::string& path, const int& clientFd
 void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
 {
   this->_clients[fd]->getResponse().setBodySize(bodySize);
+}
+
+void  Server::respondPayloadTooLarge(const int& fd)
+{
+  logger(LOG_DEBUG, "In function respondPayloadTooLarge");
+  /*
+  HTTP/1.1 413 Request Entity Too Large
+  Content-Type: text/plain
+  Content-Length: 42
+
+  413 Request Entity Too Large
+  */
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(413, fd);
+  if (this->hasCustomErrorPage(413, fd))
+    this->saveErrorBodyFilePath(413, fd, contentType, contentLength);
+  else
+  {
+    body = "413 Request Entity Too Large";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 413 Request Entity Too Large\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
 }

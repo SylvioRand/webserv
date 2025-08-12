@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/08 18:09:59 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/12 10:00:31 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -135,8 +135,10 @@ bool Config::isValid_(void) const
       return false;
     
     // Vérifie les tailles maximales de body
+    /*
     if (s.client_max_body_size > MAX_BODY_LIMIT)
       return false;
+      */
     // Vérifie qu`on a bien location /`
     if (s.locations.find("/") == s.locations.end())
       return false;

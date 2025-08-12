@@ -6,13 +6,13 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 09:10:16 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 09:59:12 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef UTILS_HPP
 #define UTILS_HPP
-
+ 
 #define COLOR_RESET   "\033[0m"
 #define COLOR_INFO    "\033[36m"    // Cyan
 #define COLOR_DEBUG   "\033[90m"    // Gris clair

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/05 09:08:03 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/12 10:44:59 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -166,3 +166,84 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_contentLength = 0;
 }
 
+bool  HttpRequest::isBodySizeAllowed(void)
+{
+  logger(LOG_DEBUG, "In function isBodySizeAllowed");
+  std::ostringstream oss;
+
+  LocationConfig  location = this->getMatchingLocation_(this->_path, this->getServerConf());
+  oss << "Content-Length [" << this->_contentLength << "]\n" <<
+    "client_max_body_size [" << location.client_max_body_size << "]";
+  logger(LOG_DEBUG, oss.str());
+  
+  if (this->_contentLength > location.client_max_body_size)
+  {
+    logger(LOG_DEBUG, "Too large");
+    return (false);
+  }
+  logger(LOG_DEBUG, "Body size is allowed.");
+  return (true);
+}
+
+LocationConfig HttpRequest::getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg)
+{
+  LocationConfig  best_match;
+  size_t best_length = 0;
+
+  std::map<std::string, LocationConfig> locations = cfg->locations;
+  for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
+  {
+    const std::string& path = it->first;
+    if (uri.substr(0, path.size()) == path && path.size() > best_length)
+    {
+      best_match = it->second;
+      best_length = path.size();
+    }
+  }
+  if (best_length == 0)
+  {
+    logger(LOG_DEBUG, "root location will be created and used");
+    return (this->createAndReturnRootLocation_(cfg));
+  }
+  logger(LOG_DEBUG, "matching LocationConfig found, path [" + best_match.path + "]");
+  return (best_match);
+}
+
+LocationConfig  HttpRequest::createAndReturnRootLocation_(const ServerConfigConstIterator& cfg)
+{
+  LocationConfig  rootLocation;
+
+  for (std::vector<std::string>::const_iterator it = cfg->indexs.begin();
+      it != cfg->indexs.end(); it++)
+    rootLocation.indexs.push_back((*it));
+
+  for (std::vector<std::string>::const_iterator it = cfg->methods.begin();
+      it != cfg->methods.end(); it++)
+    rootLocation.methods.push_back((*it));
+
+  for (std::map<int, std::string>::const_iterator it = cfg->error_pages.begin();
+      it != cfg->error_pages.end(); it++)
+    rootLocation.error_pages[it->first] = it->second;
+
+  rootLocation.autoindex = cfg->autoindex;
+  rootLocation.client_max_body_size = cfg->client_max_body_size;
+  rootLocation.upload_dir = cfg->upload_dir;
+  rootLocation.path = "root";
+  rootLocation.root = cfg->root;
+  return (rootLocation);
+}
+
+void  HttpRequest::markRequestComplete(void)
+{
+  this->_isComplete = true;
+}
+
+void  HttpRequest::setServerConf(ServerConfigConstIterator serverConf)
+{
+  this->_serverConf = serverConf;
+}
+
+HttpRequest::ServerConfigConstIterator  HttpRequest::getServerConf(void)
+{
+  return (this->_serverConf);
+}

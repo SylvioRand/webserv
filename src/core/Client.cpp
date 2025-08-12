@@ -1,14 +1,27 @@
-/* ************************************************************************** */ /*                                                                            */ /*                                                        :::      ::::::::   */ /*   Client.cpp                                         :+:      :+:    :+:   */ /*                                                    +:+ +:+         +:+     */ /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */ /*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */ /*   Updated: 2025/08/08 15:48:58 by srandria         ###   ########.fr       */ /*                                                                            */ /* ************************************************************************** */
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Client.cpp                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
+/*   Updated: 2025/08/12 12:59:19 by srandria         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../../include/core/Client.hpp"
 #include <cerrno>
 #include <cstddef>
 #include <sys/socket.h>
 #include <sys/types.h>
 
+
 Client::Client(int fd, ServerConfigConstIterator cfg) : _fd(fd),
   _lastActivity(time(NULL)), _cfg(cfg)
 {
 }
+
 
 // TODO Make sure we handle everything to avoid memory leaks
 Client::~Client(void)
@@ -26,7 +39,6 @@ bool  Client::readData(void)
   bytes = recv(_fd, buf, sizeof(buf), 0);
 
   std::cout << buf << std::endl;
-  // TODO verifier la valeur de retourn 
   if (bytes == -1)
   {
     logger(LOG_ERROR, "[RECV] Failed to receive data from client");
@@ -45,7 +57,10 @@ bool  Client::readData(void)
   else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
     logger(LOG_INFO, "POST detected");
-    this->_request.appendToBody(buf);
+    if (this->getRequest().isBodySizeAllowed())
+      this->_request.appendToBody(buf);
+    else
+      this->_request.isComplete();
   }
   return (true);
 }
