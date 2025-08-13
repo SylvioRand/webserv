@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/08 14:24:42 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/13 11:51:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -74,7 +74,8 @@ void HttpResponse::sendHeaders(const int &fd) {
 }
 
 // TODO
-void HttpResponse::sendBody(const int &fd) {
+void HttpResponse::sendBody(const int &fd)
+{
   logger(LOG_DEBUG, " -> Sending BODY <-");
   if (this->_bodyFilePath.empty()) {
     ssize_t bytesSent = send(fd, this->_body.data() + this->_bodyBytesSent,
@@ -105,11 +106,15 @@ void HttpResponse::sendBody(const int &fd) {
           logger(LOG_DEBUG, "bytesSent == 0");
         else if (bytesSent == -1)
           logger(LOG_DEBUG, "bytesSent == -1");
-      } else {
-        // TODO we need potentiall do somthing in this case
+      }
+      else 
+      {
+        // TODO we need potentially do something in this case
         logger(LOG_ERROR, "Warning, nothing has been read");
       }
-    } else {
+    }
+    else
+    {
       logger(LOG_DEBUG, "reading file ...");
       ssize_t bytesSent = send(fd, this->_bodyBuffer + this->_bufferOffset,
                                this->_bufferSize - this->_bufferOffset, 0);
@@ -117,7 +122,8 @@ void HttpResponse::sendBody(const int &fd) {
         logger(LOG_DEBUG, "bytesSent > 0");
         this->_bodyBytesSent += bytesSent;
         this->_bufferOffset += bytesSent;
-      } else if (bytesSent == 0)
+      }
+      else if (bytesSent == 0)
         logger(LOG_DEBUG, "bytesSent == 0");
       else if (bytesSent == -1)
         logger(LOG_DEBUG, "bytesSent == -1");
