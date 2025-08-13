@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 15:17:32 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/13 15:23:15 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,6 @@ void Server::start_server_(void)
       else
         this->close_client_(fd);
     }
-
     logger(LOG_DEBUG, "Checking timeouts...");
     check_timout_();
   }
@@ -227,13 +226,6 @@ void  Server::handle_pollin_(int fd)
   if ((*client).isRequestComplete())
   {
     this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
-    if (this->getMethod(fd) == "POST" && !this->_clients[fd]->getRequest().isBodySizeAllowed())
-    {
-      this->respondPayloadTooLarge(fd);
-      this->saveHeaderAndBodySize(fd);
-      this->setPollOut_(fd);
-      return ;
-    }
     logger(LOG_DEBUG, "request completed");
     std::string method = this->getMethod(fd);
     if (!this->isHttpMethodValid_(method))
@@ -262,6 +254,8 @@ void  Server::handle_pollin_(int fd)
       this->POSTMethod_(uri, fd);
     else if (method == "DELETE" && this->isMethodAllowedForLocation("DELETE"))
       this->DELETEMethod_(uri, fd);
+    else if (this->getMethod(fd) == "POST" && !this->_clients[fd]->getRequest().isBodySizeAllowed())
+      this->respondPayloadTooLarge(fd);
     else
       this->methodNotAllowed_(fd);
     this->saveHeaderAndBodySize(fd);
@@ -370,7 +364,9 @@ void  Server::setPollOut_(int fd)
   logger(LOG_INFO, "HANDLE POLLOUT");
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
   {
-    if (it->fd == fd) { it->events = POLLOUT;
+    if (it->fd == fd)
+    {
+      it->events = POLLOUT;
       std::ostringstream oss;
 
       oss << "successfully set event to POLL_OUT for fd [" << fd << "]";
@@ -389,7 +385,9 @@ void  Server::setPollIn_(const int& fd)
   this->_clients[fd]->clearBuffer();
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
   {
-    if (it->fd == fd) { it->events = POLLIN;
+    if (it->fd == fd)
+    {
+      it->events = POLLIN;
       std::ostringstream oss;
 
       oss << "successfully set event to POLL_IN for fd [" << fd << "]";
@@ -749,7 +747,7 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
     this->handleCgiPostRequest_(localPath, fd);
   else if (directoryExists_(localPath))
   {
-    // TODO maybe you nedd more else if
+    // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
     this->saveUploadedFile_(fd);
   }
