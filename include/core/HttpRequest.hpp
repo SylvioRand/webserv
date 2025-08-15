@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 10:30:07 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 09:19:41 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,6 @@
 
 class HttpRequest
 {
-
   typedef typename std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
   private:
     HttpRequest(const HttpRequest& other);
@@ -33,6 +32,7 @@ class HttpRequest
     size_t                              _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
     size_t                              _contentLength;
     ServerConfigConstIterator           _serverConf;
+    bool                                _isChunked;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 
@@ -59,6 +59,9 @@ class HttpRequest
       getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg);
     LocationConfig
       createAndReturnRootLocation_(const ServerConfigConstIterator& cfg);
+    void  setIsChunckedValue(void);
+    bool  isChunked(void);
+    void  parseBody(void);
 };
 
 #endif

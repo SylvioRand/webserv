@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 15:35:36 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 10:10:51 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,13 +56,26 @@ bool  Client::readData(void)
     this->_buffer.append(buf);
     this->_request.parse(_buffer);
   }
-  else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
+  else if (this->_request.getMethod() == "post" && !this->_request.isComplete())
   {
+    logger(LOG_DEBUG, "*********************** Here we are ********************");
+    if (this->getRequest().isChunked())
+    {
+      logger(LOG_DEBUG, "chunked detected");
+      while (1)
+        ;
+    }
     logger(LOG_INFO, "POST detected");
     if (this->getRequest().isBodySizeAllowed())
       this->_request.appendToBody(buf);
     else
       this->_request.isComplete();
+  }
+  else
+  {
+    logger(LOG_DEBUG, "-------------- Tout est deja fait -----------------------");
+    while (1)
+      ;
   }
   return (true);
 }

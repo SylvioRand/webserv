@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/13 15:23:15 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 09:58:56 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -240,6 +240,12 @@ void  Server::handle_pollin_(int fd)
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     logger(LOG_INFO, "the path(uri) [" +  uri + "]");
     saveMatchingLocation_(uri, serverConf);
+    for (std::vector<std::string>::const_iterator val = this->getCurrentLocation().methods.begin();
+      val != this->getCurrentLocation().methods.end(); val++)
+    {
+      std::cout << "val = " << val->c_str() << std::endl;
+    }
+
     if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
     else if (!this->getCurrentLocation().redirect.empty())
@@ -301,6 +307,11 @@ int  Server::getStatus(int fd)
 
 bool  Server::isMethodAllowedForLocation(const std::string method)
 {
+  for (std::vector<std::string>::const_iterator val = this->getCurrentLocation().methods.begin();
+      val != this->getCurrentLocation().methods.end(); val++)
+  {
+    std::cout << "val = " << val->c_str() << std::endl;
+  }
   std::vector<std::string>::const_iterator it = std::find(this->getCurrentLocation().methods.begin(),
         this->getCurrentLocation().methods.end(), method);
   if (it != this->getCurrentLocation().methods.end())

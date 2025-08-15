@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/12 10:00:31 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 10:02:28 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,7 @@ void Config::load_(void)
   }
   std::cout << std::endl;
   std::cout << std::endl;
-  //printServers();
+  printServers();
 
   // Uncomment this block once the configuration file parsing has been parsed.
   /*
@@ -99,7 +99,7 @@ void  Config::createServerConfigManually(void)
   LocationConfig  loc2;
   loc.root = "./www/";
   loc.path = "/";
-  loc.methods.push_back("GET");
+  loc.methods.push_back("GET, POST");
   loc.autoindex = false;
   loc2.root = "./www/uploads/";
   loc2.path = "/upload/";

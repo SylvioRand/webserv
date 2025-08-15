@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 10:44:59 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 10:13:54 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,8 @@
 #include <sstream>
 #include <string>
 
-HttpRequest::HttpRequest(void) :_isComplete(false),  _bodyBytesRead(0), _contentLength(0)
+HttpRequest::HttpRequest(void) :_isComplete(false),  _bodyBytesRead(0), _contentLength(0),
+  _isChunked(false)
 {
 
 }
@@ -35,6 +36,7 @@ void  HttpRequest::parse(const std::string &raw_request)
     return ;
   logger(LOG_INFO, "End of header detected (\\r\\n\\r\\n)");
   this->parseHeader_(raw_request, pos);
+  this->setIsChunckedValue();
   return ;
 }
 
@@ -69,20 +71,23 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
       break ;
     value = line.substr(pos + 2);
     value.erase(value.size() - 1);
-    this->_headers[key] = value;
+    this->_headers[toUpper(key)] = toUpper(value);
   }
   if (this->_method == "POST")
   {
-    this->_contentLength = std::atoi(this->_headers["Content-Length"].c_str());
-    logger(LOG_INFO, "Saved content length = " + this->_headers["Content-Length"]);
+    this->_contentLength = std::atoi(this->_headers["CONTENT-LENGTH"].c_str());
+    logger(LOG_INFO, "Saved content length = " + this->_headers["CONTENT-LENGTH"]);
     logger(LOG_INFO, "POST detected here");
     std::string bodyPart;
 
     bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
+    // TODO test it with bodyPart.size() == this->_contentLength
+    // and try remove this->_bodyBytesRead = this->_contentLength with it
     if (bodyPart.size() >= this->_contentLength)
     {
       bodyPart.resize(this->_contentLength);
       this->_bodyBytesRead = this->_contentLength;
+      logger(LOG_DEBUG, "set to true lev 1");
       this->_isComplete = true;
     }
     else
@@ -94,7 +99,32 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     logger(LOG_INFO, oss.str());
   }
   else
+  {
+    logger(LOG_DEBUG, "set to true lev 2");
     this->_isComplete = true;
+  }
+}
+
+void  HttpRequest::setIsChunckedValue(void)
+{
+  logger(LOG_DEBUG, "in function setIsChunckedValue");
+  std::map<std::string, std::string>::const_iterator it = this->getHeaders().find("transfer-encoding");
+  if (it != this->getHeaders().end())
+  {
+    logger(LOG_DEBUG, "transfer-encoding header found");
+    if (it->second == "chunked")
+    {
+      this->_isChunked = true;
+      logger(LOG_DEBUG, "isChunked set to true");
+      return ;
+    }
+  }
+  logger(LOG_DEBUG, "isChunked set to false");
+}
+
+bool  HttpRequest::isChunked()
+{
+  return (this->_isChunked);
 }
 
 bool  HttpRequest::isValid(void) const
@@ -118,7 +148,6 @@ const std::string& HttpRequest::getVersion(void) const
   return (_version);
 }
 
-
 bool  HttpRequest::isComplete(void) const
 {
   return (this->_isComplete);
@@ -135,7 +164,10 @@ void  HttpRequest::appendToBody(std::string str)
     this->_bodyBytesRead += str.size();
   this->_body.append(str);
   if (this->_bodyBytesRead == this->_contentLength)
+  {
     this->_isComplete = true;
+    this->parseBody();
+  }
 }
 
 const std::string& HttpRequest::getBody(void) const
@@ -164,6 +196,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_isComplete = false;
   this->_bodyBytesRead = 0;
   this->_contentLength = 0;
+  this->_isChunked = false;
 }
 
 bool  HttpRequest::isBodySizeAllowed(void)
@@ -247,3 +280,9 @@ HttpRequest::ServerConfigConstIterator  HttpRequest::getServerConf(void)
 {
   return (this->_serverConf);
 }
+
+void  HttpRequest::parseBody()
+{
+
+}
+

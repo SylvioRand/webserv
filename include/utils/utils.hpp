@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 09:59:12 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 09:38:38 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,5 +58,7 @@ std::string intToString(int value);
 bool        caseInsensitiveEqual(const std::string& a,
             const std::string& b);
 off_t       getFileSize(const std::string& path);
+std::string toLower(const std::string &s);
+std::string toUpper(const std::string &s);
 
 #endif

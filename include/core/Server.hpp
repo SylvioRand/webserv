@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/13 13:52:46 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/15 09:12:34 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,7 +119,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  setBodySize(const int& fd, const ssize_t& bodySize);
     void  setPollIn_(const int& fd);
     void  respondPayloadTooLarge(const int& fd);
-
 
 
     // for cgi

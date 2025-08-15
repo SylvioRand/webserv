@@ -12,6 +12,8 @@ SRC = ./src/main.cpp \
 			./src/utils/throwWithLog.cpp \
 			./src/utils/caseInsensitiveEqual.cpp \
 			./src/utils/getFileSize.cpp \
+			./src/utils/toLower.cpp \
+			./src/utils/toUpper.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 
