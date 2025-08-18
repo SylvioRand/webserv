@@ -56,26 +56,22 @@ bool  Client::readData(void)
     this->_buffer.append(buf);
     this->_request.parse(_buffer);
   }
-  else if (this->_request.getMethod() == "post" && !this->_request.isComplete())
+  else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
     logger(LOG_DEBUG, "*********************** Here we are ********************");
+    logger(LOG_INFO, "POST detected");
     if (this->getRequest().isChunked())
     {
       logger(LOG_DEBUG, "chunked detected");
-      while (1)
-        ;
-    }
-    logger(LOG_INFO, "POST detected");
-    if (this->getRequest().isBodySizeAllowed())
       this->_request.appendToBody(buf);
+    }
     else
-      this->_request.isComplete();
-  }
-  else
-  {
-    logger(LOG_DEBUG, "-------------- Tout est deja fait -----------------------");
-    while (1)
-      ;
+    {
+      if (this->getRequest().isBodySizeAllowed())
+        this->_request.appendToBody(buf);
+      else
+        this->_request.isComplete();
+    }
   }
   return (true);
 }

@@ -215,7 +215,7 @@ void  Server::handle_pollin_(int fd)
   std::ostringstream os;
   os << "HANDLE POLLIN FD -> " << fd;
   logger(LOG_DEBUG, os.str());
-  this->_clients[fd]->getRequest().shiftBufferAfterRequest();
+  //this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   Client *client = this->_clients[fd];
   if (!(*client).readData())
   {

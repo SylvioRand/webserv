@@ -36,8 +36,6 @@ void  HttpRequest::parse(const std::string &raw_request)
     return ;
   logger(LOG_INFO, "End of header detected (\\r\\n\\r\\n)");
   this->parseHeader_(raw_request, pos);
-  this->setIsChunckedValue();
-  return ;
 }
 
 // TODO Need code formating
@@ -73,6 +71,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     value.erase(value.size() - 1);
     this->_headers[toUpper(key)] = toUpper(value);
   }
+  this->setIsChunckedValue();
   if (this->_method == "POST")
   {
     this->_contentLength = std::atoi(this->_headers["CONTENT-LENGTH"].c_str());
@@ -83,8 +82,9 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
     // TODO test it with bodyPart.size() == this->_contentLength
     // and try remove this->_bodyBytesRead = this->_contentLength with it
-    if (bodyPart.size() >= this->_contentLength)
+    if (bodyPart.size() >= this->_contentLength && !this->isChunked())
     {
+      logger(LOG_DEBUG, "=================== Detect it ==================");
       bodyPart.resize(this->_contentLength);
       this->_bodyBytesRead = this->_contentLength;
       logger(LOG_DEBUG, "set to true lev 1");
@@ -96,7 +96,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     logger(LOG_INFO, "body saved -> [" + this->_body + "]");
     std::ostringstream oss;
     oss << "_bodyBytesRead value here -> " << this->_bodyBytesRead << std::endl;
-    logger(LOG_INFO, oss.str());
+      logger(LOG_INFO, oss.str());
   }
   else
   {
@@ -116,6 +116,7 @@ void  HttpRequest::setIsChunckedValue(void)
     {
       this->_isChunked = true;
       logger(LOG_DEBUG, "isChunked set to true");
+      this->_contentLength = -1;
       return ;
     }
   }
@@ -155,18 +156,29 @@ bool  HttpRequest::isComplete(void) const
 
 void  HttpRequest::appendToBody(std::string str)
 {
-  if (str.size() + this->_bodyBytesRead > this->_contentLength)
+  if (this->isChunked())
   {
-    str.resize(this->_contentLength - this->_bodyBytesRead);
-    this->_bodyBytesRead = this->_contentLength;
+    logger(LOG_DEBUG, "appendToBody for chunked");
+    logger(LOG_DEBUG, "infinit loop in HttpRequest::appendToBody");
+    while (1)
+      ;
   }
   else
-    this->_bodyBytesRead += str.size();
-  this->_body.append(str);
-  if (this->_bodyBytesRead == this->_contentLength)
   {
-    this->_isComplete = true;
-    this->parseBody();
+    logger(LOG_DEBUG, "appendToBody for not chunked");
+    if (str.size() + this->_bodyBytesRead > this->_contentLength)
+    {
+      str.resize(this->_contentLength - this->_bodyBytesRead);
+      this->_bodyBytesRead = this->_contentLength;
+    }
+    else
+      this->_bodyBytesRead += str.size();
+    this->_body.append(str);
+    if (this->_bodyBytesRead == this->_contentLength)
+    {
+      this->_isComplete = true;
+      this->parseBody();
+    }
   }
 }
 
