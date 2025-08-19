@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/15 10:13:54 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/19 13:05:21 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 HttpRequest::HttpRequest(void) :_isComplete(false),  _bodyBytesRead(0), _contentLength(0),
@@ -43,7 +44,8 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
 {
   logger(LOG_INFO, "Parsing of header begins.");
-  std::istringstream iss(raw_request);
+  std::string headerPart = raw_request.substr(0, endOfHeader);
+  std::istringstream iss(headerPart);
   iss >> this->_method;
   iss >> this->_path;
   iss >> this->_version;
@@ -72,36 +74,27 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     this->_headers[toUpper(key)] = toUpper(value);
   }
   this->setIsChunckedValue();
+  std::string bodyPart;
   if (this->_method == "POST")
+    bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
+  if (this->_method != "POST")
+    this->_isComplete = true;
+  else if (this->isChunked())
+    this->extractBodyFromResponse(bodyPart);
+  else
   {
     this->_contentLength = std::atoi(this->_headers["CONTENT-LENGTH"].c_str());
-    logger(LOG_INFO, "Saved content length = " + this->_headers["CONTENT-LENGTH"]);
-    logger(LOG_INFO, "POST detected here");
-    std::string bodyPart;
-
-    bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
     // TODO test it with bodyPart.size() == this->_contentLength
     // and try remove this->_bodyBytesRead = this->_contentLength with it
     if (bodyPart.size() >= this->_contentLength && !this->isChunked())
     {
-      logger(LOG_DEBUG, "=================== Detect it ==================");
       bodyPart.resize(this->_contentLength);
       this->_bodyBytesRead = this->_contentLength;
-      logger(LOG_DEBUG, "set to true lev 1");
       this->_isComplete = true;
     }
     else
       this->_bodyBytesRead = bodyPart.size();
     this->_body.append(bodyPart);
-    logger(LOG_INFO, "body saved -> [" + this->_body + "]");
-    std::ostringstream oss;
-    oss << "_bodyBytesRead value here -> " << this->_bodyBytesRead << std::endl;
-      logger(LOG_INFO, oss.str());
-  }
-  else
-  {
-    logger(LOG_DEBUG, "set to true lev 2");
-    this->_isComplete = true;
   }
 }
 
@@ -159,9 +152,8 @@ void  HttpRequest::appendToBody(std::string str)
   if (this->isChunked())
   {
     logger(LOG_DEBUG, "appendToBody for chunked");
-    logger(LOG_DEBUG, "infinit loop in HttpRequest::appendToBody");
-    while (1)
-      ;
+    //logger(LOG_DEBUG, "infinit loop in HttpRequest::appendToBody");
+    this->extractBodyFromResponse(str);
   }
   else
   {
@@ -209,6 +201,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_bodyBytesRead = 0;
   this->_contentLength = 0;
   this->_isChunked = false;
+  this->_bodyBuffChunked.clear();
 }
 
 bool  HttpRequest::isBodySizeAllowed(void)
@@ -296,5 +289,82 @@ HttpRequest::ServerConfigConstIterator  HttpRequest::getServerConf(void)
 void  HttpRequest::parseBody()
 {
 
+}
+
+void  HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
+{
+  logger(LOG_DEBUG, "in function extractBodyFromResponse");
+  size_t contentSize = 0;
+
+  this->_bodyBuffChunked.append(bodyPart);
+  while (this->isNextChunkReady(contentSize))
+  {
+    logger(LOG_DEBUG, "Found");
+    if (this->_hasError)
+    {
+      logger(LOG_DEBUG, "try it");
+      return ;
+    }
+    size_t pos = this->_bodyBuffChunked.find("\r\n");
+    size_t contentStart = pos + 2;
+
+    if (contentSize == 0)
+    {
+      logger(LOG_DEBUG, "try it");
+      this->_isComplete = true;
+    }
+    else
+    {
+      /*
+      this->_body.append(this->_bodyBuffChunked.begin() + contentStart,
+          this->_bodyBuffChunked.begin() + contentSize + contentStart);
+          */
+      this->_body.append(
+          &*(this->_bodyBuffChunked.begin() + contentStart),
+          &*(this->_bodyBuffChunked.begin() + contentStart + contentSize)
+      );
+
+      //logger(LOG_DEBUG, "result -> " + this->_body);
+    }
+    this->_bodyBuffChunked.erase(0, contentStart + contentSize + 2);
+  }
+}
+
+bool  HttpRequest::isNextChunkReady(size_t& contentSize)
+{
+  logger(LOG_DEBUG, "In function isNextChunkReady");
+  size_t pos = this->_bodyBuffChunked.find("\r\n");
+  contentSize = 0;
+  if (pos == std::string::npos)
+  {
+    logger(LOG_DEBUG, "aucun \\r\\n trouve");
+    return (false);
+  }
+
+  long value = strtol(this->_bodyBuffChunked.substr(0, pos).c_str(),
+        0, 16);
+  if ( value < 0)
+  {
+    this->setError();
+    logger(LOG_DEBUG, "ON a un probleme");
+    return false;
+  }
+  //logger(LOG_DEBUG, "verification de la taille de contentSize [" + toString(value) + "]");
+  contentSize = static_cast<size_t>(value);
+  //logger(LOG_DEBUG, "verification de _bodyBuffChunked -> [" + this->_bodyBuffChunked + "]");
+  size_t other = this->_bodyBuffChunked.find("0\r\n");
+  if (other != std::string::npos)
+    logger(LOG_DEBUG, " >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> on a bien 0\\r\\n\\r\\n");
+  return (this->_bodyBuffChunked.size() >= pos + 2 + contentSize + 2);
+}
+
+void  HttpRequest::setError(void)
+{
+  this->_hasError = true;
+}
+
+bool  HttpRequest::hasError(void)
+{
+  return (this->_hasError);
 }
 

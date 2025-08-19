@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/15 10:10:51 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/19 11:24:17 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,7 +36,8 @@ Client::~Client(void)
 
 bool  Client::readData(void)
 {
-  char buf[8192];
+  //char buf[8192];
+  char buf[10];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
 

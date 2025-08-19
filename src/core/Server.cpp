@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/15 09:58:56 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/19 12:30:48 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <fstream>
 #include <ios>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -217,14 +218,15 @@ void  Server::handle_pollin_(int fd)
   logger(LOG_DEBUG, os.str());
   //this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   Client *client = this->_clients[fd];
-  if (!(*client).readData())
+  if (!(*client).readData() || (*client).getRequest().hasError())
   {
     logger(LOG_DEBUG, "Cant` read data with readData()");
     close_client_(fd);
     return ;
   }
-  if ((*client).isRequestComplete())
+  if ((*client).isRequestComplete() && !(*client).getRequest().hasError())
   {
+    logger(LOG_DEBUG, "infinite loop ");
     this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
     logger(LOG_DEBUG, "request completed");
     std::string method = this->getMethod(fd);
@@ -267,6 +269,9 @@ void  Server::handle_pollin_(int fd)
     this->saveHeaderAndBodySize(fd);
     this->setPollOut_(fd);
   }
+  else if (this->_clients[fd]->getRequest().hasError())
+    logger(LOG_DEBUG, "on a detecte un erreur");
+
 }
 
 void  Server::saveHeaderAndBodySize(const int& fd)
@@ -741,6 +746,7 @@ bool  Server::existsAtLeastOneIndexFile_(const std::string path)
 
 void  Server::POSTMethod_(std::string& uri, const int fd)
 {
+  logger(LOG_DEBUG, "In POSTMethod_");
   LocationConfig  location = this->getCurrentLocation();
   if (location.upload_dir.empty())
   {
@@ -760,9 +766,26 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
+    this->saveBodyToFile("image.jpg", fd);
     this->saveUploadedFile_(fd);
   }
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
+}
+
+void Server::saveBodyToFile(const std::string& filename, const int& fd)
+{
+  std::string path;
+  path = this->getCurrentLocation().upload_dir + "/" + filename;
+  std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);
+  if (!out)
+  {
+      // Gestion d'erreur si impossible de créer le fichier
+      std::cerr << "Impossible de créer le fichier : " << filename << std::endl;
+      return;
+  }
+  const std::string& body = this->_clients[fd]->getRequest().getBody();
+  out.write(body.c_str(), body.size());
+  out.close();
 }
 
 void  Server::saveUploadedFile_(const int fd)

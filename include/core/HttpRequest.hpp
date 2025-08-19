@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/15 09:19:41 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/19 10:46:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include "../utils/utils.hpp"
 #include "../../include/core/Config.hpp"
+#include <sys/types.h>
 
 class HttpRequest
 {
@@ -33,6 +34,8 @@ class HttpRequest
     size_t                              _contentLength;
     ServerConfigConstIterator           _serverConf;
     bool                                _isChunked;
+    std::string                         _bodyBuffChunked;
+    bool                                _hasError;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 
@@ -62,6 +65,10 @@ class HttpRequest
     void  setIsChunckedValue(void);
     bool  isChunked(void);
     void  parseBody(void);
+    void  extractBodyFromResponse(const std::string& bodyPart);
+    bool  isNextChunkReady(size_t& contentSize);
+    void  setError(void);
+    bool  hasError(void);
 };
 
 #endif
