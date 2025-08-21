@@ -629,6 +629,7 @@ bool Server::isExecutable_(const std::string& path) {
     return false;
 }
 
+// TODO
 void  Server::responsNotExecutable(const int& fd)
 {
   (void)fd;
