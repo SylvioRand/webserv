@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 15:18:45 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 16:53:55 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -130,6 +130,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
           getFileExtension_(std::string path);
     bool  isExecutable_(const std::string& path);
     void  responsNotExecutable(const int& fd);
+    char  **buildEnvpForExecve_(const int fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;
