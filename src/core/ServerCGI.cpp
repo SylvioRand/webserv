@@ -2,9 +2,10 @@
 
 void Server::handleCgiGetRequest_(std::string& path, const int fd)
 {
+  logger(LOG_INFO, path);
+  logger(LOG_INFO, this->getPath_(fd));
+  logger(LOG_INFO, this->getUri_(fd));
   logger(LOG_DEBUG, "in handleCgiGetRequest_");
-  while (1)
-    ;
   (void)path;
   (void)fd;
 }
