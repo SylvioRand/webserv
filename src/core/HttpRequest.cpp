@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 11:30:28 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 12:45:27 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -185,7 +185,7 @@ const std::string& HttpRequest::getBody(void) const
   return (this->_body);
 }
 
-const std::string& HttpRequest::getPath(void) const
+const std::string& HttpRequest::getPath(void)
 {
   return (_path);
 }

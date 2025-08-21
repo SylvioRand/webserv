@@ -1,12 +1,10 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
+/* ************************************************************************** */ /*                                                                            */ /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 11:35:13 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 13:10:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -237,11 +235,10 @@ void  Server::handle_pollin_(int fd)
       this->setPollOut_(fd);
       return ;
     }
-    std::string uri = this->getUri_(fd);
-    logger(LOG_INFO, "the path(uri) [" +  uri + "]");
+    //std::string uriPath = this->getUriPath_(fd);
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
-    logger(LOG_INFO, "the path(uri) [" +  uri + "]");
-    saveMatchingLocation_(uri, serverConf);
+    logger(LOG_INFO, "the path(uri) [" +  getUriPath_(fd) + "]");
+    saveMatchingLocation_(fd, serverConf);
     for (std::vector<std::string>::const_iterator val = this->getCurrentLocation().methods.begin();
       val != this->getCurrentLocation().methods.end(); val++)
     {
@@ -257,11 +254,11 @@ void  Server::handle_pollin_(int fd)
     else if (getCurrentLocation().methods.empty())
       this->methodNotAllowed_(fd);
     else if (method == "GET" && this->isMethodAllowedForLocation("GET"))
-      this->GETMethod_(uri, fd);
+      this->GETMethod_(fd);
     else if (method == "POST" && this->isMethodAllowedForLocation("POST"))
-      this->POSTMethod_(uri, fd);
+      this->POSTMethod_(fd);
     else if (method == "DELETE" && this->isMethodAllowedForLocation("DELETE"))
-      this->DELETEMethod_(uri, fd);
+      this->DELETEMethod_(fd);
     else if (this->getMethod(fd) == "POST" && !this->_clients[fd]->getRequest().isBodySizeAllowed())
       this->respondPayloadTooLarge(fd);
     else
@@ -273,14 +270,15 @@ void  Server::handle_pollin_(int fd)
     logger(LOG_DEBUG, "on a detecte un erreur");
 }
 
-std::string  Server::getUri_(const int& fd)
+
+std::string  Server::getUriPath_(const int& fd)
 {
-  std::string path = this->getPath_(fd);
-  size_t pos = path.find("?");
+  std::string uriPath = this->getRequestUri_(fd);
+  size_t pos = uriPath.find("?");
   if (pos == std::string::npos)
-    return (path);
+    return (uriPath);
   else
-    return (path.substr(0, pos));
+    return (uriPath.substr(0, pos));
 }
 
 
@@ -305,7 +303,7 @@ std::string  Server::getVersion(int fd)
 }
 
 
-std::string Server::getPath_(int fd)
+const std::string& Server::getRequestUri_(int fd)
 {
   return (this->_clients[fd]->getRequest().getPath());
 }
@@ -480,20 +478,20 @@ const std::map<std::string, std::string>& Server::getHeaders(int fd)
     return (_clients[fd]->getRequest().getHeaders());
 }
 
-void Server::saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg)
+void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg)
 {
   LocationConfig  best_match;
   this->setCurrentLocation(best_match);
   size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
-  std::cout << "verify uri [" << uri << "]" << std::endl;
+  std::cout << "verify uriPath [" << getUriPath_(fd) << "]" << std::endl;
   for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
   {
     std::cout << "location root [" << it->second.root << "]" << std::endl;
     const std::string& path = it->first;
     std::cout << "location path [" << it->first << "]" << std::endl;
-    if (uri.substr(0, path.size()) == path && path.size() > best_length)
+    if (getUriPath_(fd).substr(0, path.size()) == path && path.size() > best_length)
     {
       best_match = it->second;
       best_length = path.size();
@@ -542,35 +540,36 @@ void  Server::setCurrentLocation(LocationConfig& location)
   this->_currentLocation = location;
 }
 
-void  Server::GETMethod_(std::string& uri, const int fd)
+void  Server::GETMethod_(const int& fd)
 {
   LocationConfig  location = this->getCurrentLocation();
-  std::string     path;
+  std::string     localPath;
   std::string     extractUri;
-  path = location.root + '/' + uri.substr(location.path.size());
-  this->_localPath = path;
-  logger(LOG_DEBUG, "value of path [" + path + "]");
-  if (this->getFileExtension_(uri) == this->getCurrentLocation().cgi_extension
+
+  localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
+  this->_localPath = localPath;
+  logger(LOG_DEBUG, "value of path [" + localPath + "]");
+  if (this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
-    this->handleCgiGetRequest_(path, fd);
-  else if (this->isFile_(path))
+    this->handleCgiGetRequest_(fd);
+  else if (this->isFile_(localPath))
   {
-    if (this->isReadable_(path))
-      this->processReadableFile_(fd, path);
+    if (this->isReadable_(localPath))
+      this->processReadableFile_(fd, localPath);
     else
       this->respondFileNotReadable(fd);
   }
-  else if (!directoryExists_(path))
+  else if (!directoryExists_(localPath))
     this->respondNotFound_(fd);
   else if (hasIndexDirective_())
   {
-    std::string indexPath = this->getAccessibleIndexPath_(path);
+    std::string indexPath = this->getAccessibleIndexPath_(localPath);
     if (indexPath.empty())
     {
       if (this->getCurrentLocation().autoindex)
         this->buildDirectoryListing_(fd);
-      else if (this->existsAtLeastOneIndexFile_(path))
+      else if (this->existsAtLeastOneIndexFile_(localPath))
         this->respondIndexFilesUnreadable_(fd);
       else
         this->respondNoIndexFileFound_(fd);
@@ -584,7 +583,7 @@ void  Server::GETMethod_(std::string& uri, const int fd)
     this->respondDirectoryListingForbidden(fd);
 }
 
-std::string Server::getFileExtension_(std::string& path)
+std::string Server::getFileExtension_(std::string path)
 {
   std::string uri;
   size_t pos = path.find("?");
@@ -757,7 +756,7 @@ bool  Server::existsAtLeastOneIndexFile_(const std::string path)
   return (false);
 }
 
-void  Server::POSTMethod_(std::string& uri, const int fd)
+void  Server::POSTMethod_(const int fd)
 {
   logger(LOG_DEBUG, "In POSTMethod_");
   LocationConfig  location = this->getCurrentLocation();
@@ -769,12 +768,12 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
   std::string     localPath;
   std::string     extractUri;
 
-  localPath = location.upload_dir + '/' + uri.substr(location.path.size());
+  localPath = location.upload_dir + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
-  if( this->getFileExtension_(uri) == this->getCurrentLocation().cgi_extension
+  if( this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
-    this->handleCgiPostRequest_(localPath, fd);
+    this->handleCgiPostRequest_(fd);
   else if (directoryExists_(localPath))
   {
     // TODO maybe you need more else if
@@ -865,13 +864,13 @@ void  Server::respondMissingUploadDir(const int fd)
 }
 
 
-void  Server::DELETEMethod_(std::string& uri, const int fd)
+void  Server::DELETEMethod_(const int fd)
 {
   std::cout << "On delete method" << std::endl;
   LocationConfig  location = this->getCurrentLocation();
   std::string     localPath;
   std::string     extractUri;
-  localPath = location.root + '/' + uri.substr(location.path.size());
+  localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
   if (isFile_(localPath))

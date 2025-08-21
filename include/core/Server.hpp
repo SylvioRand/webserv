@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 08:26:23 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 13:13:33 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,13 +62,13 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
           getMethod(int fd);
     std::string
           getVersion(int fd);
-    void  saveMatchingLocation_(const std::string& uri, ServerConfigConstIterator& cfg);
+    void  saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg);
     const std::map<std::string, std::string>& getHeaders(int fd);
-    std::string
-          getPath_(int fd);
-    void  GETMethod_(std::string& uri, const int fd);
-    void  POSTMethod_(std::string& uri, const int fd);
-    void  DELETEMethod_(std::string& uri, const int fd);
+    const std::string&
+          getRequestUri_(int fd);
+    void  GETMethod_(const int& fd);
+    void  POSTMethod_(const int fd);
+    void  DELETEMethod_(const int fd);
     bool  isFile_(const std::string localPath) const;
     bool  isReadable_(const std::string localPath) const;
     void  buildDirectoryListing_(const int fd);
@@ -121,15 +121,13 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  respondPayloadTooLarge(const int& fd);
     void  saveBodyToFile(const std::string& filename, const int& fd);
     std::string
-          getUri_(const int& fd);
-
-
+          getUriPath_(const int& fd);
 
     // for cgi
-    void  handleCgiGetRequest_(std::string& path, const int fd);
-    void  handleCgiPostRequest_(std::string& path, const int fd);
+    void  handleCgiGetRequest_(const int fd);
+    void  handleCgiPostRequest_(const int fd);
     std::string
-          getFileExtension_(std::string& path);
+          getFileExtension_(std::string path);
     bool  is_executable_file_(const std::string& path);
 
     const Config&                             _config;
