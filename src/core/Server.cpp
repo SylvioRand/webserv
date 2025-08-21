@@ -576,23 +576,26 @@ void  Server::GETMethod_(std::string& uri, const int fd)
 
 std::string Server::getFileExtension_(std::string& path)
 {
+  std::string uri;
+  size_t pos = path.find("?");
+  if (pos != std::string::npos)
+    uri = path.substr(0, pos);
+  else
+    uri = path;
   std::string fileName;
   size_t      slashPos;
 
-  slashPos = path.rfind('/');
+  slashPos = uri.rfind('/');
   if (slashPos == std::string::npos)
-  {
-    fileName = path;
-    logger(LOG_WARNING, "Error detected, the path need to have at least one '/'");
-  }
+    fileName = uri;
   else
-    fileName = path.substr(slashPos + 1);
+    fileName = uri.substr(slashPos + 1);
 
-  size_t extStart = path.rfind('.');
+  size_t extStart = uri.rfind('.');
   if (extStart == std::string::npos)
     return ("");
   else
-    return (path.substr(extStart));
+    return (uri.substr(extStart));
   return ("");
 }
 
