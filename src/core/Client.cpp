@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/19 11:24:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 11:03:58 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,11 +37,11 @@ Client::~Client(void)
 bool  Client::readData(void)
 {
   //char buf[8192];
-  char buf[10];
+  char buf[8192];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
 
-  std::cout << buf << std::endl;
+  std::cout.write(buf, bytes);
   if (bytes == -1)
   {
     logger(LOG_ERROR, "[RECV] Failed to receive data from client");
@@ -54,12 +54,13 @@ bool  Client::readData(void)
   }
   if (this->_request.getMethod().empty())
   {
-    this->_buffer.append(buf);
+    this->_buffer.append(buf, bytes);
     this->_request.parse(_buffer);
   }
   else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
     logger(LOG_DEBUG, "*********************** Here we are ********************");
+    logger(LOG_DEBUG, "Infinite loop");
     logger(LOG_INFO, "POST detected");
     if (this->getRequest().isChunked())
     {

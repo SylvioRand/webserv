@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:26:47 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/19 12:30:48 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 11:35:13 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -271,8 +271,18 @@ void  Server::handle_pollin_(int fd)
   }
   else if (this->_clients[fd]->getRequest().hasError())
     logger(LOG_DEBUG, "on a detecte un erreur");
-
 }
+
+std::string  Server::getUri_(const int& fd)
+{
+  std::string path = this->getPath_(fd);
+  size_t pos = path.find("?");
+  if (pos == std::string::npos)
+    return (path);
+  else
+    return (path.substr(0, pos));
+}
+
 
 void  Server::saveHeaderAndBodySize(const int& fd)
 {
@@ -295,7 +305,7 @@ std::string  Server::getVersion(int fd)
 }
 
 
-std::string Server::getUri_(int fd)
+std::string Server::getPath_(int fd)
 {
   return (this->_clients[fd]->getRequest().getPath());
 }
@@ -540,7 +550,7 @@ void  Server::GETMethod_(std::string& uri, const int fd)
   path = location.root + '/' + uri.substr(location.path.size());
   this->_localPath = path;
   logger(LOG_DEBUG, "value of path [" + path + "]");
-  if (this->getFileExtension_(path) == this->getCurrentLocation().cgi_extension
+  if (this->getFileExtension_(uri) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
     this->handleCgiGetRequest_(path, fd);
@@ -761,7 +771,7 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
 
   localPath = location.upload_dir + '/' + uri.substr(location.path.size());
   this->_localPath = localPath;
-  if( this->getFileExtension_(localPath) == this->getCurrentLocation().cgi_extension
+  if( this->getFileExtension_(uri) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
     this->handleCgiPostRequest_(localPath, fd);
@@ -769,7 +779,7 @@ void  Server::POSTMethod_(std::string& uri, const int fd)
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
-    this->saveBodyToFile("image.jpg", fd);
+    this->saveBodyToFile("image.png", fd);
     this->saveUploadedFile_(fd);
   }
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
