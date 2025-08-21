@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 13:13:33 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 14:01:14 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,7 +128,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleCgiPostRequest_(const int fd);
     std::string
           getFileExtension_(std::string path);
-    bool  is_executable_file_(const std::string& path);
+    bool  isExecutable_(const std::string& path);
+    void  responsNotExecutable(const int& fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

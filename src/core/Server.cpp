@@ -549,13 +549,18 @@ void  Server::GETMethod_(const int& fd)
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
-  if (this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
+  if (this->isFile_(localPath))
+  {
+    if (this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
       && !this->getCurrentLocation().cgi_path.empty())
-    this->handleCgiGetRequest_(fd);
-  else if (this->isFile_(localPath))
-  {
-    if (this->isReadable_(localPath))
+    {
+      if (this->isExecutable_(localPath))
+        this->handleCgiGetRequest_(fd);
+      else
+        this->responsNotExecutable(fd);
+    }
+    else if (this->isReadable_(localPath))
       this->processReadableFile_(fd, localPath);
     else
       this->respondFileNotReadable(fd);
@@ -583,6 +588,8 @@ void  Server::GETMethod_(const int& fd)
     this->respondDirectoryListingForbidden(fd);
 }
 
+
+
 std::string Server::getFileExtension_(std::string path)
 {
   std::string uri;
@@ -608,7 +615,7 @@ std::string Server::getFileExtension_(std::string path)
   return ("");
 }
 
-bool Server::is_executable_file_(const std::string& path) {
+bool Server::isExecutable_(const std::string& path) {
     struct stat st;
     if (stat(path.c_str(), &st) == 0) {
         // Vérifie si c'est un fichier régulier
@@ -620,6 +627,14 @@ bool Server::is_executable_file_(const std::string& path) {
         }
     }
     return false;
+}
+
+void  Server::responsNotExecutable(const int& fd)
+{
+  (void)fd;
+  // TODO
+  logger(LOG_DEBUG, "in function responsNotExecutable");
+  while (1) ;
 }
 
 
