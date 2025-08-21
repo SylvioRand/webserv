@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 14:01:14 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/21 15:18:45 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -139,6 +139,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::map<std::string, std::string>        _mimes;
     std::string                               _localPath;
     std::map<int, ServerConfigConstIterator>  _serverListeners;
+    std::vector<int>                          _pipeFd;
+    std::map<int, int>                        _pipeFdClient;
 };
 
 #endif

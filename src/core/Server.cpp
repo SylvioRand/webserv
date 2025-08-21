@@ -69,6 +69,11 @@ void Server::start_server_(void)
         if (revents & (POLLERR | POLLHUP | POLLNVAL))
           this->close_client_(fd);
       }
+      // TODO c`est ici qu`on va lire avec readFromPipe
+      else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
+      {
+
+      }
       else
         this->close_client_(fd);
     }
