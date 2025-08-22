@@ -11,6 +11,7 @@
 #include "../../include/core/Server.hpp"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <csignal>
 #include <fcntl.h>
 #include <fstream>
@@ -20,6 +21,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
+
 
 Server::Server(const Config& config) : _config(config)
 {
@@ -32,7 +34,7 @@ Server::~Server(void)
 }
 
 void Server::start_server_(void)
-{
+{ 
   logger(LOG_INFO, "Server is starting");
   this->create_all_listeners_();
 
@@ -69,10 +71,11 @@ void Server::start_server_(void)
         if (revents & (POLLERR | POLLHUP | POLLNVAL))
           this->close_client_(fd);
       }
-      // TODO c`est ici qu`on va lire avec readFromPipe
-      else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
-      {
-
+      // TODO c`est ici qu`on va lire avec handleCgiRead
+      else if (!this->_pipeFdReadComplete && std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
+      { 
+        logger(LOG_INFO, "in function handleCgiRead");
+        this->handleCgiRead(fd);
       }
       else
         this->close_client_(fd);
@@ -82,6 +85,28 @@ void Server::start_server_(void)
   }
 }
 
+void  Server::handleCgiRead(const int fd)
+{
+  // a modifier, C'est juste pour voir tous les chaine lus
+  static std::string fullStr;
+  char buffer[12];
+  int count = read(fd, buffer, sizeof(buffer));
+  if (count == -1)
+  {
+    logger(LOG_ERROR, "read failed");
+  } 
+  else if (count == 0)
+  {
+    this->_pipeFdReadComplete = true;
+    std::cout << fullStr << std::endl;
+    logger(LOG_INFO, "It's finished");
+  }
+  else if (count > 0)
+  {
+    buffer[count] = 0;
+    fullStr.append(buffer);
+  }
+}
 
 // TODO
 void  Server::stop_server(void)

@@ -131,6 +131,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isExecutable_(const std::string& path);
     void  responsNotExecutable(const int& fd);
     char  **buildEnvpForExecve_(const int fd);
+    void  handleCgiRead(const int fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;
@@ -142,6 +143,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::map<int, ServerConfigConstIterator>  _serverListeners;
     std::vector<int>                          _pipeFd;
     std::map<int, int>                        _pipeFdClient;
+    bool                                      _pipeFdReadComplete;
 };
 
 #endif
