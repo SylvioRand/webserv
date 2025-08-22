@@ -41,10 +41,11 @@ bool  Client::readData(void)
   char buf[8192];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
-
+  /*
   std::cout.write(buf, bytes);
   std::cout << std::endl;
   logger(LOG_INFO, "end of reading");
+  */
   if (bytes == -1)
   {
     logger(LOG_ERROR, "[RECV] Failed to receive data from client");
@@ -62,12 +63,8 @@ bool  Client::readData(void)
   }
   else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
-    logger(LOG_DEBUG, "*********************** Here we are ********************");
-    logger(LOG_DEBUG, "Infinite loop");
-    logger(LOG_INFO, "POST detected");
     if (this->getRequest().isChunked())
     {
-      logger(LOG_DEBUG, "chunked detected");
       std::string bodyPart;
       bodyPart.append(buf, bytes);
       this->_request.appendToBody(bodyPart);

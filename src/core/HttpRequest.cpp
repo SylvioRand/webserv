@@ -37,7 +37,7 @@ void  HttpRequest::parse(const std::string &raw_request)
 
   if (pos == std::string::npos)
     return ;
-  logger(LOG_INFO, "End of header detected (\\r\\n\\r\\n)");
+  logger(LOG_DEBUG, "End of header detected (\\r\\n\\r\\n)");
   this->parseHeader_(raw_request, pos);
 }
 
@@ -78,13 +78,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   this->setIsChunckedValue();
   std::string bodyPart;
   if (this->_method == "POST")
-  {
-    logger(LOG_DEBUG, "@@@@@@@@@@@@ BOdy part values");
     bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
-    std::cout.write(bodyPart.c_str(), bodyPart.size());
-    std::cout << std::endl;
-    logger(LOG_INFO, "It was the body part inside headers");
-  }
   if (this->_method != "POST")
     this->_isComplete = true;
   else if (this->isChunked())
@@ -160,6 +154,7 @@ void  HttpRequest::appendToBody(std::string& str)
   logger(LOG_INFO, "In  function appendToBody");
   if (this->isChunked())
   {
+    /*
     logger(LOG_DEBUG, "appendToBody for chunked");
     //logger(LOG_DEBUG, "infinit loop in HttpRequest::appendToBody");
     logger(LOG_INFO, "Verification de ce qui a deja ete stoque dans _bodyBuffChunked");
@@ -170,6 +165,7 @@ void  HttpRequest::appendToBody(std::string& str)
     std::cout.write(str.c_str(), str.size());
     std::cout << std::endl;
     logger(LOG_INFO, "fin de la verification de buff");
+    */
     this->extractBodyFromResponse(str);
   }
   else
@@ -314,95 +310,33 @@ void  HttpRequest::parseBody()
 
 void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
 {
-    logger(LOG_DEBUG, "in function extractBodyFromResponse");
-    size_t contentSize = 0;
+  size_t contentSize = 0;
 
-    static int lock2 = 0;
-    lock2++;
-    this->_bodyBuffChunked.append(bodyPart.c_str(), bodyPart.size());
-    /*
-    if (lock2 == 1)
-      this->_bodyBuffChunked.append(bodyPart.c_str(), bodyPart.size());
-    else
-      this->_bodyBuffChunked.append(bodyPart, bodyPart.size());
-      */
-    
-    logger(LOG_INFO, " &&&&&&&&&&&&&&&&&&&&&& bodyPart values after appending");
-    std::cout << std::endl;
-    std::cout.write(bodyPart.c_str(), bodyPart.size());
-    std::cout << std::endl;
-    logger(LOG_INFO, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-
-    static int  lock = 0;
-    while (this->isNextChunkReady(contentSize))
+  this->_bodyBuffChunked.append(bodyPart.c_str(), bodyPart.size());
+  while (this->isNextChunkReady(contentSize))
+  {
+    size_t pos = this->_bodyBuffChunked.find("\r\n");
+    size_t contentStart = pos + 2;
+    if (contentSize == 0)
     {
-        lock++;
-        logger(LOG_DEBUG, " &&&&&&&&&&&&&&&&&&&&&& this->_bodyBuffChunked values");
-        //std::cout.write(bodyPart.c_str(), bodyPart.size());
-        std::cout << std::endl;
-        std::cout.write(this->_bodyBuffChunked.c_str(), this->_bodyBuffChunked.size());
-        std::cout << std::endl;
-        logger(LOG_DEBUG, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-
-        /*
-        if (lock == 2)
-          while (1);
-        if (this->hasError())
-        {
-          logger(LOG_ERROR, "Error Detected");
-          while (1);
-        }
-        */
-
-        logger(LOG_DEBUG, "Found");
-        logger(LOG_DEBUG, "contentSize value -> " + toString(contentSize) + "]");
-        size_t pos = this->_bodyBuffChunked.find("\r\n");
-        size_t contentStart = pos + 2;
-        if (contentSize == 0)
-        {
-            logger(LOG_DEBUG, "last chunk received (0 length)");
-            this->_isComplete = true;
-            // Supprimer correctement "0\r\n\r\n"
-            this->_bodyBuffChunked.erase(0, pos + 4); 
-            break; // sortir de la boucle
-        }
-        else
-        {
-            logger(LOG_DEBUG, "the preview contentSize [" + toString(contentSize) + "]");
-            //while (1)
-            //  ;
-            this->_body.append(this->_bodyBuffChunked, contentStart, contentSize);
-            logger(LOG_DEBUG, "Real values after append in body");
-            std::cout.write(this->_body.c_str(), this->_body.size());
-            std::cout << std::endl;
-            logger(LOG_DEBUG, "===========================");
-            logger(LOG_DEBUG, "chunk appended, total body size = " + toString(this->_body.size()));
-
-            // Supprime la taille + CRLF + données + CRLF
-            this->_bodyBuffChunked.erase(0, contentStart + contentSize + 2);
-        }
+      logger(LOG_INFO, "[HTTP] Successfully received full request body (chunked transfer completed).");
+      this->_isComplete = true;
+      this->_bodyBuffChunked.erase(0, pos + 4); 
+      break; // sortir de la boucle
     }
+    else
+    {
+      this->_body.append(this->_bodyBuffChunked, contentStart, contentSize);
+      this->_bodyBuffChunked.erase(0, contentStart + contentSize + 2);
+    }
+  }
 }
 
 
 bool  HttpRequest::isNextChunkReady(size_t& contentSize)
 {
-  logger(LOG_DEBUG, "In function isNextChunkReady");
   size_t pos = this->_bodyBuffChunked.find("\r\n");
   contentSize = 0;
-  // for test
-
-  size_t posbr = this->_bodyBuffChunked.find("\r");
-  size_t posbn = this->_bodyBuffChunked.find("\n");
-  if (posbr != std::string::npos)
-    logger(LOG_DEBUG, "Position of \\r [" + toString(posbr) + "]");
-  if (posbn != std::string::npos)
-    logger(LOG_DEBUG, "Position of \\n [" + toString(posbn) + "]");
-
-  
-
-  ////
-
   if (pos == std::string::npos)
   {
     logger(LOG_DEBUG, "aucun \\r\\n trouve");
@@ -410,142 +344,20 @@ bool  HttpRequest::isNextChunkReady(size_t& contentSize)
   }
 
   std::string hexaSize = this->_bodyBuffChunked.substr(0, pos);
-  logger(LOG_DEBUG, "hexa value [" + hexaSize + "]");
   long value = strtol(this->_bodyBuffChunked.substr(0, pos).c_str(),
         0, 16);
-  std::cout << std::endl;
-  std::cout.write(this->_bodyBuffChunked.c_str(), this->_bodyBuffChunked.size());
-  std::cout << std::endl;
-  logger(LOG_DEBUG, "NOus allons parcourir les [" + toString(this->_bodyBuffChunked.size()) + "caracteres");
-  logger(LOG_DEBUG, "decimal value from hexa [" + toString(value) + "]");
-  /*
-  if (value == 0)
-  {
-    std::string lengthStr= this->_bodyBuffChunked.substr(0, pos).c_str();
-    logger(LOG_DEBUG, "lengthStr.size() -> [" + toString(lengthStr.size()) + "]");
-    logger(LOG_DEBUG, "lengthStr -> [" + lengthStr + "]");
-  }
-  */
-  static int lock = 0;
   if ( value < 0)
   {
     this->setError();
-    logger(LOG_DEBUG, "ON a un probleme");
+    logger(LOG_ERROR, "Error detected in function isNextChunkReady");
     return false;
   }
   contentSize = static_cast<size_t>(value);
-  logger(LOG_DEBUG, "_bodyBuffChunked.size() -> " + toString(this->_bodyBuffChunked.size()));
   if (this->_bodyBuffChunked.size() >= pos + 2 + contentSize + 2)
-  {
-    logger(LOG_DEBUG, "Yes, Next Chunk is Ready ********************************************************************");
     return (true);
-  }
   else
-  {
-    lock++;
-    logger(LOG_DEBUG, "No, Next Chunk is not Ready");
-    if (lock == 2)
-    {
-      //while (1) ;
-    }
     return (false);
-  }
 }
-
-/*
-void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
-{
-    logger(LOG_DEBUG, "in function extractBodyFromResponse");
-    size_t contentSize = 0;
-
-    // On accumule les données reçues
-    this->_bodyBuffChunked.append(bodyPart);
-
-    while (this->isNextChunkReady(contentSize))
-    {
-        if (this->_hasError)
-        {
-            logger(LOG_DEBUG, "error while parsing chunk");
-            return;
-        }
-
-        size_t pos = this->_bodyBuffChunked.find("\r\n");
-        if (pos == std::string::npos)
-        {
-            logger(LOG_DEBUG, "Unexpected: no CRLF found");
-            this->setError();
-            return;
-        }
-
-        size_t contentStart = pos + 2;
-
-        // Dernier chunk : "0\r\n\r\n"
-        if (contentSize == 0)
-        {
-            logger(LOG_DEBUG, "last chunk received (0 length)");
-            this->_isComplete = true;
-            // Supprimer le dernier chunk et CRLF final
-            if (_bodyBuffChunked.size() >= pos + 4)
-                this->_bodyBuffChunked.erase(0, pos + 4);
-            else
-                this->_bodyBuffChunked.clear();
-            break;
-        }
-
-        // Copier le chunk dans le corps (sécurisé pour binaire)
-        this->_body.append(
-            this->_bodyBuffChunked.data() + contentStart,
-            contentSize
-        );
-        logger(LOG_DEBUG, "chunk appended, total body size = " + toString(this->_body.size()));
-
-        // Supprimer la taille + CRLF + données + CRLF
-        if (_bodyBuffChunked.size() >= contentStart + contentSize + 2)
-            this->_bodyBuffChunked.erase(0, contentStart + contentSize + 2);
-        else
-        {
-            logger(LOG_DEBUG, "Partial chunk received, wait for more data");
-            break; // on attend le reste du chunk
-        }
-    }
-}
-
-
-bool HttpRequest::isNextChunkReady(size_t& contentSize)
-{
-    logger(LOG_DEBUG, "In function isNextChunkReady");
-    size_t pos = this->_bodyBuffChunked.find("\r\n");
-    contentSize = 0;
-
-    if (pos == std::string::npos)
-    {
-        logger(LOG_DEBUG, "aucun \\r\\n trouve");
-        return false;
-    }
-
-    std::string hexaSize = this->_bodyBuffChunked.substr(0, pos);
-    long value = strtol(hexaSize.c_str(), 0, 16);
-
-    if (value < 0)
-    {
-        logger(LOG_DEBUG, "Invalid chunk size");
-        this->setError();
-        return false;
-    }
-
-    contentSize = static_cast<size_t>(value);
-
-    // Vérifie si on a assez de données pour ce chunk + CRLF final
-    if (_bodyBuffChunked.size() >= pos + 2 + contentSize + 2)
-    {
-        logger(LOG_DEBUG, "Next chunk is ready, size = " + toString(contentSize));
-        return true;
-    }
-
-    logger(LOG_DEBUG, "Next chunk not ready yet");
-    return false;
-}
-*/
 
 void  HttpRequest::setError(void)
 {
