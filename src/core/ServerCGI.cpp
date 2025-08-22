@@ -23,30 +23,61 @@
 
 void Server::handleCgiGetRequest_(const int fd)
 {
-  std::string absolutePath = this->getCurrentLocation().root  + "/" + getUriPath_(fd).substr(this->getCurrentLocation().path.size());
-  logger(LOG_DEBUG, "in handleCgiGetRequest_");
+  std::string absolutePath = this->getCurrentLocation().root  + "/" \
+    + getUriPath_(fd).substr(this->getCurrentLocation().path.size());
+  logger(LOG_INFO, "in handleCgiGetRequest_");
   logger(LOG_INFO, "getRequestUri_-> " + this->getRequestUri_(fd));
   logger(LOG_INFO, "getUriPath_-> " + this->getUriPath_(fd));
   logger(LOG_INFO, "absolutePath-> " + absolutePath);
 
   // error cgi_path
-  if (!this->isFile_(this->getCurrentLocation().cgi_path))
+  if (!this->isFile_(this->getCurrentLocation().cgi_path) \
+      && !this->isExecutable_(this->getCurrentLocation().cgi_path))
   {
-    logger(LOG_ERROR, "500 Internal Server Error: CGI interpreter not available");
+    // TODO : retourne une page d'erreur avec status = 500
+    // "500 Internal Server Error: CGI interpreter not available
+    return ;
   }
+
   // build env variables
   char **envp = this->buildEnvpForExecve_(fd);
-  (void)envp;
 
   // execute the script and cummunicate with him
   int cgi_pipe[2];
   if (pipe(cgi_pipe) == -1)
   {
-    logger(LOG_FATAL, "Error FATAL");
+    logger(LOG_ERROR, "Error with function pipe()");
+    return ;
   }
-  std::cout << "cgi_pipe[0] = " << cgi_pipe[0] << std::endl;
-  std::cout << "cgi_pipe[1] = " << cgi_pipe[1] << std::endl;
-  // TODO: a la maison
+  int pid = fork();
+  if (pid < 0)
+  {
+    logger(LOG_FATAL, "fork failed");
+    return ;
+  }
+  else if (pid == 0)
+  {
+    char *argv[] = {
+        (char*)this->getCurrentLocation().cgi_path.c_str(),
+        (char*)absolutePath.c_str(),
+        NULL
+    };
+    close(cgi_pipe[0]);
+    dup2(cgi_pipe[1], STDOUT_FILENO);
+    close(cgi_pipe[1]);
+    execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
+    exit(0);
+  }
+  else
+  {
+    logger(LOG_DEBUG, "I am parent");
+    this->_pipeFdReadComplete = false;
+    this->_pipeFd.push_back(cgi_pipe[0]);
+    this->_pipeFdClient[cgi_pipe[0]] = fd;
+    this->setNonBlocking_(cgi_pipe[0]);
+    this->addFdToPoll_(cgi_pipe[0]);
+    close(cgi_pipe[1]);
+  }
 }
 
 char  **Server::buildEnvpForExecve_(const int fd)
@@ -92,4 +123,27 @@ void Server::handleCgiPostRequest_(const int fd)
 {
   logger(LOG_DEBUG, "in handleCgiPostRequest_");
   (void)fd;
+}
+
+void  Server::handleCgiRead(const int fd)
+{
+  // a modifier, C'est juste pour voir tous les chaine lus
+  static std::string fullStr;
+  char buffer[12];
+  int count = read(fd, buffer, sizeof(buffer));
+  if (count == -1)
+  {
+    logger(LOG_ERROR, "read failed");
+  } 
+  else if (count == 0)
+  {
+    this->_pipeFdReadComplete = true;
+    std::cout << fullStr << std::endl;
+    logger(LOG_INFO, "It's finished");
+  }
+  else if (count > 0)
+  {
+    buffer[count] = 0;
+    fullStr.append(buffer);
+  }
 }

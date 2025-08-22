@@ -14,13 +14,18 @@
 
 void logger(LogLevel level, const std::string &message)
 {
-  const std::string prefix[5] = {"INFO", "DEBUG", "WARNING", "ERROR", "FATAL"};
+  #if PRODUCTION_MODE
+    if (level == LOG_DEBUG)
+      return ;
+  #endif
+
+  const std::string prefix[5] = {"INFO ", "DEBUG", "WARNING", "ERROR", "FATAL"};
   std::ostream& out = (level > 1) ? std::cerr : std::cout;
 
   if (level == 0)
     out << COLOR_INFO << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
   else if (level == 1)
-    out <<  "[" << prefix[level] << "] " << message << std::endl;
+    out << COLOR_DEBUG << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
   else if (level == 2)
     out << COLOR_DEBUG << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
   else if (level == 3)

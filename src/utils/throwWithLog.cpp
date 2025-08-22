@@ -15,7 +15,7 @@
 // TODO : Call a cleanup function to close FDs and free resources (prevent leaks)
 void  throwWithLog(LogLevel level, const std::string &msg)
 {
-  const std::string prefix[5] = {"INFO", "DEBUG", "WARNING", "ERROR", "FATAL"};
+  const std::string prefix[5] = {"INFO ", "DEBUG", "WARNING", "ERROR", "FATAL"};
 
   if (level < LOG_INFO || level > LOG_FATAL)
     throw std::runtime_error("UNKNOWN log level: " + msg);

@@ -72,14 +72,14 @@ void Server::start_server_(void)
           this->close_client_(fd);
       }
       // TODO c`est ici qu`on va lire avec readFromPipe
-      else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
+      else if (!this->_pipeFdReadComplete && std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
       {
-
+        logger(LOG_INFO, "in function handleCgiRead");
+        this->handleCgiRead(fd);
       }
       else
         this->close_client_(fd);
     }
-    logger(LOG_DEBUG, "Checking timeouts...");
     check_timout_();
   }
 }
@@ -218,9 +218,7 @@ void  Server::setNonBlocking_(int fd)
 
 void  Server::handle_pollin_(int fd)
 {
-  std::ostringstream os;
-  os << "HANDLE POLLIN FD -> " << fd;
-  logger(LOG_DEBUG, os.str());
+  logger(LOG_DEBUG, "POLLIN event on fd=" + toString(fd));
   //this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   Client *client = this->_clients[fd];
   if (!(*client).readData() || (*client).getRequest().hasError())

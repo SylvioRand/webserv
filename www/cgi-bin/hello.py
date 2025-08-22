@@ -2,19 +2,31 @@
 import os
 from urllib.parse import parse_qs
 
-# Récupère la query string depuis les variables d'environnement
-query_string = os.environ.get("QUERY_STRING", "")
-params = parse_qs(query_string)
+def main():
+    # Récupérer les paramètres
+    query_string = os.environ.get("QUERY_STRING", "")
+    params = parse_qs(query_string)
+    name = params.get("name", ["inconnu"])[0]
+    
+    # Générer la réponse
+    html_content = f"""
+    <html>
+    <body>
+        <h1>Bonjour, {name}!</h1>
+        <p>Query string: {query_string}</p>
+        <p>Méthode: {os.environ.get('REQUEST_METHOD', 'inconnue')}</p>
+    </body>
+    </html>
+    """
+    
+    # Headers HTTP CORRECTS
+    print("Content-Type: text/html")
+    print(f"Content-Length: {len(html_content)}")
+    print("Connection: close")
+    print("")  # ⚠️ LIGNE VIDE OBLIGATOIRE
+    
+    # Body
+    print(html_content)
 
-# Extrait le paramètre 'name' ou utilise une valeur par défaut
-name = params.get("name", ["inconnu"])[0]
-
-# En-tête HTTP
-print("Content-Type: text/html\r\n")
-print("\r\n")
-
-# Corps HTML
-print("<html><body>")
-print("<h1>Bonjour, {}!</h1>".format(name))
-print("</body></html>")
-
+if __name__ == "__main__":
+    main()

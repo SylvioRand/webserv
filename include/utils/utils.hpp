@@ -15,7 +15,7 @@
  
 #define COLOR_RESET   "\033[0m"
 #define COLOR_INFO    "\033[36m"    // Cyan
-#define COLOR_DEBUG   "\033[90m"    // Gris clair
+#define COLOR_DEBUG   "\033[33m"    // jaune
 #define COLOR_WARN    "\033[33m"    // Jaune
 #define COLOR_ERROR   "\033[31m"    // Rouge
 #define COLOR_FATAL   "\033[97;41m" // Blanc sur fond rouge

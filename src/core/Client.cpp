@@ -36,7 +36,7 @@ Client::~Client(void)
 
 bool  Client::readData(void)
 {
-  logger(LOG_INFO, "Reading Data ...");
+  logger(LOG_DEBUG, "[HTTP] Reading request data from socket (recv).");
   //char buf[8192];
   char buf[8192];
   ssize_t bytes;

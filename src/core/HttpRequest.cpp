@@ -151,23 +151,8 @@ bool  HttpRequest::isComplete(void) const
 
 void  HttpRequest::appendToBody(std::string& str)
 {
-  logger(LOG_INFO, "In  function appendToBody");
   if (this->isChunked())
-  {
-    /*
-    logger(LOG_DEBUG, "appendToBody for chunked");
-    //logger(LOG_DEBUG, "infinit loop in HttpRequest::appendToBody");
-    logger(LOG_INFO, "Verification de ce qui a deja ete stoque dans _bodyBuffChunked");
-    std::cout.write(this->_bodyBuffChunked.c_str(), this->_bodyBuffChunked.size());
-    std::cout << std::endl;
-    logger(LOG_INFO, "fin de la verification de _bodyBuffChunked");
-    logger(LOG_INFO, "Verification du nouveau contenu recuperer pour le body");
-    std::cout.write(str.c_str(), str.size());
-    std::cout << std::endl;
-    logger(LOG_INFO, "fin de la verification de buff");
-    */
     this->extractBodyFromResponse(str);
-  }
   else
   {
     // TODO To move to another specific function/ and maybe nedd new implementation
@@ -319,7 +304,8 @@ void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
     size_t contentStart = pos + 2;
     if (contentSize == 0)
     {
-      logger(LOG_INFO, "[HTTP] Successfully received full request body (chunked transfer completed).");
+      logger(LOG_INFO,
+        "[HTTP] Successfully received full request body (chunked transfer completed).");
       this->_isComplete = true;
       this->_bodyBuffChunked.erase(0, pos + 4); 
       break; // sortir de la boucle
@@ -338,10 +324,7 @@ bool  HttpRequest::isNextChunkReady(size_t& contentSize)
   size_t pos = this->_bodyBuffChunked.find("\r\n");
   contentSize = 0;
   if (pos == std::string::npos)
-  {
-    logger(LOG_DEBUG, "aucun \\r\\n trouve");
     return (false);
-  }
 
   std::string hexaSize = this->_bodyBuffChunked.substr(0, pos);
   long value = strtol(this->_bodyBuffChunked.substr(0, pos).c_str(),
