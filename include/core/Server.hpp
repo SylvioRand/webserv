@@ -131,7 +131,9 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isExecutable_(const std::string& path);
     void  responsNotExecutable(const int& fd);
     char  **buildEnvpForExecve_(const int fd);
-    void  handleCgiRead(const int fd);
+    void  handleCgiRead(const int& pipeFd, const int& clientFd);
+    const std::string getFileName(const std::string uriPath);
+    void  unregisterCgiFd(const int& fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

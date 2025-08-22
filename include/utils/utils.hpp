@@ -14,11 +14,11 @@
 #define UTILS_HPP
  
 #define COLOR_RESET   "\033[0m"
-#define COLOR_INFO    "\033[36m"    // Cyan
-#define COLOR_DEBUG   "\033[33m"    // jaune
-#define COLOR_WARN    "\033[33m"    // Jaune
-#define COLOR_ERROR   "\033[31m"    // Rouge
-#define COLOR_FATAL   "\033[97;41m" // Blanc sur fond rouge
+#define COLOR_INFO    "\033[1;34m"    // Bleu clair
+#define COLOR_DEBUG   "\033[1;33m"    // jaune
+#define COLOR_WARN    "\033[1;38;5;208m"    // Jaune
+#define COLOR_ERROR   "\033[1;31m"    // Rouge
+#define COLOR_FATAL   "\033[1;97;41m" // Blanc sur fond rouge
 
 #include "../utils/Logger.hpp"
 #include "../utils/contentType.hpp"

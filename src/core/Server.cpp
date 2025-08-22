@@ -40,7 +40,12 @@ void Server::start_server_(void)
 
   while (true)
   {
-    logger(LOG_DEBUG, "Waiting on poll...");
+    static bool waitingLogged = false;
+    if (!waitingLogged)
+    {
+      logger(LOG_DEBUG, "Waiting on poll...");
+      waitingLogged = true;
+    }
     int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
@@ -48,6 +53,7 @@ void Server::start_server_(void)
     // On itère à l'envers pour éviter les problèmes avec erase()
     for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
     {
+      waitingLogged = false;
       if (_pool_fds[i].revents == 0)
         continue;
 
@@ -72,11 +78,8 @@ void Server::start_server_(void)
           this->close_client_(fd);
       }
       // TODO c`est ici qu`on va lire avec readFromPipe
-      else if (!this->_pipeFdReadComplete && std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
-      {
-        logger(LOG_INFO, "in function handleCgiRead");
-        this->handleCgiRead(fd);
-      }
+      else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
+        this->handleCgiRead(fd, this->_pipeFdClient[fd]);
       else
         this->close_client_(fd);
     }
@@ -229,9 +232,7 @@ void  Server::handle_pollin_(int fd)
   }
   if ((*client).isRequestComplete() && !(*client).getRequest().hasError())
   {
-    logger(LOG_DEBUG, "infinite loop ");
     this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
-    logger(LOG_DEBUG, "request completed");
     std::string method = this->getMethod(fd);
     if (!this->isHttpMethodValid_(method))
     {
@@ -242,13 +243,8 @@ void  Server::handle_pollin_(int fd)
     }
     //std::string uriPath = this->getUriPath_(fd);
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
-    logger(LOG_INFO, "the path(uri) [" +  getUriPath_(fd) + "]");
+    logger(LOG_DEBUG, "uriPath [" +  getUriPath_(fd) + "]");
     saveMatchingLocation_(fd, serverConf);
-    for (std::vector<std::string>::const_iterator val = this->getCurrentLocation().methods.begin();
-      val != this->getCurrentLocation().methods.end(); val++)
-    {
-      std::cout << "val = " << val->c_str() << std::endl;
-    }
 
     if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
@@ -268,8 +264,11 @@ void  Server::handle_pollin_(int fd)
       this->respondPayloadTooLarge(fd);
     else
       this->methodNotAllowed_(fd);
-    this->saveHeaderAndBodySize(fd);
-    this->setPollOut_(fd);
+    if (!this->_clients[fd]->getRequest()._isCgiRequest)
+    {
+      this->saveHeaderAndBodySize(fd);
+      this->setPollOut_(fd);
+    }
   }
   else if (this->_clients[fd]->getRequest().hasError())
     logger(LOG_DEBUG, "on a detecte un erreur");
@@ -325,19 +324,14 @@ int  Server::getStatus(int fd)
 
 bool  Server::isMethodAllowedForLocation(const std::string method)
 {
-  for (std::vector<std::string>::const_iterator val = this->getCurrentLocation().methods.begin();
-      val != this->getCurrentLocation().methods.end(); val++)
-  {
-    std::cout << "val = " << val->c_str() << std::endl;
-  }
   std::vector<std::string>::const_iterator it = std::find(this->getCurrentLocation().methods.begin(),
         this->getCurrentLocation().methods.end(), method);
   if (it != this->getCurrentLocation().methods.end())
   {
-    logger(LOG_DEBUG, "method [" + method + "] is detected and allowed");
+    logger(LOG_DEBUG, "[" + method + "] is allowed in location");
     return (true);
   }
-  logger(LOG_DEBUG, "method [" + method + "] is detected but not allowed");
+  logger(LOG_DEBUG, "[" + method + "] is not allowed in location");
   return (false);
 }
 
@@ -390,7 +384,6 @@ void  Server::methodNotSupported_(const int fd)
 
 void  Server::setPollOut_(int fd)
 {
-  logger(LOG_INFO, "HANDLE POLLOUT");
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
   {
     if (it->fd == fd)
@@ -398,18 +391,17 @@ void  Server::setPollOut_(int fd)
       it->events = POLLOUT;
       std::ostringstream oss;
 
-      oss << "successfully set event to POLL_OUT for fd [" << fd << "]";
-      logger(LOG_DEBUG, oss.str());
-
+      logger(LOG_INFO, "🟢 Monitoring output events (POLLOUT) on fd=" + toString(fd));
       return ;
     }
   }
-  logger(LOG_ERROR, "fd not found");
+
+  logger(LOG_ERROR,
+    "Failed to monitor input events (POLLIN) on fd=" + toString(fd) + " — descriptor not found");
 }
 
 void  Server::setPollIn_(const int& fd)
 {
-  logger(LOG_INFO, "HANDLE POLL_IN");
   this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   this->_clients[fd]->clearBuffer();
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
@@ -419,13 +411,12 @@ void  Server::setPollIn_(const int& fd)
       it->events = POLLIN;
       std::ostringstream oss;
 
-      oss << "successfully set event to POLL_IN for fd [" << fd << "]";
-      logger(LOG_DEBUG, oss.str());
-
+      logger(LOG_INFO, "🔵 Monitoring input events (POLLIN) on fd=" + toString(fd));
       return ;
     }
   }
-  logger(LOG_ERROR, "fd not found");
+  logger(LOG_ERROR,
+    "Failed to monitor input events (POLLIN) on fd=" + toString(fd) + " — descriptor not found");
 }
 
 
@@ -469,13 +460,15 @@ void Server::close_client_(int fd)
     if (itPollFd->fd == fd)
     {
       itPollFd = this->_pool_fds.erase(itPollFd);
-      std::cout << "after removing client in poll" << std::endl;
-      break;
+      logger(LOG_DEBUG,
+        "🟢 Client fd=" + toString(fd) + " successfully removed from poll monitoring");
+      return ;
     }
     else
       ++itPollFd;
   }
-  logger(LOG_DEBUG, "Out");
+  logger(LOG_DEBUG,
+    "⚠️ Failed to remove client fd=" + toString(fd) + ": not found in poll monitoring");
 }
 
 const std::map<std::string, std::string>& Server::getHeaders(int fd)
@@ -490,12 +483,9 @@ void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg
   size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
-  std::cout << "verify uriPath [" << getUriPath_(fd) << "]" << std::endl;
   for (std::map<std::string, LocationConfig>::const_iterator it = locations.begin(); it != locations.end(); it++)
   {
-    std::cout << "location root [" << it->second.root << "]" << std::endl;
     const std::string& path = it->first;
-    std::cout << "location path [" << it->first << "]" << std::endl;
     if (getUriPath_(fd).substr(0, path.size()) == path && path.size() > best_length)
     {
       best_match = it->second;
@@ -504,12 +494,12 @@ void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg
   }
   if (best_length == 0)
   {
-    logger(LOG_DEBUG, "root location will ve created and used");
+    logger(LOG_DEBUG, "root location will be created and used");
     this->createAndSaveRootLocation_(cfg);
     return ;
   }
   this->setCurrentLocation(best_match);
-  logger(LOG_DEBUG, "matching LocationConfig found, root [" + best_match.root + "]");
+  logger(LOG_DEBUG, "matching LocationConfig found [" + best_match.path + "]");
 }
 
 // TODO
@@ -553,7 +543,7 @@ void  Server::GETMethod_(const int& fd)
 
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
-  logger(LOG_DEBUG, "value of path [" + localPath + "]");
+  logger(LOG_DEBUG, "localPath [" + localPath + "]");
   if (this->isFile_(localPath))
   {
     if (this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
@@ -593,8 +583,6 @@ void  Server::GETMethod_(const int& fd)
     this->respondDirectoryListingForbidden(fd);
 }
 
-
-
 std::string Server::getFileExtension_(std::string path)
 {
   std::string uri;
@@ -603,14 +591,7 @@ std::string Server::getFileExtension_(std::string path)
     uri = path.substr(0, pos);
   else
     uri = path;
-  std::string fileName;
-  size_t      slashPos;
-
-  slashPos = uri.rfind('/');
-  if (slashPos == std::string::npos)
-    fileName = uri;
-  else
-    fileName = uri.substr(slashPos + 1);
+  const std::string fileName = this->getFileName(path);
 
   size_t extStart = uri.rfind('.');
   if (extStart == std::string::npos)
@@ -618,6 +599,15 @@ std::string Server::getFileExtension_(std::string path)
   else
     return (uri.substr(extStart));
   return ("");
+}
+
+const std::string Server::getFileName(const std::string uriPath)
+{
+  size_t pos = uriPath.rfind("/");
+
+  if (pos != std::string::npos)
+    return (uriPath.substr(pos + 1));
+  return (uriPath);
 }
 
 bool Server::isExecutable_(const std::string& path) {

@@ -19,8 +19,8 @@
 #include <unistd.h>
 
 
-Client::Client(int fd, ServerConfigConstIterator cfg) : _fd(fd),
-  _lastActivity(time(NULL)), _cfg(cfg)
+Client::Client(int fd, ServerConfigConstIterator cfg) : _isReadingCgiResponse(false),
+  _fd(fd), _lastActivity(time(NULL)), _cfg(cfg)
 {
 }
 
@@ -41,11 +41,6 @@ bool  Client::readData(void)
   char buf[8192];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
-  /*
-  std::cout.write(buf, bytes);
-  std::cout << std::endl;
-  logger(LOG_INFO, "end of reading");
-  */
   if (bytes == -1)
   {
     logger(LOG_ERROR, "[RECV] Failed to receive data from client");
@@ -84,24 +79,12 @@ bool  Client::readData(void)
 void  Client::sendData(std::string &localPath)
 {
   (void)localPath;
-  logger(LOG_INFO, "Sending Data ...");
-  logger(LOG_DEBUG, "Status value [" + toString(this->_response.getStatus()) + "]");
+  logger(LOG_INFO, "📤 Sending HTTP response to client...");
+  logger(LOG_DEBUG, "Status code [" + toString(this->_response.getStatus()) + "]");
   if (!this->_response.areHeadersFullySent())
     this->_response.sendHeaders(this->_fd);
   else if (!this->_response.isBodyFullySent())
     this->_response.sendBody(this->_fd);
-
-  // just to verify
-  std::cout << "------------------------------------" << std::endl;
-  std::cout << this->_response.build() << std::endl;
-  std::cout << "------------------------------------" << std::endl;
-
-  std::cout << "=======================" << std::endl;
-  std::cout << "file body path [" << this->_response.getBodyFilePath()
-    << "]"<< std::endl;
-  std::cout << "file body fd [" << this->_response.getBodyFileFd()
-    << "]"<< std::endl;
-  std::cout << "=======================" << std::endl;
 }
 
 bool  Client::isRequestComplete(void) const

@@ -129,17 +129,10 @@ void HttpResponse::sendBody(const int &fd)
         logger(LOG_DEBUG, "bytesSent == -1");
     }
   }
-  std::cout << "on ressort **************" << std::endl;
 }
 
-bool HttpResponse::areHeadersFullySent(void) {
-  logger(LOG_DEBUG, "verifying areHeadersFullySent");
-  std::cout << "---------------" << std::endl;
-  std::cout << "headers size = " << this->_headersSize << std::endl;
-  std::cout << "headers offser = " << this->_headersOffset << std::endl;
-  std::cout << "body size = " << this->_bodySize << std::endl;
-  std::cout << "body offset = " << this->_bodyBytesSent << std::endl;
-  std::cout << "---------------" << std::endl;
+bool HttpResponse::areHeadersFullySent(void)
+{
   if (this->_headersOffset == this->_headersSize) {
     logger(LOG_DEBUG, "Headers are fully sent");
     return (true);

@@ -26,6 +26,8 @@ class Client
     Client(int fd, ServerConfigConstIterator cfg_ite);
     ~Client(void);
 
+    bool  _isReadingCgiResponse;
+
     bool  readData(void);
     void  sendData(std::string& localPath);
     bool  isRequestComplete(void) const;
@@ -38,6 +40,7 @@ class Client
     Client(void);
     Client(const Client &other);
     Client& operator=(const Client& other);
+
 
     int                       _fd;
     HttpRequest               _request;

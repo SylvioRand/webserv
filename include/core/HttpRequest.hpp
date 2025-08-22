@@ -43,6 +43,8 @@ class HttpRequest
     HttpRequest(void);
     ~HttpRequest(void);
 
+    bool  _isCgiRequest;
+
     void  parse(const std::string &raw_request);
     bool  isValid(void) const;
     bool  isComplete(void) const;

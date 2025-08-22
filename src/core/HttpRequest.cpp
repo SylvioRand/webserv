@@ -1,4 +1,4 @@
-/* ***********************************else *************************************** */
+/* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   HttpRequest.cpp                                    :+:      :+:    :+:   */
@@ -19,8 +19,8 @@
 #include <string>
 #include <sys/types.h>
 
-HttpRequest::HttpRequest(void) :_isComplete(false),  _bodyBytesRead(0), _contentLength(0),
-  _isChunked(false)
+HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0), _contentLength(0),
+  _isChunked(false), _isCgiRequest(false)
 {
 
 }
@@ -38,6 +38,11 @@ void  HttpRequest::parse(const std::string &raw_request)
   if (pos == std::string::npos)
     return ;
   logger(LOG_DEBUG, "End of header detected (\\r\\n\\r\\n)");
+  std::ostringstream oss;
+  oss << "👇👇👇👇👇 Headers from request 👇👇👇👇👇" << std::endl << std::endl;
+  oss.write(raw_request.c_str(), pos);
+  oss << std::endl << std::endl;
+  logger(LOG_DEBUG, oss.str());
   this->parseHeader_(raw_request, pos);
 }
 
@@ -45,21 +50,21 @@ void  HttpRequest::parse(const std::string &raw_request)
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
 {
-  logger(LOG_INFO, "Parsing of header begins.");
+  logger(LOG_DEBUG, "Parsing of header begins.");
   std::string headerPart = raw_request.substr(0, endOfHeader);
   std::istringstream iss(headerPart);
   iss >> this->_method;
   iss >> this->_path;
   iss >> this->_version;
-  logger(LOG_INFO, "Method -> " + this->_method);
-  logger(LOG_INFO, "path -> " + this->_path);
-  logger(LOG_INFO, "version -> " + this->_version);
+  logger(LOG_DEBUG, "Method     -> " + this->_method);
+  logger(LOG_DEBUG, "requestURI -> " + this->_path);
+  logger(LOG_DEBUG, "version    -> " + this->_version);
   std::string line;
 
   std::getline(iss, line);
   if (!this->isValid())
   {
-    this->_isComplete = true;
+    this->markRequestComplete();
     return ;
   }
   while (std::getline(iss, line) && line != "\r")
@@ -80,7 +85,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   if (this->_method == "POST")
     bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
   if (this->_method != "POST")
-    this->_isComplete = true;
+    this->markRequestComplete();
   else if (this->isChunked())
     this->extractBodyFromResponse(bodyPart);
   else
@@ -92,7 +97,7 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     {
       bodyPart.resize(this->_contentLength);
       this->_bodyBytesRead = this->_contentLength;
-      this->_isComplete = true;
+      this->markRequestComplete();
     }
     else
       this->_bodyBytesRead = bodyPart.size();
@@ -102,7 +107,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 
 void  HttpRequest::setIsChunckedValue(void)
 {
-  logger(LOG_DEBUG, "in function setIsChunckedValue");
   std::map<std::string, std::string>::const_iterator it = this->getHeaders().find("transfer-encoding");
   if (it != this->getHeaders().end())
   {
@@ -110,12 +114,11 @@ void  HttpRequest::setIsChunckedValue(void)
     if (it->second == "chunked")
     {
       this->_isChunked = true;
-      logger(LOG_DEBUG, "isChunked set to true");
+      logger(LOG_DEBUG, "Chunked request detected");
       this->_contentLength = -1;
       return ;
     }
   }
-  logger(LOG_DEBUG, "isChunked set to false");
 }
 
 bool  HttpRequest::isChunked()
@@ -127,10 +130,10 @@ bool  HttpRequest::isValid(void) const
 {
   if (this->_method != "GET" && this->_method != "POST" && this->_method != "DELETE")
   {
-    logger(LOG_ERROR, "INVALID method");
+    logger(LOG_WARNING, "INVALID method");
     return (false);
   }
-  logger(LOG_INFO, "valid method");
+  logger(LOG_DEBUG, "✅ valid method");
   return (true);
 }
 
@@ -152,7 +155,7 @@ bool  HttpRequest::isComplete(void) const
 void  HttpRequest::appendToBody(std::string& str)
 {
   if (this->isChunked())
-    this->extractBodyFromResponse(str);
+        this->extractBodyFromResponse(str);
   else
   {
     // TODO To move to another specific function/ and maybe nedd new implementation
@@ -169,7 +172,7 @@ void  HttpRequest::appendToBody(std::string& str)
     this->_body.append(str.c_str(), str.size());
     if (this->_bodyBytesRead == this->_contentLength)
     {
-      this->_isComplete = true;
+      this->markRequestComplete()
       this->parseBody();
     }
     */
@@ -194,6 +197,7 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders(void) const
 void HttpRequest::shiftBufferAfterRequest()
 {
   logger(LOG_DEBUG, "in shiftBufferAfterRequest");
+  this->_isCgiRequest = false;
   this->_method.clear();
   this->_path.clear();
   this->_headers.clear();
@@ -275,6 +279,7 @@ LocationConfig  HttpRequest::createAndReturnRootLocation_(const ServerConfigCons
 
 void  HttpRequest::markRequestComplete(void)
 {
+  logger(LOG_DEBUG, "✅ Request fully received");
   this->_isComplete = true;
 }
 
@@ -306,7 +311,7 @@ void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
     {
       logger(LOG_INFO,
         "[HTTP] Successfully received full request body (chunked transfer completed).");
-      this->_isComplete = true;
+      this->markRequestComplete();
       this->_bodyBuffChunked.erase(0, pos + 4); 
       break; // sortir de la boucle
     }
