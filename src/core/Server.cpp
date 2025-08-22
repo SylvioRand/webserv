@@ -1,4 +1,6 @@
-/* ************************************************************************** */ /*                                                                            */ /*                                                        :::      ::::::::   */
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
@@ -799,7 +801,7 @@ void  Server::POSTMethod_(const int fd)
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
-    this->saveBodyToFile("image.png", fd);
+    this->saveBodyToFile("lowSize.jpeg", fd);
     this->saveUploadedFile_(fd);
   }
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
@@ -807,6 +809,7 @@ void  Server::POSTMethod_(const int fd)
 
 void Server::saveBodyToFile(const std::string& filename, const int& fd)
 {
+  logger(LOG_INFO, "In saveBodyToFile");
   std::string path;
   path = this->getCurrentLocation().upload_dir + "/" + filename;
   std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);

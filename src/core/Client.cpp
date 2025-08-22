@@ -36,12 +36,15 @@ Client::~Client(void)
 
 bool  Client::readData(void)
 {
+  logger(LOG_INFO, "Reading Data ...");
   //char buf[8192];
   char buf[8192];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
 
   std::cout.write(buf, bytes);
+  std::cout << std::endl;
+  logger(LOG_INFO, "end of reading");
   if (bytes == -1)
   {
     logger(LOG_ERROR, "[RECV] Failed to receive data from client");
@@ -65,15 +68,17 @@ bool  Client::readData(void)
     if (this->getRequest().isChunked())
     {
       logger(LOG_DEBUG, "chunked detected");
-      this->_request.appendToBody(buf);
+      std::string bodyPart;
+      bodyPart.append(buf, bytes);
+      this->_request.appendToBody(bodyPart);
+    }
+    else if (this->getRequest().isBodySizeAllowed())
+    {
+      //TODO need specific function for it
+      //this->_request.appendToBody(bodyPart);
     }
     else
-    {
-      if (this->getRequest().isBodySizeAllowed())
-        this->_request.appendToBody(buf);
-      else
-        this->_request.isComplete();
-    }
+      this->_request.isComplete();
   }
   return (true);
 }

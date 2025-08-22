@@ -46,7 +46,7 @@ class HttpRequest
     void  parse(const std::string &raw_request);
     bool  isValid(void) const;
     bool  isComplete(void) const;
-    void  appendToBody(std::string str);
+    void  appendToBody(std::string& str);
     const std::string &getMethod(void) const;
     const std::string &getVersion(void) const;
     const std::string& getBody(void) const;
