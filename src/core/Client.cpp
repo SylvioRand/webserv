@@ -75,16 +75,19 @@ bool  Client::readData(void)
   return (true);
 }
 
-// TODO
-void  Client::sendData(std::string &localPath)
+void  Client::sendData(void)
 {
-  (void)localPath;
-  logger(LOG_INFO, "📤 Sending HTTP response to client...");
-  logger(LOG_DEBUG, "Status code [" + toString(this->_response.getStatus()) + "]");
+  logger(LOG_INFO, "📤 Sending HTTP response to client fd=" + toString(this->_fd) + " ...");
   if (!this->_response.areHeadersFullySent())
     this->_response.sendHeaders(this->_fd);
   else if (!this->_response.isBodyFullySent())
     this->_response.sendBody(this->_fd);
+}
+
+void  Client::sendCgiData(void)
+{
+  logger(LOG_INFO, "📤 Sending HTTP cgi response to client fd=" + toString(this->_fd) + " ...");
+  this->_response.sendCgiResponse(this->_fd);
 }
 
 bool  Client::isRequestComplete(void) const

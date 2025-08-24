@@ -1,5 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
@@ -79,7 +77,18 @@ void Server::start_server_(void)
       }
       // TODO c`est ici qu`on va lire avec readFromPipe
       else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
-        this->handleCgiRead(fd, this->_pipeFdClient[fd]);
+      {
+        if (revents & (POLLERR))
+        {
+          this->handleCgiRead(fd, this->_pipeFdClient[fd]);
+        }
+        if (revents & (POLLIN | POLLHUP))
+        {
+          this->handleCgiRead(fd, this->_pipeFdClient[fd]);
+        }
+        if (revents & POLLOUT)
+        {}
+      }
       else
         this->close_client_(fd);
     }
@@ -423,18 +432,35 @@ void  Server::setPollIn_(const int& fd)
 // TODO
 void  Server::handle_pollout_(int fd)
 {
-  logger(LOG_INFO, "In handle_pollout_ FUNCTION");
-  
-  this->_clients[fd]->sendData(this->_localPath);
-  logger(LOG_DEBUG, "in handle_pollout_ function");
-  if (this->_clients[fd]->getResponse().areHeadersFullySent() &&
-      this->_clients[fd]->getResponse().isBodyFullySent())
+  logger(LOG_DEBUG, "POLLOUT event on fd=" + toString(fd));
+  Client *client = this->_clients[fd];
+
+  if (this->_clients[fd]->getRequest()._isCgiRequest)
   {
-    std::cout << "tokony efa vita eh" << std::endl;
-    if (this->_clients[fd]->getResponse().isKeepAlive())
+    client->sendCgiData();
+    if (client->getResponse().getCgiBytesSent()
+        == client->getResponse().getCgiRespondSize())
+      client->getResponse()._isFullySent = true;
+  }
+  else
+  {
+    client->sendData();
+    if (client->getResponse().areHeadersFullySent() &&
+        client->getResponse().isBodyFullySent())
+      client->getResponse()._isFullySent = true;
+  }
+  if (client->getResponse()._isFullySent)
+  {
+    logger(LOG_INFO, "📤 Response fully sent to client fd="
+        + toString(fd) + " | Status code: "
+        + toString(client->getResponse().getStatus()));
+    this->_clients[fd]->getResponse().closeBodyFileFd(
+        this->_clients[fd]->getResponse().getBodyFileFd(),
+        this->getFileName(getUriPath_(fd)));
+    if (client->getResponse().isKeepAlive())
     {
       this->setPollIn_(fd);
-      this->_clients[fd]->getResponse().initializeState();
+      client->getResponse().initializeState();
     }
     else
       close_client_(fd);
@@ -443,7 +469,8 @@ void  Server::handle_pollout_(int fd)
 
 void Server::close_client_(int fd)
 {
-  logger(LOG_INFO, "close client");
+  this->_clients[fd]->getResponse().closeBodyFileFd(fd, this->getFileName(this->getUriPath_(fd)));
+  logger(LOG_INFO, "close client fd=" + toString(fd));
 
   std::map<int, Client*>::iterator it = _clients.find(fd);
   if (it != _clients.end())
@@ -451,9 +478,7 @@ void Server::close_client_(int fd)
     delete it->second;
     _clients.erase(it);
   }
-  std::cout << "after removing client in _clients maps" << std::endl;
   close(fd);
-  std::cout << "after close(fd)" << std::endl;
   std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
   while (itPollFd != this->_pool_fds.end())
   {
@@ -716,7 +741,6 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
   [corps du fichier]
   */
   std::string contentType = this->getContentTypeByFileExtension(path);
-  std::cout << "value of Content-Type " << contentType << std::endl;
 
   std::string contentLength = toString(getFileSize(path));
   std::ostringstream headers;
@@ -1115,7 +1139,6 @@ void  Server::processReadableFile_(const int fd, const std::string& path)
 {
   logger(LOG_DEBUG, "In function processReadableFile_");
   std::string contentType = this->getContentTypeByFileExtension(path);
-  std::cout << "value of Content-Type " << contentType << std::endl;
 
   std::string contentLength = toString(getFileSize(path));
   this->setBodySize(fd, getFileSize(path));
@@ -1649,14 +1672,18 @@ void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
 
 void  Server::openAndSaveBodyFileFd(const std::string& path, const int& clientFd)
 {
-  logger(LOG_DEBUG, "Attempting to open the file and store its file descriptor...");
   int fd;
 
   fd = open(path.c_str(), O_RDONLY);
   if (fd == -1)
+  {
     logger(LOG_FATAL,
         "Warning: The file should be readable but an issue was detected.");
+    return ;
+  }
   this->_clients[clientFd]->getResponse().setBodyFileFd(fd);
+  logger(LOG_INFO, "File opened and FD stored for response body: filename='"
+      + path + "', fd=" + toString(fd));
 }
 
 void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
@@ -1690,6 +1717,42 @@ void  Server::respondPayloadTooLarge(const int& fd)
   std::ostringstream headers;
 
   headers << this->getVersion(fd) << " 413 Request Entity Too Large\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+}
+
+// TODO 
+void  Server::respondFallbackError(const int& fd)
+{
+  logger(LOG_DEBUG, "In function respondFallbackError");
+  /*
+  HTTP/1.1 502 Bad Gateway
+  Content-Type: text/html
+  Content-Length: 102
+
+  Failed to retrieve response from CGI.
+  */
+   std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(502, fd);
+  if (this->hasCustomErrorPage(502, fd))
+    this->saveErrorBodyFilePath(502, fd, contentType, contentLength);
+  else
+  {
+    body = "Failed to retrieve response from CGI.";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 502 Bad Gateway\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);

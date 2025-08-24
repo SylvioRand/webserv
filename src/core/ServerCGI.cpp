@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iomanip>
+#include <iostream>
 #include <iterator>
 #include <map>
 #include <sstream>
@@ -51,6 +52,8 @@ void Server::handleCgiGetRequest_(const int fd)
     return ;
   }
   this->_clients[fd]->getRequest()._isCgiRequest = true;
+  logger(LOG_DEBUG,
+      "🚀 Executing CGI handler [" + this->getFileName(this->getUriPath_(fd)) + "] ...");
   int pid = fork();
   if (pid < 0)
   {
@@ -68,14 +71,12 @@ void Server::handleCgiGetRequest_(const int fd)
     close(cgi_pipe[0]);
     dup2(cgi_pipe[1], STDOUT_FILENO);
     close(cgi_pipe[1]);
-    logger(LOG_DEBUG,
-        "🚀 Executing CGI handler [" + this->getFileName(this->getUriPath_(fd)) + "]");
     execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
+    perror("execve failed");
     exit(0);
   }
   else
   {
-    logger(LOG_DEBUG, "I am parent");
     this->_pipeFdReadComplete = false;
     this->_pipeFd.push_back(cgi_pipe[0]);
     this->_pipeFdClient[cgi_pipe[0]] = fd;
@@ -90,6 +91,8 @@ char  **Server::buildEnvpForExecve_(const int fd)
   std::map<std::string, std::string>  envMap;
   std::ostringstream  oss;
 
+  envMap["VERSION"] = this->getVersion(fd);
+  oss << "        " << "VERSION = " << envMap["VERSION"] << std::endl;;
   envMap["REQUEST_METHOD"] = this->getMethod(fd);
   oss << "        " << "REQUEST_METHOD = " << envMap["REQUEST_METHOD"] << std::endl;;
   size_t pos = this->getRequestUri_(fd).rfind("?");
@@ -102,8 +105,9 @@ char  **Server::buildEnvpForExecve_(const int fd)
   envMap["SCRIPT_NAME"] = this->getUriPath_(fd);
   oss << "        " << "SCRIPT_NAME = " << envMap["SCRIPT_NAME"] << std::endl;
   envMap["SERVER_PROTOCOL"] = this->getVersion(fd);
-  oss << "        " << "SERVER_PROTOCOL = " << envMap["SERVER_PROTOCOL"] << std::endl
-    << std::endl;
+  oss << "        " << "SERVER_PROTOCOL = " << envMap["SERVER_PROTOCOL"] << std::endl;
+  envMap["CONNECTION"] = this->buildConnectionHeader(fd);
+  oss << "        " << "CONNECTION = " << envMap["CONNECTION"] << std::endl;;
   logger(LOG_DEBUG, "⚙️  CGI environment variables set for child process\n" + oss.str());
   std::vector<std::string>  envVars;
   for (std::map<std::string, std::string>::iterator it = envMap.begin();
@@ -134,33 +138,37 @@ void Server::handleCgiPostRequest_(const int fd)
 
 void  Server::handleCgiRead(const int& pipeFd, const int& clientFd)
 {
-  // a modifier, C'est juste pour voir tous les chaine lus
-  if (this->_clients[clientFd]->_isReadingCgiResponse == false)
+  Client* client = this->_clients[clientFd];
+  if (client->_isReadingCgiResponse == false)
   {
-    logger(LOG_DEBUG,
+    logger(LOG_INFO,
         "📥 Receiving CGI-generated HTTP response in parent process ...");
-    this->_clients[clientFd]->_isReadingCgiResponse = true;
+    client->_isReadingCgiResponse = true;
   }
-  static std::string fullStr;
-  char buffer[12];
+  char buffer[8192];
   int count = read(pipeFd, buffer, sizeof(buffer));
   if (count == -1)
   {
-    logger(LOG_ERROR, "read failed");
+    logger(LOG_ERROR, "CGI read failure, fallback response will be sent");
+    this->_clients[pipeFd]->getRequest()._isCgiRequest = false;
+    this->unregisterCgiFd(pipeFd);
+    this->respondFallbackError(clientFd);
+    this->saveHeaderAndBodySize(clientFd);
+    this->setPollOut_(clientFd);
   } 
   else if (count == 0)
   {
-    logger(LOG_INFO, "Parent received CGI response, ready to send.");
+    logger(LOG_INFO,
+      "Parent received CGI response, ready to send to client fd=" + toString(clientFd));
     this->_pipeFdReadComplete = true;
-    this->_clients[clientFd]->_isReadingCgiResponse = false;
+    client->_isReadingCgiResponse = false;
+    client->getResponse().saveCgiRespondSize(clientFd);
     this->unregisterCgiFd(pipeFd);
     this->setPollOut_(clientFd);
-    std::cout << fullStr << std::endl;
   }
   else if (count > 0)
   {
-    buffer[count] = 0;
-    fullStr.append(buffer);
+    client->getResponse().appendCgiResponse(buffer, count);
   }
 }
 
@@ -182,4 +190,11 @@ void  Server::unregisterCgiFd(const int& pipeFd)
   }
   logger(LOG_DEBUG,
     "⚠️ Failed to remove pipe fd=" + toString(pipeFd) + ": not found in poll monitoring");
+}
+
+void  Server::appendCgiResponse(const int& clientFd, const std::string& buff)
+{
+  (void)clientFd;
+  (void)buff;
+  this->_clients[clientFd]->getResponse();
 }

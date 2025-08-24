@@ -196,7 +196,6 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders(void) const
 
 void HttpRequest::shiftBufferAfterRequest()
 {
-  logger(LOG_DEBUG, "in shiftBufferAfterRequest");
   this->_isCgiRequest = false;
   this->_method.clear();
   this->_path.clear();
@@ -212,20 +211,23 @@ void HttpRequest::shiftBufferAfterRequest()
 
 bool  HttpRequest::isBodySizeAllowed(void)
 {
-  logger(LOG_DEBUG, "In function isBodySizeAllowed");
-  std::ostringstream oss;
+  LocationConfig  location = this->getMatchingLocation_(this->_path,
+      this->getServerConf());
 
-  LocationConfig  location = this->getMatchingLocation_(this->_path, this->getServerConf());
-  oss << "Content-Length [" << this->_contentLength << "]\n" <<
-    "client_max_body_size [" << location.client_max_body_size << "]";
-  logger(LOG_DEBUG, oss.str());
-  
   if (this->_contentLength > location.client_max_body_size)
   {
     logger(LOG_DEBUG, "Too large");
+    logger(LOG_INFO, 
+      "❌ Client body size (" + toString(this->_contentLength) + 
+      " bytes) exeeds limit (" + 
+      toString(location.client_max_body_size) + " bytes).");
+
     return (false);
   }
-  logger(LOG_DEBUG, "Body size is allowed.");
+  logger(LOG_INFO, 
+    "✅ Client body size (" + toString(this->_contentLength) + 
+    " bytes) is within allowed limit (" + 
+    toString(location.client_max_body_size) + " bytes).");
   return (true);
 }
 
@@ -279,7 +281,7 @@ LocationConfig  HttpRequest::createAndReturnRootLocation_(const ServerConfigCons
 
 void  HttpRequest::markRequestComplete(void)
 {
-  logger(LOG_DEBUG, "✅ Request fully received");
+  logger(LOG_INFO, "✅ Request fully received");
   this->_isComplete = true;
 }
 

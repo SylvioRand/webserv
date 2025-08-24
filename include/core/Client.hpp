@@ -29,7 +29,8 @@ class Client
     bool  _isReadingCgiResponse;
 
     bool  readData(void);
-    void  sendData(std::string& localPath);
+    void  sendData(void);
+    void  sendCgiData(void);
     bool  isRequestComplete(void) const;
     HttpRequest& getRequest(void);
     HttpResponse& getResponse(void);

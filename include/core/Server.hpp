@@ -37,6 +37,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handle_pollin_(int fd);
     void  handle_pollout_(int fd);
     void  close_client_(int fd);
+    void  close_pipeFd_(const int& fd);
     void  check_timout_(void);
     void  addFdToPoll_(int fd);
     //void  startListener_(int fd, const ServerConfig &cfg);
@@ -122,6 +123,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  saveBodyToFile(const std::string& filename, const int& fd);
     std::string
           getUriPath_(const int& fd);
+    void  respondFallbackError(const int& fd);
 
     // for cgi
     void  handleCgiGetRequest_(const int fd);
@@ -134,6 +136,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleCgiRead(const int& pipeFd, const int& clientFd);
     const std::string getFileName(const std::string uriPath);
     void  unregisterCgiFd(const int& fd);
+    void  appendCgiResponse(const int& clientFd, const std::string& buff);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

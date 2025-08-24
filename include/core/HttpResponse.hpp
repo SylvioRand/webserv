@@ -38,6 +38,9 @@ class HttpResponse
     ssize_t     _bufferOffset;
     ssize_t     _bodyBytesSent;
     bool        _keepAlive;
+    std::string _cgiResponse;
+    ssize_t     _cgiResponseSize;
+    ssize_t     _cgiBytesSent;;
 
 
   public:
@@ -64,6 +67,17 @@ class HttpResponse
     void  initializeState(void);
     void  setKeepAliveStatus(bool value);
     bool  isKeepAlive(void);
+    ssize_t
+          getCgiBytesSent(void);
+    ssize_t
+          getCgiRespondSize(void);
+    void  saveCgiRespondSize(const int& cliendFd);
+    void  appendCgiResponse(const std::string& buff, const ssize_t& size);
+    void  sendCgiResponse(const int&fd);
+    bool  isCgiResponseFullySent(void);
+    void  closeBodyFileFd(const int&fd, const std::string path);
+
+    bool  _isFullySent;
 };
 
 #endif
