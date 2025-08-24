@@ -127,7 +127,10 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
 
     // for cgi
     void  handleCgiGetRequest_(const int fd);
-    void  handleCgiPostRequest_(const int fd);
+    bool  isCGIRequest(const int& fd);
+    void  respondInternalServerError(const int&fd);
+    void  prepareAndLaunchCGI(const int& fd);
+    void  launchCgiProcess(const int& fd, const std::string& localPath);
     std::string
           getFileExtension_(std::string path);
     bool  isExecutable_(const std::string& path);

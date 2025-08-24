@@ -263,6 +263,8 @@ void  Server::handle_pollin_(int fd)
       this->methodNotSupported_(fd);
     else if (getCurrentLocation().methods.empty())
       this->methodNotAllowed_(fd);
+    else if (this->isCGIRequest(fd))
+      this->prepareAndLaunchCGI(fd);
     else if (method == "GET" && this->isMethodAllowedForLocation("GET"))
       this->GETMethod_(fd);
     else if (method == "POST" && this->isMethodAllowedForLocation("POST"))
@@ -571,16 +573,7 @@ void  Server::GETMethod_(const int& fd)
   logger(LOG_DEBUG, "localPath [" + localPath + "]");
   if (this->isFile_(localPath))
   {
-    if (this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
-      && !this->getCurrentLocation().cgi_extension.empty()
-      && !this->getCurrentLocation().cgi_path.empty())
-    {
-      if (this->isExecutable_(localPath))
-        this->handleCgiGetRequest_(fd);
-      else
-        this->responsNotExecutable(fd);
-    }
-    else if (this->isReadable_(localPath))
+    if (this->isReadable_(localPath))
       this->processReadableFile_(fd, localPath);
     else
       this->respondFileNotReadable(fd);
@@ -607,6 +600,8 @@ void  Server::GETMethod_(const int& fd)
   else if (!this->getCurrentLocation().autoindex)
     this->respondDirectoryListingForbidden(fd);
 }
+
+
 
 std::string Server::getFileExtension_(std::string path)
 {
@@ -635,18 +630,20 @@ const std::string Server::getFileName(const std::string uriPath)
   return (uriPath);
 }
 
-bool Server::isExecutable_(const std::string& path) {
-    struct stat st;
-    if (stat(path.c_str(), &st) == 0) {
-        // Vérifie si c'est un fichier régulier
-        if (S_ISREG(st.st_mode)) {
-            // Vérifie s'il est exécutable par quelqu’un (propriétaire, groupe ou autres)
-            if (st.st_mode & S_IXUSR || st.st_mode & S_IXGRP || st.st_mode & S_IXOTH) {
-                return true;
-            }
-        }
+bool Server::isExecutable_(const std::string& path)
+{
+  struct stat st;
+  if (stat(path.c_str(), &st) == 0)
+  {
+    // Vérifie si c'est un fichier régulier
+    if (S_ISREG(st.st_mode))
+    {
+      // Vérifie s'il est exécutable par quelqu’un (propriétaire, groupe ou autres)
+      if (st.st_mode & S_IXUSR || st.st_mode & S_IXGRP || st.st_mode & S_IXOTH)
+        return true;
     }
-    return false;
+  }
+  return false;
 }
 
 // TODO
@@ -805,11 +802,7 @@ void  Server::POSTMethod_(const int fd)
 
   localPath = location.upload_dir + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
-  if( this->getFileExtension_(getUriPath_(fd)) == this->getCurrentLocation().cgi_extension
-      && !this->getCurrentLocation().cgi_extension.empty()
-      && !this->getCurrentLocation().cgi_path.empty())
-    this->handleCgiPostRequest_(fd);
-  else if (directoryExists_(localPath))
+  if (directoryExists_(localPath))
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file

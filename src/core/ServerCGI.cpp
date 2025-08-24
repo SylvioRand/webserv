@@ -24,6 +24,90 @@
 #include <unistd.h>
 #include <cstring> // pour strdup
 
+
+void  Server::prepareAndLaunchCGI(const int& fd)
+{
+  LocationConfig  location = this->getCurrentLocation();
+  std::string     localPath;
+  localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
+  std::string cgiPath = location.cgi_path;
+  if (this->isExecutable_(localPath))
+  {
+    if (!this->isFile_(cgiPath) || !this->isExecutable_(cgiPath))
+      this->respondInternalServerError(fd);
+    else
+      this->launchCgiProcess(fd, localPath);
+  }
+  else
+    this->responsNotExecutable(fd);
+}
+
+// TODO
+void  Server::respondInternalServerError(const int&fd)
+{
+  (void)fd;
+}
+
+void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
+{
+  // build env variables
+  char **envp = this->buildEnvpForExecve_(fd);
+
+  // execute the script and cummunicate with him
+  int cgi_pipe[2];
+  if (pipe(cgi_pipe) == -1)
+  {
+    logger(LOG_ERROR, "Error with function pipe()");
+    return ;
+  }
+  this->_clients[fd]->getRequest()._isCgiRequest = true;
+  logger(LOG_DEBUG,
+      "🚀 Executing CGI handler [" + this->getFileName(this->getUriPath_(fd)) + "] ...");
+  int pid = fork();
+  if (pid < 0)
+  {
+    // TODO Need to do something here for HTTP response
+    logger(LOG_FATAL, "fork failed");
+    return ;
+  }
+  else if (pid == 0)
+  {
+    char *argv[] = {
+        (char*)this->getCurrentLocation().cgi_path.c_str(),
+        (char*)localPath.c_str(),
+        NULL
+    };
+    close(cgi_pipe[0]);
+    dup2(cgi_pipe[1], STDOUT_FILENO);
+    close(cgi_pipe[1]);
+    execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
+    perror("execve failed");
+    exit(0);
+  }
+  else
+  {
+    this->_pipeFdReadComplete = false;
+    this->_pipeFd.push_back(cgi_pipe[0]);
+    this->_pipeFdClient[cgi_pipe[0]] = fd;
+    this->setNonBlocking_(cgi_pipe[0]);
+    this->addFdToPoll_(cgi_pipe[0]);
+    close(cgi_pipe[1]);
+  }
+
+}
+
+bool  Server::isCGIRequest(const int&fd)
+{
+  LocationConfig  location = this->getCurrentLocation();
+  std::string     localPath;
+  localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
+
+  return (this->getFileExtension_(getUriPath_(fd)) ==
+      this->getCurrentLocation().cgi_extension
+      && !this->getCurrentLocation().cgi_extension.empty()
+      && !this->getCurrentLocation().cgi_path.empty());
+}
+
 void Server::handleCgiGetRequest_(const int fd)
 {
   std::string absolutePath = this->getCurrentLocation().root  + "/" \
@@ -41,6 +125,7 @@ void Server::handleCgiGetRequest_(const int fd)
     // "500 Internal Server Error: CGI interpreter not available
     return ;
   }
+
   // build env variables
   char **envp = this->buildEnvpForExecve_(fd);
 
@@ -128,12 +213,6 @@ char  **Server::buildEnvpForExecve_(const int fd)
   }
   envp[envVars.size()] = NULL;
   return (envp);
-}
-
-void Server::handleCgiPostRequest_(const int fd)
-{
-  logger(LOG_DEBUG, "in handleCgiPostRequest_");
-  (void)fd;
 }
 
 void  Server::handleCgiRead(const int& pipeFd, const int& clientFd)
