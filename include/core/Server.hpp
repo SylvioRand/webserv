@@ -6,18 +6,23 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/25 09:19:59 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 10:32:37 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef SERVER_HPP
 #define SERVER_HPP
-
 #include "../utils/utils.hpp"
 #include "../core/Config.hpp"
 #include "../core/Client.hpp"
 #include <string>
 
+
+struct CgiPipes
+{
+  int in_pipe[2];
+  int out_pipe[2];
+};
 
 class Server
 {
@@ -59,7 +64,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isSupportedHttpMethod(const std::string& method);
     void  setStatus(int code, int fd);
     int   getStatus(int code);
-    std::string
+    std::string&
           getMethod(int fd);
     std::string
           getVersion(int fd);
@@ -140,6 +145,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     const std::string getFileName(const std::string uriPath);
     void  unregisterCgiFd(const int& fd);
     const std::string generateAutoIndexHtml(const int&fd);
+    void  handleChildProcess(const int& fd, const std::string& localPath, const CgiPipes& cgiPipes);
+    void  handleParentProcess(const int& fd, const CgiPipes& cgiPipes);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

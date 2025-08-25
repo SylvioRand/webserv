@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/25 09:20:34 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 10:34:55 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,6 @@
 #include <string>
 #include <unistd.h>
 #include <cstring> // pour strdup
-
 
 void  Server::prepareAndLaunchCGI(const int& fd)
 {
@@ -42,20 +41,47 @@ void  Server::prepareAndLaunchCGI(const int& fd)
     this->responsNotExecutable(fd);
 }
 
-// TODO
 void  Server::respondInternalServerError(const int&fd)
 {
-  (void)fd;
+  logger(LOG_DEBUG, "in function respondInternalServerError");
+  /*
+  HTTP/1.1 500 Internal Server Error
+  Content-Type: text/html
+  Content-Length: 64
+
+  CGI script not available or not executable.
+  */
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(500, fd);
+  if (this->hasCustomErrorPage(500, fd))
+    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  else
+  {
+    body = "CGI script not available or not executable.";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
 }
 
 void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
 {
-  // build env variables
-  char **envp = this->buildEnvpForExecve_(fd);
+  CgiPipes cgiPipes;
+  const std::string method = this->getMethod(fd);
 
-  // execute the script and cummunicate with him
-  int cgi_pipe[2];
-  if (pipe(cgi_pipe) == -1)
+  if (pipe(cgiPipes.out_pipe) == -1 || (method == "POST" && pipe(cgiPipes.in_pipe)))
   {
     logger(LOG_ERROR, "Error with function pipe()");
     return ;
@@ -71,29 +97,45 @@ void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
     return ;
   }
   else if (pid == 0)
-  {
-    char *argv[] = {
-        (char*)this->getCurrentLocation().cgi_path.c_str(),
-        (char*)localPath.c_str(),
-        NULL
-    };
-    close(cgi_pipe[0]);
-    dup2(cgi_pipe[1], STDOUT_FILENO);
-    close(cgi_pipe[1]);
-    execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
-    perror("execve failed");
-    exit(0);
-  }
+    this->handleChildProcess(fd, localPath, cgiPipes);
   else
-  {
-    this->_pipeFdReadComplete = false;
-    this->_pipeFd.push_back(cgi_pipe[0]);
-    this->_pipeFdClient[cgi_pipe[0]] = fd;
-    this->setNonBlocking_(cgi_pipe[0]);
-    this->addFdToPoll_(cgi_pipe[0]);
-    close(cgi_pipe[1]);
-  }
+    this->handleParentProcess(fd, cgiPipes);
+}
 
+void  Server::handleChildProcess(const int&fd, const std::string& localPath,
+    const CgiPipes& cgiPipes)
+{
+  char **envp = this->buildEnvpForExecve_(fd);
+
+  char *argv[] = {
+      (char*)this->getCurrentLocation().cgi_path.c_str(),
+      (char*)localPath.c_str(),
+      NULL
+  };
+  dup2(cgiPipes.out_pipe[1], STDOUT_FILENO);
+  close(cgiPipes.out_pipe[0]);
+  close(cgiPipes.out_pipe[1]);
+  if (this->getMethod(fd) == "POST")
+  {
+    dup2(cgiPipes.in_pipe[0], STDIN_FILENO);
+    close(cgiPipes.in_pipe[0]);
+    close(cgiPipes.in_pipe[1]);
+  }
+  execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
+  perror("execve failed");
+  exit(0);
+}
+
+void  Server::handleParentProcess(const int&fd, const CgiPipes& cgiPipes)
+{
+  this->_pipeFdReadComplete = false;
+  this->_pipeFd.push_back(cgiPipes.out_pipe[0]);
+  this->_pipeFdClient[cgiPipes.out_pipe[0]] = fd;
+  this->setNonBlocking_(cgiPipes.out_pipe[0]);
+  this->addFdToPoll_(cgiPipes.out_pipe[0]);
+  close(cgiPipes.out_pipe[1]);
+  if (this->getMethod(fd) == "POST")
+    close(cgiPipes.in_pipe[0]);
 }
 
 bool  Server::isCGIRequest(const int&fd)
