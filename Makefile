@@ -8,7 +8,6 @@ SRC = ./src/main.cpp \
 			./src/core/HttpResponse.cpp \
 			./src/core/ServerCGI.cpp \
 			./src/utils/Logger.cpp \
-			./src/utils/Fileutils.cpp \
 			./src/utils/throwWithLog.cpp \
 			./src/utils/caseInsensitiveEqual.cpp \
 			./src/utils/getFileSize.cpp \

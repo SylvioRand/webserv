@@ -1,3 +1,4 @@
+/* ************************************************************************** */
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
@@ -1105,10 +1106,8 @@ void  Server::respondDeleteDirConflict_(const int fd)
   response.setBody(body);
 }
 
-// TODO Zramahaz
 void  Server::buildDirectoryListing_(const int fd)
 {
-  logger(LOG_DEBUG, "In function buildDirectoryListing_");
   /*
   HTTP/1.1 200 OK
   Content-Type: text/html
@@ -1125,7 +1124,43 @@ void  Server::buildDirectoryListing_(const int fd)
   </body>
   </html>
   */
+  const std::string body = this->generateAutoIndexHtml(fd);
+  std::string contentLength = toString(body.size());
+  std::string contentType = CT_HTML;
   this->setStatus(200, fd);
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 200 OK\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+  logger(LOG_INFO, "Autoindex response created for directory: " + this->getUriPath_(fd));
+}
+
+const std::string Server::generateAutoIndexHtml(const int& fd)
+{
+  const std::string uriPath = this->getUriPath_(fd);
+  const std::string localPath= this->getCurrentLocation().root + "/" + uriPath;
+  DIR *dir_ptr = opendir(localPath.c_str());
+  
+  struct dirent *entry;
+
+  std::string body;
+  body = "<html>\n<head><title>Index of " + uriPath + "</title></head>\n<body>\n<h1>Index of "
+    + uriPath + "</h1>\n<ul>\n";
+  while ((entry = readdir(dir_ptr)) != NULL)
+  {
+    const std::string li = "<li><a href=" + uriPath + "/" + entry->d_name
+      + ">" + entry->d_name + "</a></li>";
+    body.append(li);
+  }
+  body.append("</ul>\n</body>\n</html>");
+  return (body);
 }
 
 void  Server::processReadableFile_(const int fd, const std::string& path)
@@ -1730,7 +1765,7 @@ void  Server::respondFallbackError(const int& fd)
 
   Failed to retrieve response from CGI.
   */
-   std::string body;
+  std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 

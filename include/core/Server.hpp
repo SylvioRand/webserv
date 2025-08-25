@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 16:53:55 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/25 08:40:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -140,6 +140,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     const std::string getFileName(const std::string uriPath);
     void  unregisterCgiFd(const int& fd);
     void  appendCgiResponse(const int& clientFd, const std::string& buff);
+    const std::string generateAutoIndexHtml(const int&fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

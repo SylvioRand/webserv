@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/19 11:40:31 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 08:19:25 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <ctime>
+#include <dirent.h>
 
 template<typename T>
 std::string toString(T value) { std::ostringstream oss;
