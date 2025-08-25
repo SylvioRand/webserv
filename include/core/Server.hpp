@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/25 10:32:37 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 12:27:25 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,7 +45,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  close_pipeFd_(const int& fd);
     void  check_timout_(void);
     void  addFdToPoll_(int fd);
-    //void  startListener_(int fd, const ServerConfig &cfg);
     void  startListener_(int fd, ServerConfigConstIterator );
     void  bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& addr);
     void  setSocketReuseAddr_(int fd);
@@ -64,7 +63,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isSupportedHttpMethod(const std::string& method);
     void  setStatus(int code, int fd);
     int   getStatus(int code);
-    std::string&
+    std::string
           getMethod(int fd);
     std::string
           getVersion(int fd);
@@ -141,12 +140,13 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     bool  isExecutable_(const std::string& path);
     void  responsNotExecutable(const int& fd);
     char  **buildEnvpForExecve_(const int fd);
-    void  handleCgiRead(const int& pipeFd, const int& clientFd);
+    void  readCgiResponse(const int& pipeFd, const int& clientFd);
     const std::string getFileName(const std::string uriPath);
     void  unregisterCgiFd(const int& fd);
     const std::string generateAutoIndexHtml(const int&fd);
     void  handleChildProcess(const int& fd, const std::string& localPath, const CgiPipes& cgiPipes);
     void  handleParentProcess(const int& fd, const CgiPipes& cgiPipes);
+    void  sendRequestBodyToCgi(const int&fd, const int& clientFd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;
@@ -158,7 +158,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::map<int, ServerConfigConstIterator>  _serverListeners;
     std::vector<int>                          _pipeFd;
     std::map<int, int>                        _pipeFdClient;
-    bool                                      _pipeFdReadComplete;
 };
 
 #endif

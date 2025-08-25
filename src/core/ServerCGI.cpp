@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/25 10:34:55 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 12:34:26 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,14 +128,19 @@ void  Server::handleChildProcess(const int&fd, const std::string& localPath,
 
 void  Server::handleParentProcess(const int&fd, const CgiPipes& cgiPipes)
 {
-  this->_pipeFdReadComplete = false;
   this->_pipeFd.push_back(cgiPipes.out_pipe[0]);
   this->_pipeFdClient[cgiPipes.out_pipe[0]] = fd;
   this->setNonBlocking_(cgiPipes.out_pipe[0]);
   this->addFdToPoll_(cgiPipes.out_pipe[0]);
   close(cgiPipes.out_pipe[1]);
   if (this->getMethod(fd) == "POST")
+  {
+    this->_pipeFd.push_back(cgiPipes.in_pipe[1]);
+    this->_pipeFdClient[cgiPipes.in_pipe[1]] = fd;
+    this->setNonBlocking_(cgiPipes.in_pipe[1]);
+    this->addFdToPoll_(cgiPipes.in_pipe[1]);
     close(cgiPipes.in_pipe[0]);
+  }
 }
 
 bool  Server::isCGIRequest(const int&fd)
@@ -194,7 +199,7 @@ char  **Server::buildEnvpForExecve_(const int fd)
   return (envp);
 }
 
-void  Server::handleCgiRead(const int& pipeFd, const int& clientFd)
+void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
 {
   Client* client = this->_clients[clientFd];
   if (client->_isReadingCgiResponse == false)
@@ -218,7 +223,6 @@ void  Server::handleCgiRead(const int& pipeFd, const int& clientFd)
   {
     logger(LOG_INFO,
       "Parent received CGI response, ready to send to client fd=" + toString(clientFd));
-    this->_pipeFdReadComplete = true;
     client->_isReadingCgiResponse = false;
     client->getResponse().saveCgiRespondSize(clientFd);
     this->unregisterCgiFd(pipeFd);
@@ -226,6 +230,14 @@ void  Server::handleCgiRead(const int& pipeFd, const int& clientFd)
   }
   else if (count > 0)
     client->getResponse().appendCgiResponse(buffer, count);
+}
+
+void  Server::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)
+{
+  (void)pipeFd;
+  (void)clientFd;
+  Client* client = this->_clients[clientFd];
+  client->getRequest().sendRequestBodyToCgi(pipeFd, clientFd);
 }
 
 void  Server::unregisterCgiFd(const int& pipeFd)

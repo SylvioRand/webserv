@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 12:45:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 14:32:21 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,7 +20,7 @@
 #include <sys/types.h>
 
 HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0), _contentLength(0),
-  _isChunked(false), _isCgiRequest(false)
+  _isChunked(false),_cgiOffset(0), _isCgiRequest(false)
 {
 
 }
@@ -83,7 +83,9 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   this->setIsChunckedValue();
   std::string bodyPart;
   if (this->_method == "POST")
+  {
     bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
+  }
   if (this->_method != "POST")
     this->markRequestComplete();
   else if (this->isChunked())
@@ -95,13 +97,25 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     // and try remove this->_bodyBytesRead = this->_contentLength with it
     if (bodyPart.size() >= this->_contentLength && !this->isChunked())
     {
+    logger(LOG_FATAL, "is body part Ok");
+    std::cout.write(bodyPart.c_str(), bodyPart.size());
+    logger(LOG_FATAL, "END");
+
       bodyPart.resize(this->_contentLength);
       this->_bodyBytesRead = this->_contentLength;
       this->markRequestComplete();
     }
     else
       this->_bodyBytesRead = bodyPart.size();
+
+    logger(LOG_FATAL, "is body part Ok");
+    std::cout.write(bodyPart.c_str(), bodyPart.size());
+    logger(LOG_FATAL, "END");
     this->_body.append(bodyPart);
+    logger(LOG_FATAL, "is body Ok");
+    std::cout.write(this->_body.c_str(), this->_body.size());
+    logger(LOG_FATAL, "END");
+
   }
 }
 
@@ -160,8 +174,6 @@ void  HttpRequest::appendToBody(std::string& str)
   {
     // TODO To move to another specific function/ and maybe nedd new implementation
     logger(LOG_DEBUG, "appendToBody for not chunked");
-    while (1);
-    /*
     if (str.size() + this->_bodyBytesRead > this->_contentLength)
     {
       str.resize(this->_contentLength - this->_bodyBytesRead);
@@ -172,10 +184,10 @@ void  HttpRequest::appendToBody(std::string& str)
     this->_body.append(str.c_str(), str.size());
     if (this->_bodyBytesRead == this->_contentLength)
     {
-      this->markRequestComplete()
+      logger(LOG_INFO, "Body is  fully received\n" + this->_body);
+      this->markRequestComplete();
       this->parseBody();
     }
-    */
   }
 }
 
@@ -207,6 +219,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_contentLength = 0;
   this->_isChunked = false;
   this->_bodyBuffChunked.clear();
+  this->_cgiOffset = 0;
 }
 
 bool  HttpRequest::isBodySizeAllowed(void)
@@ -325,7 +338,6 @@ void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
   }
 }
 
-
 bool  HttpRequest::isNextChunkReady(size_t& contentSize)
 {
   size_t pos = this->_bodyBuffChunked.find("\r\n");
@@ -359,3 +371,27 @@ bool  HttpRequest::hasError(void)
   return (this->_hasError);
 }
 
+
+size_t  HttpRequest::getCgiOffset(void)
+{
+  return (this->_cgiOffset);
+}
+
+// TODO need test
+void  HttpRequest::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)
+{
+  size_t bytes;
+  if (this->getBody().size() > this->getCgiOffset())
+  {
+    bytes = write(pipeFd, this->_body.c_str() + this->_cgiOffset, this->_body.size() - this->_cgiOffset);
+    if (bytes > 0)
+      this->_cgiOffset += bytes;
+  }
+  if (this->_body.size() == this->_cgiOffset)
+  {
+    close(pipeFd);
+    logger(LOG_INFO, "📤 Entire request body successfully written to CGI pipe (fd=" 
+                 + toString(pipeFd) + ") for client fd=" 
+                 + toString(clientFd));
+  }
+}

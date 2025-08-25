@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 12:45:11 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 13:11:21 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ class HttpRequest
     bool                                _isChunked;
     std::string                         _bodyBuffChunked;
     bool                                _hasError;
+    size_t                              _cgiOffset;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
 
@@ -71,6 +72,8 @@ class HttpRequest
     bool  isNextChunkReady(size_t& contentSize);
     void  setError(void);
     bool  hasError(void);
+    size_t   getCgiOffset(void);
+    void  sendRequestBodyToCgi(const int&pipeFd, const int& clientFd);
 };
 
 #endif

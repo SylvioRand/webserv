@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/21 11:03:58 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/25 14:25:51 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,20 +54,21 @@ bool  Client::readData(void)
   if (this->_request.getMethod().empty())
   {
     this->_buffer.append(buf, bytes);
+    logger(LOG_FATAL, "VERIFICATION ->");
+    std::cout.write(this->_buffer.c_str(), this->_buffer.size());
+    logger(LOG_FATAL, "END");
     this->_request.parse(_buffer);
   }
   else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
+    std::string bodyPart;
+    bodyPart.append(buf, bytes);
     if (this->getRequest().isChunked())
-    {
-      std::string bodyPart;
-      bodyPart.append(buf, bytes);
       this->_request.appendToBody(bodyPart);
-    }
     else if (this->getRequest().isBodySizeAllowed())
     {
       //TODO need specific function for it
-      //this->_request.appendToBody(bodyPart);
+      this->_request.appendToBody(bodyPart);
     }
     else
       this->_request.isComplete();

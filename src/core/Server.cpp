@@ -79,16 +79,19 @@ void Server::start_server_(void)
       // TODO c`est ici qu`on va lire avec readFromPipe
       else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
       {
+        // TODO
         if (revents & (POLLERR))
         {
-          this->handleCgiRead(fd, this->_pipeFdClient[fd]);
+          //this->readCgiResponse(fd, this->_pipeFdClient[fd]);
         }
         if (revents & (POLLIN | POLLHUP))
         {
-          this->handleCgiRead(fd, this->_pipeFdClient[fd]);
+          this->readCgiResponse(fd, this->_pipeFdClient[fd]);
         }
         if (revents & POLLOUT)
-        {}
+        {
+          this->sendRequestBodyToCgi(fd, this->_pipeFdClient[fd]);
+        }
       }
       else
         this->close_client_(fd);
@@ -833,7 +836,7 @@ void  Server::POSTMethod_(const int fd)
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
-    this->saveBodyToFile("ubunt.iso", fd);
+    this->saveBodyToFile("lowSize.jpeg", fd);
     this->saveUploadedFile_(fd);
   }
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
@@ -1780,6 +1783,7 @@ void  Server::respondPayloadTooLarge(const int& fd)
   response.setBody(body);
 }
 
+// TODO 
 void  Server::respondFallbackError(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondFallbackError");
