@@ -432,7 +432,6 @@ void  Server::setPollIn_(const int& fd)
 }
 
 
-// TODO
 void  Server::handle_pollout_(int fd)
 {
   logger(LOG_DEBUG, "POLLOUT event on fd=" + toString(fd));
@@ -647,13 +646,40 @@ bool Server::isExecutable_(const std::string& path)
   return false;
 }
 
-// TODO
 void  Server::responsNotExecutable(const int& fd)
 {
-  (void)fd;
-  // TODO
   logger(LOG_DEBUG, "in function responsNotExecutable");
-  while (1) ;
+
+  /*
+  HTTP/1.1 500 Internal Server Error
+  Content-Type: text/html
+  Content-Length: 129
+
+  CGI script is not executable.
+  */
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(500, fd);
+  if (this->hasCustomErrorPage(500, fd))
+    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  else
+  {
+    body = "CGI script is not executable.";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
 }
 
 
@@ -1754,7 +1780,6 @@ void  Server::respondPayloadTooLarge(const int& fd)
   response.setBody(body);
 }
 
-// TODO 
 void  Server::respondFallbackError(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondFallbackError");

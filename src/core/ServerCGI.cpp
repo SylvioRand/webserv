@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/21 17:16:06 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/08/25 09:20:34 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -108,69 +108,6 @@ bool  Server::isCGIRequest(const int&fd)
       && !this->getCurrentLocation().cgi_path.empty());
 }
 
-void Server::handleCgiGetRequest_(const int fd)
-{
-  std::string absolutePath = this->getCurrentLocation().root  + "/" \
-    + getUriPath_(fd).substr(this->getCurrentLocation().path.size());
-  logger(LOG_DEBUG, "preparing CGI handler");
-  logger(LOG_DEBUG, "getRequestUri_ -> " + this->getRequestUri_(fd));
-  logger(LOG_DEBUG, "getUriPath_    -> " + this->getUriPath_(fd));
-  logger(LOG_DEBUG, "absolutePath   -> " + absolutePath);
-
-  // error cgi_path
-  if (!this->isFile_(this->getCurrentLocation().cgi_path) \
-      && !this->isExecutable_(this->getCurrentLocation().cgi_path))
-  {
-    // TODO : retourne une page d'erreur avec status = 500
-    // "500 Internal Server Error: CGI interpreter not available
-    return ;
-  }
-
-  // build env variables
-  char **envp = this->buildEnvpForExecve_(fd);
-
-  // execute the script and cummunicate with him
-  int cgi_pipe[2];
-  if (pipe(cgi_pipe) == -1)
-  {
-    logger(LOG_ERROR, "Error with function pipe()");
-    return ;
-  }
-  this->_clients[fd]->getRequest()._isCgiRequest = true;
-  logger(LOG_DEBUG,
-      "🚀 Executing CGI handler [" + this->getFileName(this->getUriPath_(fd)) + "] ...");
-  int pid = fork();
-  if (pid < 0)
-  {
-    // TODO Need to do something here for HTTP response
-    logger(LOG_FATAL, "fork failed");
-    return ;
-  }
-  else if (pid == 0)
-  {
-    char *argv[] = {
-        (char*)this->getCurrentLocation().cgi_path.c_str(),
-        (char*)absolutePath.c_str(),
-        NULL
-    };
-    close(cgi_pipe[0]);
-    dup2(cgi_pipe[1], STDOUT_FILENO);
-    close(cgi_pipe[1]);
-    execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
-    perror("execve failed");
-    exit(0);
-  }
-  else
-  {
-    this->_pipeFdReadComplete = false;
-    this->_pipeFd.push_back(cgi_pipe[0]);
-    this->_pipeFdClient[cgi_pipe[0]] = fd;
-    this->setNonBlocking_(cgi_pipe[0]);
-    this->addFdToPoll_(cgi_pipe[0]);
-    close(cgi_pipe[1]);
-  }
-}
-
 char  **Server::buildEnvpForExecve_(const int fd)
 {
   std::map<std::string, std::string>  envMap;
@@ -246,9 +183,7 @@ void  Server::handleCgiRead(const int& pipeFd, const int& clientFd)
     this->setPollOut_(clientFd);
   }
   else if (count > 0)
-  {
     client->getResponse().appendCgiResponse(buffer, count);
-  }
 }
 
 void  Server::unregisterCgiFd(const int& pipeFd)
@@ -269,11 +204,4 @@ void  Server::unregisterCgiFd(const int& pipeFd)
   }
   logger(LOG_DEBUG,
     "⚠️ Failed to remove pipe fd=" + toString(pipeFd) + ": not found in poll monitoring");
-}
-
-void  Server::appendCgiResponse(const int& clientFd, const std::string& buff)
-{
-  (void)clientFd;
-  (void)buff;
-  this->_clients[clientFd]->getResponse();
 }
