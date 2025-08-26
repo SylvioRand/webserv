@@ -15,6 +15,9 @@
 
 #include "../utils/utils.hpp"
 #include "../../include/core/Config.hpp"
+#include <cstddef>
+#include <sstream>
+#include <string>
 #include <sys/types.h>
 
 class HttpRequest
@@ -37,8 +40,14 @@ class HttpRequest
     std::string                         _bodyBuffChunked;
     bool                                _hasError;
     size_t                              _cgiOffset;
+    bool                                _hasContentLength;
+    bool                                _hasBoundary;
+    std::string                         _boundary;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
+    void  handleMultipartFormData(const std::string& bodyPart);
+    void  handleChunkedEncoding(const std::string& bodyPart);
+    void  handleFixedLengthBody(std::string& bodyPart);
 
   public:
     HttpRequest(void);
@@ -66,14 +75,25 @@ class HttpRequest
     LocationConfig
       createAndReturnRootLocation_(const ServerConfigConstIterator& cfg);
     void  setIsChunckedValue(void);
-    bool  isChunked(void);
+    bool  isChunked(void); // a voir si on a vraiment besoin
     void  parseBody(void);
     void  extractBodyFromResponse(const std::string& bodyPart);
     bool  isNextChunkReady(size_t& contentSize);
     void  setError(void);
     bool  hasError(void);
-    size_t   getCgiOffset(void);
+    size_t
+          getCgiOffset(void);
     void  sendRequestBodyToCgi(const int&pipeFd, const int& clientFd);
+
+
+    // new function for handluing body request 
+    void  extractRequestBody(std::string& bodyPart);
+    void  setHasContentLength(void);
+    void  setHasBoundary(void);
+    bool  hasContentLength(void);
+    void  fillHeadersMap(std::istringstream& iss);
+    
+
 };
 
 #endif

@@ -54,24 +54,13 @@ bool  Client::readData(void)
   if (this->_request.getMethod().empty())
   {
     this->_buffer.append(buf, bytes);
-    logger(LOG_FATAL, "VERIFICATION ->");
-    std::cout.write(this->_buffer.c_str(), this->_buffer.size());
-    logger(LOG_FATAL, "END");
     this->_request.parse(_buffer);
   }
   else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
     std::string bodyPart;
     bodyPart.append(buf, bytes);
-    if (this->getRequest().isChunked())
-      this->_request.appendToBody(bodyPart);
-    else if (this->getRequest().isBodySizeAllowed())
-    {
-      //TODO need specific function for it
-      this->_request.appendToBody(bodyPart);
-    }
-    else
-      this->_request.isComplete();
+    this->_request.extractRequestBody(bodyPart);
   }
   return (true);
 }
@@ -101,7 +90,6 @@ HttpRequest& Client::getRequest(void)
   return (_request);
 }
 
-
 HttpResponse& Client::getResponse(void)
 {
   return (_response);
@@ -111,7 +99,6 @@ Client::ServerConfigConstIterator Client::getServerConfig(void) const
 {
   return (_cfg);
 }
-
 
 void  Client::clearBuffer(void)
 {

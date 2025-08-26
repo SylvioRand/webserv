@@ -16,6 +16,6 @@ std::string toUpper(const std::string &s)
 {
     std::string result = s;
     std::transform(result.begin(), result.end(), result.begin(),
-                   (int(*)(int))std::tolower);
-    return (result);
+                   (int(*)(int))std::toupper);
+    return result;
 }

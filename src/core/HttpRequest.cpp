@@ -20,7 +20,7 @@
 #include <sys/types.h>
 
 HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0), _contentLength(0),
-  _isChunked(false),_cgiOffset(0), _isCgiRequest(false)
+  _isChunked(false), _cgiOffset(0), _hasContentLength(false), _hasBoundary(false),  _isCgiRequest(false)
 {
 
 }
@@ -46,7 +46,6 @@ void  HttpRequest::parse(const std::string &raw_request)
   this->parseHeader_(raw_request, pos);
 }
 
-// TODO Need code formating
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
 {
@@ -59,81 +58,127 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   logger(LOG_DEBUG, "Method     -> " + this->_method);
   logger(LOG_DEBUG, "requestURI -> " + this->_path);
   logger(LOG_DEBUG, "version    -> " + this->_version);
-  std::string line;
 
-  std::getline(iss, line);
-  if (!this->isValid())
-  {
-    this->markRequestComplete();
-    return ;
-  }
-  while (std::getline(iss, line) && line != "\r")
-  {
-    size_t      pos = line.find(":");
-    std::string key;
-    std::string value;
-
-    key = line.substr(0, pos);
-    if (pos == std::string::npos)
-      break ;
-    value = line.substr(pos + 2);
-    value.erase(value.size() - 1);
-    this->_headers[toUpper(key)] = toUpper(value);
-  }
+  this->fillHeadersMap(iss);
   this->setIsChunckedValue();
-  std::string bodyPart;
+  this->setHasContentLength();
+  this->setHasBoundary();
   if (this->_method == "POST")
   {
-    bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
-  }
-  if (this->_method != "POST")
-    this->markRequestComplete();
-  else if (this->isChunked())
-    this->extractBodyFromResponse(bodyPart);
-  else
-  {
-    this->_contentLength = std::atoi(this->_headers["CONTENT-LENGTH"].c_str());
-    // TODO test it with bodyPart.size() == this->_contentLength
-    // and try remove this->_bodyBytesRead = this->_contentLength with it
-    if (bodyPart.size() >= this->_contentLength && !this->isChunked())
-    {
-    logger(LOG_FATAL, "is body part Ok");
-    std::cout.write(bodyPart.c_str(), bodyPart.size());
-    logger(LOG_FATAL, "END");
+    std::string bodyPart;
 
-      bodyPart.resize(this->_contentLength);
-      this->_bodyBytesRead = this->_contentLength;
+    bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
+   
+    this->extractRequestBody(bodyPart);
+  }
+  else
+    this->markRequestComplete();
+}
+
+void  HttpRequest::extractRequestBody(std::string& bodyPart)
+{
+ 
+      logger(LOG_FATAL, "Ce qu`on a -> [");
+      std::cout.write(bodyPart.c_str(), bodyPart.size());
+      logger(LOG_FATAL, "end");
+
+
+  if (this->_hasBoundary)
+  {
+    logger(LOG_FATAL, "yes headers has Boundary");
+    this->handleMultipartFormData(bodyPart);
+  }
+  else if (this->_isChunked)
+  {
+    logger(LOG_FATAL, "yes headers isChunked");
+    this->handleChunkedEncoding(bodyPart);
+  }
+  else if (this->_hasContentLength)
+  {
+    logger(LOG_FATAL, "yes headers has Content-Length");
+    while (1) ;
+    this->handleFixedLengthBody(bodyPart);
+  }
+}
+
+void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
+{
+
+      logger(LOG_FATAL, "Ce qu`on a dans bodyPart -> [");
+      std::cout.write(bodyPart.c_str(), bodyPart.size());
+      std::cout << " bodyPart.size -> [" << bodyPart.size() << "]" << std::endl;
+      logger(LOG_FATAL, "end");
+
+  this->_body.append(bodyPart.c_str(), bodyPart.size());
+
+      logger(LOG_FATAL, "Ce qu`on a dans body-> [");
+      std::cout.write(this->_body.c_str(), this->_body.size());
+      std::cout << "body.size -> [" << this->_body.size() << "]" << std::endl;
+      logger(LOG_FATAL, "end");
+
+
+
+  size_t  start;
+  size_t  boundary1;
+  size_t  boundary2;
+  int     boundarySize = this->_boundary.size();
+  boundary1 = this->_body.find(this->_boundary);
+  if (boundary1 != std::string::npos)
+  {
+    logger(LOG_FATAL, "first");
+    start = boundary1 + boundarySize;
+    boundary2 = this->_body.find(this->_boundary, start);
+    if (boundary2 != std::string::npos)
+    {
+      this->_body = this->_body.substr(start, boundary2 - start);
       this->markRequestComplete();
+      
+      logger(LOG_FATAL, "Ce qu`on a -> [");
+      std::cout.write(this->_body.c_str(), boundarySize);
+      logger(LOG_FATAL, "end");
+    }
+  }
+}
+
+void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
+{
+  size_t contentSize = 0;
+
+  this->_bodyBuffChunked.append(bodyPart.c_str(), bodyPart.size());
+  while (this->isNextChunkReady(contentSize))
+  {
+    size_t pos = this->_bodyBuffChunked.find("\r\n");
+    size_t contentStart = pos + 2;
+    if (contentSize == 0)
+    {
+      logger(LOG_INFO,
+        "[HTTP] Successfully received full request body (chunked transfer completed).");
+      this->markRequestComplete();
+      this->_bodyBuffChunked.erase(0, pos + 4); 
+      break; // sortir de la boucle
     }
     else
-      this->_bodyBytesRead = bodyPart.size();
-
-    logger(LOG_FATAL, "is body part Ok");
-    std::cout.write(bodyPart.c_str(), bodyPart.size());
-    logger(LOG_FATAL, "END");
-    this->_body.append(bodyPart);
-    logger(LOG_FATAL, "is body Ok");
-    std::cout.write(this->_body.c_str(), this->_body.size());
-    logger(LOG_FATAL, "END");
-
-  }
-}
-
-void  HttpRequest::setIsChunckedValue(void)
-{
-  std::map<std::string, std::string>::const_iterator it = this->getHeaders().find("transfer-encoding");
-  if (it != this->getHeaders().end())
-  {
-    logger(LOG_DEBUG, "transfer-encoding header found");
-    if (it->second == "chunked")
     {
-      this->_isChunked = true;
-      logger(LOG_DEBUG, "Chunked request detected");
-      this->_contentLength = -1;
-      return ;
+      this->_body.append(this->_bodyBuffChunked, contentStart, contentSize);
+      this->_bodyBuffChunked.erase(0, contentStart + contentSize + 2);
     }
   }
 }
+
+void  HttpRequest::handleFixedLengthBody(std::string& bodyPart)
+{
+  if (bodyPart.size() >= this->_contentLength)
+  {
+    bodyPart.resize(this->_contentLength);
+    this->_bodyBytesRead = this->_contentLength;
+    this->markRequestComplete();
+  }
+  else
+    this->_bodyBytesRead = bodyPart.size();
+
+  this->_body.append(bodyPart);
+}
+
 
 bool  HttpRequest::isChunked()
 {
@@ -208,7 +253,6 @@ const std::map<std::string, std::string>& HttpRequest::getHeaders(void) const
 
 void HttpRequest::shiftBufferAfterRequest()
 {
-  this->_isCgiRequest = false;
   this->_method.clear();
   this->_path.clear();
   this->_headers.clear();
@@ -218,8 +262,14 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_bodyBytesRead = 0;
   this->_contentLength = 0;
   this->_isChunked = false;
+  this->_isCgiRequest = false;
   this->_bodyBuffChunked.clear();
+  this->_hasError = false;
   this->_cgiOffset = 0;
+  this->_hasContentLength = false;
+  this->_hasBoundary = false;
+  this->_boundary.clear();
+  this->_isCgiRequest = false;
 }
 
 bool  HttpRequest::isBodySizeAllowed(void)
@@ -393,5 +443,80 @@ void  HttpRequest::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)
     logger(LOG_INFO, "📤 Entire request body successfully written to CGI pipe (fd=" 
                  + toString(pipeFd) + ") for client fd=" 
                  + toString(clientFd));
+  }
+}
+
+void  HttpRequest::setIsChunckedValue(void)
+{
+  std::map<std::string, std::string>::const_iterator it =
+    this->getHeaders().find("TRANSFER-ENCODING");
+  if (it != this->getHeaders().end())
+  {
+    if (it->second == "CHUNKED")
+    {
+      this->_isChunked = true;
+      logger(LOG_DEBUG, "Chunked request detected");
+      this->_contentLength = -1; // A voir si on en a vraiment besion
+      return ;
+    }
+  }
+}
+
+void  HttpRequest::setHasContentLength(void)
+{
+  std::map<std::string, std::string>::iterator it =
+    this->_headers.find("CONTENT-LENGTH");
+  if (it != this->_headers.end())
+  {
+    this->_hasContentLength = true;
+    this->_contentLength = std::atoi(it->second.c_str());
+    logger(LOG_DEBUG, "Content-Length is detected in headers");
+  }
+}
+
+void  HttpRequest::setHasBoundary(void)
+{
+  std::map<std::string, std::string>::iterator it =
+    this->_headers.find("CONTENT-TYPE");
+  if (it != this->_headers.end())
+  {
+    size_t pos = it->second.find("BOUNDARY");
+
+    if (pos != std::string::npos)
+    {
+      this->_hasBoundary = true;
+      this->_boundary = it->second.substr(it->second.rfind("=") + 1);
+      logger(LOG_DEBUG, "headers has boundary =" +
+          this->_boundary);
+    }
+  }
+}
+
+bool  HttpRequest::hasContentLength(void)
+{
+  return (_hasContentLength);
+}
+
+void  HttpRequest::fillHeadersMap(std::istringstream& iss)
+{
+  std::string line;
+  std::getline(iss, line);
+  if (!this->isValid())
+  {
+    this->markRequestComplete();
+    return ;
+  }
+  while (std::getline(iss, line) && line != "\r")
+  {
+    size_t      pos = line.find(":");
+    std::string key;
+    std::string value;
+
+    key = line.substr(0, pos);
+    if (pos == std::string::npos)
+      break ;
+    value = line.substr(pos + 2);
+    value.erase(value.size() - 1);
+    this->_headers[toUpper(key)] = toUpper(value);
   }
 }
