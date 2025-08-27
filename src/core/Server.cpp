@@ -837,10 +837,13 @@ void  Server::POSTMethod_(const int fd)
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
     //this->saveBodyToFile("longMovie.mp4", fd);
-    this->saveBodyToFile("ubuntu.iso", fd);
+    //this->saveBodyToFile("ubuntu.iso", fd);
+    this->saveBodyToFile("bigImage.png", fd);
     //this->saveBodyToFile("longMovie.mp4", fd);
     this->saveUploadedFile_(fd);
   }
+  else
+    this->respondMissingUploadDir(fd);
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
 }
 

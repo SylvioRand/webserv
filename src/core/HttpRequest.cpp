@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/27 09:26:34 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 10:38:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,16 +82,15 @@ void  HttpRequest::extractRequestBody(std::string& bodyPart)
       std::cout.write(bodyPart.c_str(), bodyPart.size());
       logger(LOG_FATAL, "end");
 
-
-  if (this->_hasBoundary)
-  {
-    logger(LOG_FATAL, "yes headers has Boundary");
-    this->handleMultipartFormData(bodyPart);
-  }
-  else if (this->_isChunked)
+  if (this->_isChunked)
   {
     logger(LOG_FATAL, "yes headers isChunked");
     this->handleChunkedEncoding(bodyPart);
+  }
+  else if (this->_hasBoundary)
+  {
+    logger(LOG_FATAL, "yes headers has Boundary");
+    this->handleMultipartFormData(bodyPart);
   }
   else if (this->_hasContentLength)
   {
@@ -121,7 +120,7 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
   {
     //this->_body = this->_body.substr(start + 2, boundary2 - start);
     // TODO ON this line, add a function to manage all boundary data and call that same function if chunk with boundary`
-    
+    this->parseMultipartBody();
   }
 }
 
@@ -138,8 +137,15 @@ void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
     {
       logger(LOG_INFO,
         "[HTTP] Successfully received full request body (chunked transfer completed).");
+
+      if (_hasBoundary)
+      {
+        logger(LOG_FATAL, "you got it bro");
+        std::cout.write(this->_body.c_str(), this->_body.size());
+        logger(LOG_FATAL, "end");
+        this->parseMultipartBody();
+      }
       this->markRequestComplete();
-      this->_bodyBuffChunked.erase(0, pos + 4); 
       break; // sortir de la boucle
     }
     else
@@ -164,6 +170,11 @@ void  HttpRequest::handleFixedLengthBody(std::string& bodyPart)
   this->_body.append(bodyPart);
 }
 
+void  HttpRequest::parseMultipartBody()
+{
+  logger(LOG_DEBUG, "In function parseMultipartBody");
+        while (1);
+}
 
 bool  HttpRequest::isChunked()
 {
@@ -362,8 +373,8 @@ void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
     {
       logger(LOG_INFO,
         "[HTTP] Successfully received full request body (chunked transfer completed).");
-      this->markRequestComplete();
       this->_bodyBuffChunked.erase(0, pos + 4); 
+      this->markRequestComplete();
       break; // sortir de la boucle
     }
     else

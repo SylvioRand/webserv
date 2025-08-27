@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/27 08:52:33 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 09:33:08 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,6 +100,7 @@ class HttpRequest
     void  setHasBoundary(void);
     bool  hasContentLength(void);
     void  fillHeadersMap(std::istringstream& iss);
+    void  parseMultipartBody();
     
 
 };
