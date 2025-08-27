@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/27 09:19:20 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 09:26:34 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,6 +77,12 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 
 void  HttpRequest::extractRequestBody(std::string& bodyPart)
 {
+ 
+      logger(LOG_FATAL, "Ce qu`on a -> [");
+      std::cout.write(bodyPart.c_str(), bodyPart.size());
+      logger(LOG_FATAL, "end");
+
+
   if (this->_hasBoundary)
   {
     logger(LOG_FATAL, "yes headers has Boundary");
@@ -102,6 +108,7 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
   this->_body.append(bodyPart.c_str(), bodyPart.size());
 
   endOfBody = this->_body.find(this->_endBoundary);
+  logger(LOG_FATAL, "verifions _endBoundary -> " + this->_endBoundary);
 
   // TODO need to test the first case
   if (this->_isCgiRequest)
@@ -114,6 +121,7 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
   {
     //this->_body = this->_body.substr(start + 2, boundary2 - start);
     // TODO ON this line, add a function to manage all boundary data and call that same function if chunk with boundary`
+    
   }
 }
 
