@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/25 13:11:21 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 08:52:33 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,13 @@
 #include <sstream>
 #include <string>
 #include <sys/types.h>
+
+struct MultipartPart {
+    std::string name;       // ex: "username"
+    std::string filename;   // ex: "photo.png" (vide si pas de fichier)
+    std::string contentType;// ex: "image/png" (optionnel)
+    std::string data;       // le contenu (texte ou binaire brut)
+};
 
 class HttpRequest
 {
@@ -43,6 +50,7 @@ class HttpRequest
     bool                                _hasContentLength;
     bool                                _hasBoundary;
     std::string                         _boundary;
+    std::string                         _endBoundary;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
     void  handleMultipartFormData(const std::string& bodyPart);

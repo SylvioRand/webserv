@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/25 12:34:26 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 07:53:53 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -143,16 +143,17 @@ void  Server::handleParentProcess(const int&fd, const CgiPipes& cgiPipes)
   }
 }
 
-bool  Server::isCGIRequest(const int&fd)
+void  Server::setIsCGIRequest(const int&fd)
 {
   LocationConfig  location = this->getCurrentLocation();
   std::string     localPath;
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
 
-  return (this->getFileExtension_(getUriPath_(fd)) ==
+  if (this->getFileExtension_(getUriPath_(fd)) ==
       this->getCurrentLocation().cgi_extension
       && !this->getCurrentLocation().cgi_extension.empty()
-      && !this->getCurrentLocation().cgi_path.empty());
+      && !this->getCurrentLocation().cgi_path.empty())
+    this->_clients[fd]->getRequest()._isCgiRequest = true;
 }
 
 char  **Server::buildEnvpForExecve_(const int fd)

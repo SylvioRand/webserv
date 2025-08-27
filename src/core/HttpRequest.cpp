@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/25 14:32:21 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 09:19:20 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -77,12 +77,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 
 void  HttpRequest::extractRequestBody(std::string& bodyPart)
 {
- 
-      logger(LOG_FATAL, "Ce qu`on a -> [");
-      std::cout.write(bodyPart.c_str(), bodyPart.size());
-      logger(LOG_FATAL, "end");
-
-
   if (this->_hasBoundary)
   {
     logger(LOG_FATAL, "yes headers has Boundary");
@@ -103,40 +97,23 @@ void  HttpRequest::extractRequestBody(std::string& bodyPart)
 
 void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
 {
-
-      logger(LOG_FATAL, "Ce qu`on a dans bodyPart -> [");
-      std::cout.write(bodyPart.c_str(), bodyPart.size());
-      std::cout << " bodyPart.size -> [" << bodyPart.size() << "]" << std::endl;
-      logger(LOG_FATAL, "end");
+  size_t  endOfBody;
 
   this->_body.append(bodyPart.c_str(), bodyPart.size());
 
-      logger(LOG_FATAL, "Ce qu`on a dans body-> [");
-      std::cout.write(this->_body.c_str(), this->_body.size());
-      std::cout << "body.size -> [" << this->_body.size() << "]" << std::endl;
-      logger(LOG_FATAL, "end");
+  endOfBody = this->_body.find(this->_endBoundary);
 
-
-
-  size_t  start;
-  size_t  boundary1;
-  size_t  boundary2;
-  int     boundarySize = this->_boundary.size();
-  boundary1 = this->_body.find(this->_boundary);
-  if (boundary1 != std::string::npos)
+  // TODO need to test the first case
+  if (this->_isCgiRequest)
   {
-    logger(LOG_FATAL, "first");
-    start = boundary1 + boundarySize;
-    boundary2 = this->_body.find(this->_boundary, start);
-    if (boundary2 != std::string::npos)
-    {
-      this->_body = this->_body.substr(start, boundary2 - start);
+    // TODO verify if we need to set POLLOUT
+    if (endOfBody != std::string::npos)
       this->markRequestComplete();
-      
-      logger(LOG_FATAL, "Ce qu`on a -> [");
-      std::cout.write(this->_body.c_str(), boundarySize);
-      logger(LOG_FATAL, "end");
-    }
+  }
+  else if (endOfBody != std::string::npos)
+  {
+    //this->_body = this->_body.substr(start + 2, boundary2 - start);
+    // TODO ON this line, add a function to manage all boundary data and call that same function if chunk with boundary`
   }
 }
 
@@ -269,6 +246,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_hasContentLength = false;
   this->_hasBoundary = false;
   this->_boundary.clear();
+  this->_endBoundary.clear();
   this->_isCgiRequest = false;
 }
 
@@ -485,9 +463,9 @@ void  HttpRequest::setHasBoundary(void)
     if (pos != std::string::npos)
     {
       this->_hasBoundary = true;
-      this->_boundary = it->second.substr(it->second.rfind("=") + 1);
       logger(LOG_DEBUG, "headers has boundary =" +
           this->_boundary);
+      logger(LOG_DEBUG, "endOfHeader [" + this->_endBoundary + "]");
     }
   }
 }
@@ -517,6 +495,13 @@ void  HttpRequest::fillHeadersMap(std::istringstream& iss)
       break ;
     value = line.substr(pos + 2);
     value.erase(value.size() - 1);
+    size_t  posBoundary = value.find("boundary=");
+    if (key.find("CONTENT-TYPE") && posBoundary != std::string::npos)
+    {
+      std::string boundary = "--" + value.substr(posBoundary + 9);
+      this->_boundary = boundary + "\r\n";
+      this->_endBoundary = boundary + "--\r\n";
+    }
     this->_headers[toUpper(key)] = toUpper(value);
   }
 }

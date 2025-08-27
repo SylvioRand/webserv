@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/25 12:27:25 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/27 07:50:26 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -131,7 +131,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
 
     // for cgi
     void  handleCgiGetRequest_(const int fd);
-    bool  isCGIRequest(const int& fd);
+    void  setIsCGIRequest(const int& fd);
     void  respondInternalServerError(const int&fd);
     void  prepareAndLaunchCGI(const int& fd);
     void  launchCgiProcess(const int& fd, const std::string& localPath);

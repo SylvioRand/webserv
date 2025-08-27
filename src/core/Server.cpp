@@ -258,7 +258,7 @@ void  Server::handle_pollin_(int fd)
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     logger(LOG_DEBUG, "uriPath [" +  getUriPath_(fd) + "]");
     saveMatchingLocation_(fd, serverConf);
-
+    this->setIsCGIRequest(fd);
     if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
     else if (!this->getCurrentLocation().redirect.empty())
@@ -267,7 +267,7 @@ void  Server::handle_pollin_(int fd)
       this->methodNotSupported_(fd);
     else if (getCurrentLocation().methods.empty())
       this->methodNotAllowed_(fd);
-    else if (this->isCGIRequest(fd))
+    else if (this->_clients[fd]->getRequest()._isCgiRequest)
       this->prepareAndLaunchCGI(fd);
     else if (method == "GET" && this->isMethodAllowedForLocation("GET"))
       this->GETMethod_(fd);
