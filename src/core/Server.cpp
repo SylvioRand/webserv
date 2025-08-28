@@ -838,13 +838,45 @@ void  Server::POSTMethod_(const int fd)
     // TODO Need to parse the body before saving correct data to save in specific file
     //this->saveBodyToFile("longMovie.mp4", fd);
     //this->saveBodyToFile("ubuntu.iso", fd);
-    this->saveBodyToFile("bigImage.png", fd);
+    if (this->_clients[fd]->getRequest().hasBoundary_())
+    {
+      this->saveMultipartFiles(fd);
+    }
+    else
+      this->saveBodyToFile("bigImage.png", fd);
     //this->saveBodyToFile("longMovie.mp4", fd);
     this->saveUploadedFile_(fd);
   }
   else
     this->respondMissingUploadDir(fd);
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
+}
+
+void  Server::saveMultipartFiles(const int& fd)
+{
+  logger(LOG_FATAL, "in function saveMultipartFiles");
+  std::vector<MultipartPart> multipart = this->_clients[fd]->getRequest().getMultipart();
+  std::string path = this->getCurrentLocation().upload_dir + "/";
+  for (std::vector<MultipartPart>::iterator it = multipart.begin(); it != multipart.end(); it++)
+  {
+    if (!it->fullySaved)
+    {
+      logger(LOG_FATAL, "verif filename -> " + it->filename);
+      std::string localPath = path.c_str() + it->filename;
+      logger(LOG_INFO, "pour le filePath" + localPath);
+      std::ofstream file(localPath.c_str());
+      //std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);
+      if (!file)
+      {
+        // TODO need to do somethin  in this case
+        std::cerr << "Impossible de créer le fichier : " << it->filename << std::endl;
+        return;
+      }
+      file.write(it->data.c_str(), it->data.size());
+      file.close();
+      it->fullySaved = true;
+    }
+  }
 }
 
 void Server::saveBodyToFile(const std::string& filename, const int& fd)

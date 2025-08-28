@@ -6,14 +6,16 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/27 10:38:20 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/28 18:42:48 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/HttpRequest.hpp"
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -77,11 +79,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 
 void  HttpRequest::extractRequestBody(std::string& bodyPart)
 {
- 
-      logger(LOG_FATAL, "Ce qu`on a -> [");
-      std::cout.write(bodyPart.c_str(), bodyPart.size());
-      logger(LOG_FATAL, "end");
-
   if (this->_isChunked)
   {
     logger(LOG_FATAL, "yes headers isChunked");
@@ -107,8 +104,12 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
   this->_body.append(bodyPart.c_str(), bodyPart.size());
 
   endOfBody = this->_body.find(this->_endBoundary);
-  logger(LOG_FATAL, "verifions _endBoundary -> " + this->_endBoundary);
-
+  if (endOfBody == std::string::npos)
+  {
+    //std::cout.write(this->_body.c_str(), this->_body.size());
+    logger(LOG_INFO, "to be coutinue");
+    return ;
+  }
   // TODO need to test the first case
   if (this->_isCgiRequest)
   {
@@ -118,6 +119,12 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
   }
   else if (endOfBody != std::string::npos)
   {
+    /*
+    logger(LOG_FATAL, "start");
+    std::cout.write(this->_body.c_str(), this->_boundary.size());
+    logger(LOG_FATAL, "end");
+    */
+
     //this->_body = this->_body.substr(start + 2, boundary2 - start);
     // TODO ON this line, add a function to manage all boundary data and call that same function if chunk with boundary`
     this->parseMultipartBody();
@@ -133,6 +140,7 @@ void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
   {
     size_t pos = this->_bodyBuffChunked.find("\r\n");
     size_t contentStart = pos + 2;
+        while (1);
     if (contentSize == 0)
     {
       logger(LOG_INFO,
@@ -173,7 +181,93 @@ void  HttpRequest::handleFixedLengthBody(std::string& bodyPart)
 void  HttpRequest::parseMultipartBody()
 {
   logger(LOG_DEBUG, "In function parseMultipartBody");
-        while (1);
+  std::string boundary = this->_boundary.substr(0, this->_boundary.size() - 2);
+  /*
+  logger(LOG_DEBUG, "only boundary[");
+  std::cout.write(boundary.c_str(), boundary.size());
+  logger(LOG_FATAL, "End");
+  */
+  size_t  start = this->_body.find(boundary) + 2;
+  start += this->_boundary.size();
+  size_t  end;
+  size_t  lastBoundaryPos = this->_body.find(this->_endBoundary);
+  //logger(LOG_FATAL, "End boundary value -> " + this->_endBoundary);
+
+  while (1)
+  {
+    size_t step = start + this->_boundary.size();
+   // logger(LOG_FATAL, "step value -> " + toString(step));
+    end = this->_body.find(boundary, step);
+    /*
+    if (end == std::string::npos)
+    {
+      logger(LOG_FATAL, "NOus ne l`avions pas trouve ");
+    }
+    logger(LOG_FATAL, "body size -> " + toString(this->_body.size()));
+    logger(LOG_FATAL, "compare [" + toString(lastBoundaryPos) + "] and [" + toString(end) + "]");
+    */
+    this->addToMultipartStruct(start, end);
+    if (end == lastBoundaryPos)
+    {
+      //logger(LOG_FATAL, "Can`t enter here");
+      this->_body.clear(); //  for optimizing memory
+      this->markRequestComplete();
+      return;
+    }
+    start = end + this->_boundary.size();
+  }
+}
+
+void   HttpRequest::addToMultipartStruct(size_t& start, size_t& end)
+{
+  logger(LOG_FATAL, "IN function addToMultipartStruct");
+  /*
+  std::cout << "[";
+  std::cout.write(this->_body.substr(start, end).c_str(), end - start);
+  std::cout << "]";
+  */
+  MultipartPart part; 
+
+  // TODO NEDD TO CREATE FUNCTION FOR FILLING name/filename/contentType from header inside boundary
+  size_t headerEnd = this->_body.find("\r\n\r\n");
+  if (headerEnd != std::string::npos)
+  {
+    //logger(LOG_INFO, "headerEnd not found");
+  }
+  std::string headerPart = this->_body.substr(start, headerEnd - start);
+  //logger(LOG_INFO, "headerPART in addToMultipartStruct -> " + headerPart);
+  std::istringstream iss(headerPart);
+  std::string line;
+  while (std::getline(iss, line) && line != "\r")
+  {
+    size_t      pos = line.find(":");
+    std::string key;
+    std::string value;
+
+    key = toUpper(line.substr(0, pos));
+    if (pos == std::string::npos)
+      break ;
+    value = line.substr(pos + 2);
+    size_t  filenamePos = value.find("filename=");
+    if (filenamePos != std::string::npos)
+      logger(LOG_INFO, "filenamePos is correct");
+    if (filenamePos != std::string::npos)
+    {
+      if (key.find("CONTENT-DISPOSITION") != std::string::npos && filenamePos != std::string::npos)
+      {
+        part.filename = value.substr(filenamePos + std::string("filename=").size());
+        logger(LOG_INFO, "et la ca vaut quoi -> " + part.filename);
+      }
+    }
+  }
+  //std::cout.write(headerPart.c_str(), headerPart.size());
+  //logger(LOG_FATAL, "end");
+  part.name = "srandria";
+  part.contentType = "";
+  part.fullySaved = false;
+  size_t pos = this->_body.find("\r\n\r\n", start) + 4;
+  part.data = this->_body.substr(pos, end);
+  this->_multiPart.push_back(part);
 }
 
 bool  HttpRequest::isChunked()
@@ -267,6 +361,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_boundary.clear();
   this->_endBoundary.clear();
   this->_isCgiRequest = false;
+  this->_multiPart.clear();
 }
 
 bool  HttpRequest::isBodySizeAllowed(void)
@@ -482,8 +577,8 @@ void  HttpRequest::setHasBoundary(void)
     if (pos != std::string::npos)
     {
       this->_hasBoundary = true;
-      logger(LOG_DEBUG, "headers has boundary =" +
-          this->_boundary);
+      logger(LOG_DEBUG, "headers has [boundary =" +
+          this->_boundary + "]");
       logger(LOG_DEBUG, "endOfHeader [" + this->_endBoundary + "]");
     }
   }
@@ -509,18 +604,44 @@ void  HttpRequest::fillHeadersMap(std::istringstream& iss)
     std::string key;
     std::string value;
 
-    key = line.substr(0, pos);
+    key = toUpper(line.substr(0, pos));
     if (pos == std::string::npos)
       break ;
     value = line.substr(pos + 2);
-    value.erase(value.size() - 1);
+    value.erase(value.size());
     size_t  posBoundary = value.find("boundary=");
-    if (key.find("CONTENT-TYPE") && posBoundary != std::string::npos)
+    if (key.find("CONTENT-TYPE") != std::string::npos && posBoundary != std::string::npos)
     {
-      std::string boundary = "--" + value.substr(posBoundary + 9);
-      this->_boundary = boundary + "\r\n";
+      size_t brPos = value.find("\r");
+      if (brPos != std::string::npos)
+      {
+        logger(LOG_INFO, "kely sisa");
+      }
+
+      std::string boundary = "--" + value.substr(posBoundary + 9, value.size() - posBoundary + 9);
+      while (!boundary.empty() &&
+          (boundary[boundary.size() - 1] == '\r' || boundary[boundary.size() - 1] == '\n'))
+        boundary.erase(boundary.size() - 1);
+      logger(LOG_INFO, "que vaut juste boundary -> " + boundary + "]");
+      this->_boundary = boundary;
+      logger(LOG_INFO, "apres asignation boundary -> " + boundary + "]");
       this->_endBoundary = boundary + "--\r\n";
+      logger(LOG_INFO, "boubary size without \\r\\n = " + toString(boundary.size()));
+      logger(LOG_INFO, "boundary [" + this->_boundary + "] " + toString(this->_boundary.size()));
+      logger(LOG_INFO, "endBoundary [" + this->_endBoundary + "]" + toString(this->_endBoundary.size()));
     }
     this->_headers[toUpper(key)] = toUpper(value);
   }
 }
+
+
+bool  HttpRequest::hasBoundary_(void)
+{
+  return (this->_hasBoundary);
+}
+
+std::vector<MultipartPart>&  HttpRequest::getMultipart(void)
+{
+  return (this->_multiPart);
+}
+

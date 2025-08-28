@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/27 10:13:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/28 09:23:47 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -128,6 +128,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::string
           getUriPath_(const int& fd);
     void  respondFallbackError(const int& fd);
+    void  saveMultipartFiles(const int&fd);
 
     // for cgi
     void  handleCgiGetRequest_(const int fd);

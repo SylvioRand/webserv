@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/27 09:33:08 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/28 11:16:36 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,7 @@
 #include <sys/types.h>
 
 struct MultipartPart {
+    bool        fullySaved;
     std::string name;       // ex: "username"
     std::string filename;   // ex: "photo.png" (vide si pas de fichier)
     std::string contentType;// ex: "image/png" (optionnel)
@@ -51,6 +52,8 @@ class HttpRequest
     bool                                _hasBoundary;
     std::string                         _boundary;
     std::string                         _endBoundary;
+
+    std::vector<MultipartPart>          _multiPart;
 
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
     void  handleMultipartFormData(const std::string& bodyPart);
@@ -92,6 +95,10 @@ class HttpRequest
     size_t
           getCgiOffset(void);
     void  sendRequestBodyToCgi(const int&pipeFd, const int& clientFd);
+    void  addToMultipartStruct(size_t& start, size_t& end);
+    bool  hasBoundary_(void);
+    std::vector<MultipartPart>&  getMultipart(void);
+
 
 
     // new function for handluing body request 
@@ -101,7 +108,6 @@ class HttpRequest
     bool  hasContentLength(void);
     void  fillHeadersMap(std::istringstream& iss);
     void  parseMultipartBody();
-    
 
 };
 
