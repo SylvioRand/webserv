@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/28 09:23:47 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/29 09:58:02 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,7 +120,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  respondNotImplemented_(const int& fd);
     void  setBodyFilePath(const int& fd, const std::string& path);
     void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
-    void  openAndSaveBodyFileFd(const std::string& path, const int& fd);
     void  setBodySize(const int& fd, const ssize_t& bodySize);
     void  setPollIn_(const int& fd);
     void  respondPayloadTooLarge(const int& fd);
@@ -148,6 +147,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleChildProcess(const int& fd, const std::string& localPath, const CgiPipes& cgiPipes);
     void  handleParentProcess(const int& fd, const CgiPipes& cgiPipes);
     void  sendRequestBodyToCgi(const int&fd, const int& clientFd);
+    bool  isBodySizeAllowed(const int& fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

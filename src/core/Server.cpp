@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cctype>
 #include <csignal>
+#include <cstddef>
 #include <fcntl.h>
 #include <fstream>
 #include <ios>
@@ -460,7 +461,6 @@ void  Server::handle_pollout_(int fd)
         + toString(fd) + " | Status code: "
         + toString(client->getResponse().getStatus()));
     this->_clients[fd]->getResponse().closeBodyFileFd(
-        this->_clients[fd]->getResponse().getBodyFileFd(),
         this->getFileName(getUriPath_(fd)));
     if (client->getResponse().isKeepAlive())
     {
@@ -474,7 +474,7 @@ void  Server::handle_pollout_(int fd)
 
 void Server::close_client_(int fd)
 {
-  this->_clients[fd]->getResponse().closeBodyFileFd(fd, this->getFileName(this->getUriPath_(fd)));
+  this->_clients[fd]->getResponse().closeBodyFileFd(this->getFileName(this->getUriPath_(fd)));
   logger(LOG_INFO, "close client fd=" + toString(fd));
 
   std::map<int, Client*>::iterator it = _clients.find(fd);
@@ -782,7 +782,7 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
 
   this->setStatus(200, fd);
   this->setBodyFilePath(fd, path);
-  this->openAndSaveBodyFileFd(path, fd);
+  this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
   this->setBodySize(fd, getFileSize(path));
   this->setBodyFilePath(fd, path);
 }
@@ -836,36 +836,58 @@ void  Server::POSTMethod_(const int fd)
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
-    //this->saveBodyToFile("longMovie.mp4", fd);
-    //this->saveBodyToFile("ubuntu.iso", fd);
-    if (this->_clients[fd]->getRequest().hasBoundary_())
+    if (this->_clients[fd]->getRequest().getBody().size() < this->getCurrentLocation().client_max_body_size) 
     {
-      this->saveMultipartFiles(fd);
+      if (this->_clients[fd]->getRequest().hasBoundary_())
+        this->saveMultipartFiles(fd);
+      else
+        this->saveBodyToFile("bigImage.png", fd);
     }
-    else
-      this->saveBodyToFile("bigImage.png", fd);
     //this->saveBodyToFile("longMovie.mp4", fd);
-    this->saveUploadedFile_(fd);
+    if (this->_clients[fd]->getRequest().getBody().size() > this->getCurrentLocation().client_max_body_size) 
+      this->respondPayloadTooLarge(fd);
+    else
+      this->saveUploadedFile_(fd);
   }
   else
     this->respondMissingUploadDir(fd);
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
 }
 
+bool  Server::isBodySizeAllowed(const int& fd)
+{
+  LocationConfig  location = this->getCurrentLocation();
+  size_t          contentLength = this->_clients[fd]->getRequest().getBody().size();
+
+  if (contentLength > location.client_max_body_size)
+  {
+    logger(LOG_DEBUG, "Too large");
+    logger(LOG_INFO, 
+      "❌ Client body size (" + toString(contentLength) + 
+      " bytes) exeeds limit (" + 
+      toString(location.client_max_body_size) + " bytes).");
+
+    return (false);
+  }
+  logger(LOG_INFO, 
+    "✅ Client body size (" + toString(contentLength) + 
+    " bytes) is within allowed limit (" + 
+    toString(location.client_max_body_size) + " bytes).");
+  return (true);
+}
+
+
+
 void  Server::saveMultipartFiles(const int& fd)
 {
-  logger(LOG_FATAL, "in function saveMultipartFiles");
   std::vector<MultipartPart> multipart = this->_clients[fd]->getRequest().getMultipart();
   std::string path = this->getCurrentLocation().upload_dir + "/";
   for (std::vector<MultipartPart>::iterator it = multipart.begin(); it != multipart.end(); it++)
   {
     if (!it->fullySaved)
     {
-      logger(LOG_FATAL, "verif filename -> " + it->filename);
       std::string localPath = path.c_str() + it->filename;
-      logger(LOG_INFO, "pour le filePath" + localPath);
       std::ofstream file(localPath.c_str());
-      //std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);
       if (!file)
       {
         // TODO need to do somethin  in this case
@@ -1248,7 +1270,7 @@ void  Server::processReadableFile_(const int fd, const std::string& path)
 
   this->setStatus(200, fd);
   this->setBodyFilePath(fd, path);
-  this->openAndSaveBodyFileFd(path, fd);
+  this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
 }
 
 void  Server::onDeleteSuccess_(const int fd)
@@ -1417,7 +1439,7 @@ void Server::saveErrorBodyFilePath(const int code, const int& fd,
         std::string path = serverConf->root + '/' + it->second;
         contentType = this->getContentTypeByFileExtension(path);
         contentLength = toString(getFileSize(path));
-        this->openAndSaveBodyFileFd(path, fd);
+        this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
         this->setBodySize(fd, getFileSize(path));
         this->setBodyFilePath(fd, path);
         return ;
@@ -1435,7 +1457,7 @@ void Server::saveErrorBodyFilePath(const int code, const int& fd,
         std::string path = this->getCurrentLocation().root + '/' + it->second;
         contentType = this->getContentTypeByFileExtension(path);
         contentLength = toString(getFileSize(path));
-        this->openAndSaveBodyFileFd(path, fd);
+        this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
         this->setBodySize(fd, getFileSize(path));
         this->setBodyFilePath(fd, path);
         return ;
@@ -1762,22 +1784,6 @@ void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
   rootLocation.path = "root";
   rootLocation.root = cfg->root;
   this->setCurrentLocation(rootLocation);
-}
-
-void  Server::openAndSaveBodyFileFd(const std::string& path, const int& clientFd)
-{
-  int fd;
-
-  fd = open(path.c_str(), O_RDONLY);
-  if (fd == -1)
-  {
-    logger(LOG_FATAL,
-        "Warning: The file should be readable but an issue was detected.");
-    return ;
-  }
-  this->_clients[clientFd]->getResponse().setBodyFileFd(fd);
-  logger(LOG_INFO, "File opened and FD stored for response body: filename='"
-      + path + "', fd=" + toString(fd));
 }
 
 void  Server::setBodySize(const int& fd, const ssize_t& bodySize)

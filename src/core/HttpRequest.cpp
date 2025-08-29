@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/28 18:42:48 by srandria         ###   ########.fr       */
+/*   Updated: 2025/08/29 08:29:07 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,12 +81,10 @@ void  HttpRequest::extractRequestBody(std::string& bodyPart)
 {
   if (this->_isChunked)
   {
-    logger(LOG_FATAL, "yes headers isChunked");
     this->handleChunkedEncoding(bodyPart);
   }
   else if (this->_hasBoundary)
   {
-    logger(LOG_FATAL, "yes headers has Boundary");
     this->handleMultipartFormData(bodyPart);
   }
   else if (this->_hasContentLength)
@@ -105,11 +103,7 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
 
   endOfBody = this->_body.find(this->_endBoundary);
   if (endOfBody == std::string::npos)
-  {
-    //std::cout.write(this->_body.c_str(), this->_body.size());
-    logger(LOG_INFO, "to be coutinue");
     return ;
-  }
   // TODO need to test the first case
   if (this->_isCgiRequest)
   {
@@ -118,17 +112,7 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
       this->markRequestComplete();
   }
   else if (endOfBody != std::string::npos)
-  {
-    /*
-    logger(LOG_FATAL, "start");
-    std::cout.write(this->_body.c_str(), this->_boundary.size());
-    logger(LOG_FATAL, "end");
-    */
-
-    //this->_body = this->_body.substr(start + 2, boundary2 - start);
-    // TODO ON this line, add a function to manage all boundary data and call that same function if chunk with boundary`
     this->parseMultipartBody();
-  }
 }
 
 void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
@@ -147,12 +131,7 @@ void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
         "[HTTP] Successfully received full request body (chunked transfer completed).");
 
       if (_hasBoundary)
-      {
-        logger(LOG_FATAL, "you got it bro");
-        std::cout.write(this->_body.c_str(), this->_body.size());
-        logger(LOG_FATAL, "end");
         this->parseMultipartBody();
-      }
       this->markRequestComplete();
       break; // sortir de la boucle
     }
@@ -180,62 +159,33 @@ void  HttpRequest::handleFixedLengthBody(std::string& bodyPart)
 
 void  HttpRequest::parseMultipartBody()
 {
-  logger(LOG_DEBUG, "In function parseMultipartBody");
   std::string boundary = this->_boundary.substr(0, this->_boundary.size() - 2);
-  /*
-  logger(LOG_DEBUG, "only boundary[");
-  std::cout.write(boundary.c_str(), boundary.size());
-  logger(LOG_FATAL, "End");
-  */
   size_t  start = this->_body.find(boundary) + 2;
   start += this->_boundary.size();
   size_t  end;
   size_t  lastBoundaryPos = this->_body.find(this->_endBoundary);
-  //logger(LOG_FATAL, "End boundary value -> " + this->_endBoundary);
 
   while (1)
   {
     size_t step = start + this->_boundary.size();
-   // logger(LOG_FATAL, "step value -> " + toString(step));
     end = this->_body.find(boundary, step);
-    /*
-    if (end == std::string::npos)
-    {
-      logger(LOG_FATAL, "NOus ne l`avions pas trouve ");
-    }
-    logger(LOG_FATAL, "body size -> " + toString(this->_body.size()));
-    logger(LOG_FATAL, "compare [" + toString(lastBoundaryPos) + "] and [" + toString(end) + "]");
-    */
     this->addToMultipartStruct(start, end);
     if (end == lastBoundaryPos)
     {
-      //logger(LOG_FATAL, "Can`t enter here");
-      this->_body.clear(); //  for optimizing memory
       this->markRequestComplete();
       return;
     }
-    start = end + this->_boundary.size();
+    start = end + this->_boundary.size() + 2;
   }
 }
 
 void   HttpRequest::addToMultipartStruct(size_t& start, size_t& end)
 {
-  logger(LOG_FATAL, "IN function addToMultipartStruct");
-  /*
-  std::cout << "[";
-  std::cout.write(this->_body.substr(start, end).c_str(), end - start);
-  std::cout << "]";
-  */
   MultipartPart part; 
 
   // TODO NEDD TO CREATE FUNCTION FOR FILLING name/filename/contentType from header inside boundary
   size_t headerEnd = this->_body.find("\r\n\r\n");
-  if (headerEnd != std::string::npos)
-  {
-    //logger(LOG_INFO, "headerEnd not found");
-  }
   std::string headerPart = this->_body.substr(start, headerEnd - start);
-  //logger(LOG_INFO, "headerPART in addToMultipartStruct -> " + headerPart);
   std::istringstream iss(headerPart);
   std::string line;
   while (std::getline(iss, line) && line != "\r")
@@ -250,23 +200,16 @@ void   HttpRequest::addToMultipartStruct(size_t& start, size_t& end)
     value = line.substr(pos + 2);
     size_t  filenamePos = value.find("filename=");
     if (filenamePos != std::string::npos)
-      logger(LOG_INFO, "filenamePos is correct");
-    if (filenamePos != std::string::npos)
     {
       if (key.find("CONTENT-DISPOSITION") != std::string::npos && filenamePos != std::string::npos)
-      {
         part.filename = value.substr(filenamePos + std::string("filename=").size());
-        logger(LOG_INFO, "et la ca vaut quoi -> " + part.filename);
-      }
     }
   }
-  //std::cout.write(headerPart.c_str(), headerPart.size());
-  //logger(LOG_FATAL, "end");
   part.name = "srandria";
   part.contentType = "";
   part.fullySaved = false;
   size_t pos = this->_body.find("\r\n\r\n", start) + 4;
-  part.data = this->_body.substr(pos, end);
+  part.data = this->_body.substr(pos, end - pos - 2);
   this->_multiPart.push_back(part);
 }
 
@@ -319,7 +262,6 @@ void  HttpRequest::appendToBody(std::string& str)
     this->_body.append(str.c_str(), str.size());
     if (this->_bodyBytesRead == this->_contentLength)
     {
-      logger(LOG_INFO, "Body is  fully received\n" + this->_body);
       this->markRequestComplete();
       this->parseBody();
     }
