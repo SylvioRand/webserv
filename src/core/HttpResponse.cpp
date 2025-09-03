@@ -46,7 +46,7 @@ void  HttpResponse::openAndSaveBodyFileStream(const std::string& path)
         "Warning: The file should be readable but an issue was detected.");
     return ;
   }
-  logger(LOG_INFO, "File opened and FD stored for response body: filename='"
+  logger(LOG_INFO, "File opened and filestream stored for response body: filename='"
       + path);
 }
 
@@ -121,7 +121,7 @@ void HttpResponse::sendBody(const int &fd)
     {
       this->_bufferOffset = 0;
       this->_bodyFileStream.seekg(this->_streamOffset);
-      this->_bodyFileStream.read(&this->_bodyBuffer[0], 16);
+      this->_bodyFileStream.read(&this->_bodyBuffer[0], READ_CHUNK_SIZE);
       std::streamsize bytesRead = this->_bodyFileStream.gcount();
       ssize_t bytesSent = send(fd, this->_bodyBuffer, bytesRead, 0);
       if (bytesSent > 0)
@@ -158,9 +158,7 @@ void HttpResponse::sendBody(const int &fd)
 bool HttpResponse::areHeadersFullySent(void)
 {
   if (this->_headersOffset == this->_headersSize)
-  {
     return (true);
-  }
   return (false);
 }
 
@@ -240,13 +238,5 @@ void HttpResponse::saveCgiRespondSize(const int& clientFd)
 void  HttpResponse::appendCgiResponse(const std::string& buff, const ssize_t& size)
 {
   this->_cgiResponse.append(buff.c_str(), size);
-}
-
-void  HttpResponse::sendCgiResponse(const int&fd)
-{
-  ssize_t bytesSent = send(fd, this->_cgiResponse.data() + this->_cgiBytesSent,
-                           this->_cgiResponse.size() - this->_cgiBytesSent, 0);
-  if (bytesSent > 0)
-    this->_cgiBytesSent += bytesSent;
 }
 

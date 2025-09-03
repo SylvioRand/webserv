@@ -22,7 +22,7 @@
 #include <sys/types.h>
 
 HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0), _contentLength(0),
-  _isChunked(false), _cgiOffset(0), _hasContentLength(false), _hasBoundary(false),  _isCgiRequest(false)
+  _isChunked(false), _hasError(false), _cgiOffset(0), _hasContentLength(false), _hasBoundary(false),  _isCgiRequest(false), _allFilesSaved(false)
 {
 
 }
@@ -97,12 +97,15 @@ void  HttpRequest::extractRequestBody(std::string& bodyPart)
 
 void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
 {
-  size_t  endOfBody;
+  size_t  endOfBody = std::string::npos;
 
   this->_body.append(bodyPart.c_str(), bodyPart.size());
+  std::string endBoundary;
+  if (this->_body.size() > this->_endBoundary.size())
+    endBoundary = this->_body.substr(this->_body.size() - this->_endBoundary.size(), this->_endBoundary.size());
 
   endOfBody = this->_body.find(this->_endBoundary);
-  if (endOfBody == std::string::npos)
+  if (endBoundary != this->_endBoundary)
     return ;
   // TODO need to test the first case
   if (this->_isCgiRequest)
@@ -111,7 +114,7 @@ void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
     if (endOfBody != std::string::npos)
       this->markRequestComplete();
   }
-  else if (endOfBody != std::string::npos)
+  else
     this->parseMultipartBody();
 }
 
@@ -163,8 +166,7 @@ void  HttpRequest::parseMultipartBody()
   size_t  start = this->_body.find(boundary) + 2;
   start += this->_boundary.size();
   size_t  end;
-  size_t  lastBoundaryPos = this->_body.find(this->_endBoundary);
-
+  size_t  lastBoundaryPos = this->_body.size() - this->_endBoundary.size();
   while (1)
   {
     size_t step = start + this->_boundary.size();
@@ -188,6 +190,8 @@ void   HttpRequest::addToMultipartStruct(size_t& start, size_t& end)
   std::string headerPart = this->_body.substr(start, headerEnd - start);
   std::istringstream iss(headerPart);
   std::string line;
+  std::srand(static_cast<unsigned int>(std::time(NULL)));
+
   while (std::getline(iss, line) && line != "\r")
   {
     size_t      pos = line.find(":");
@@ -198,16 +202,22 @@ void   HttpRequest::addToMultipartStruct(size_t& start, size_t& end)
     if (pos == std::string::npos)
       break ;
     value = line.substr(pos + 2);
-    size_t  filenamePos = value.find("filename=");
+    size_t  filenamePos = value.find("filename=\"");
     if (filenamePos != std::string::npos)
     {
       if (key.find("CONTENT-DISPOSITION") != std::string::npos && filenamePos != std::string::npos)
-        part.filename = value.substr(filenamePos + std::string("filename=").size());
+      {
+        size_t start = filenamePos + std::string("filename=\"").size();
+        size_t end = value.find('"', start);
+        std::string filename = value.substr(filenamePos + std::string("filename=\"").size(), end - start);
+        part.filename = unique_filename(filename);
+      }
     }
   }
   part.name = "srandria";
   part.contentType = "";
   part.fullySaved = false;
+  part.offset = 0;
   size_t pos = this->_body.find("\r\n\r\n", start) + 4;
   part.data = this->_body.substr(pos, end - pos - 2);
   this->_multiPart.push_back(part);
@@ -304,6 +314,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_endBoundary.clear();
   this->_isCgiRequest = false;
   this->_multiPart.clear();
+  this->_allFilesSaved = false;
 }
 
 bool  HttpRequest::isBodySizeAllowed(void)
@@ -517,12 +528,7 @@ void  HttpRequest::setHasBoundary(void)
     size_t pos = it->second.find("BOUNDARY");
 
     if (pos != std::string::npos)
-    {
       this->_hasBoundary = true;
-      logger(LOG_DEBUG, "headers has [boundary =" +
-          this->_boundary + "]");
-      logger(LOG_DEBUG, "endOfHeader [" + this->_endBoundary + "]");
-    }
   }
 }
 
@@ -554,23 +560,12 @@ void  HttpRequest::fillHeadersMap(std::istringstream& iss)
     size_t  posBoundary = value.find("boundary=");
     if (key.find("CONTENT-TYPE") != std::string::npos && posBoundary != std::string::npos)
     {
-      size_t brPos = value.find("\r");
-      if (brPos != std::string::npos)
-      {
-        logger(LOG_INFO, "kely sisa");
-      }
-
       std::string boundary = "--" + value.substr(posBoundary + 9, value.size() - posBoundary + 9);
       while (!boundary.empty() &&
           (boundary[boundary.size() - 1] == '\r' || boundary[boundary.size() - 1] == '\n'))
         boundary.erase(boundary.size() - 1);
-      logger(LOG_INFO, "que vaut juste boundary -> " + boundary + "]");
       this->_boundary = boundary;
-      logger(LOG_INFO, "apres asignation boundary -> " + boundary + "]");
       this->_endBoundary = boundary + "--\r\n";
-      logger(LOG_INFO, "boubary size without \\r\\n = " + toString(boundary.size()));
-      logger(LOG_INFO, "boundary [" + this->_boundary + "] " + toString(this->_boundary.size()));
-      logger(LOG_INFO, "endBoundary [" + this->_endBoundary + "]" + toString(this->_endBoundary.size()));
     }
     this->_headers[toUpper(key)] = toUpper(value);
   }

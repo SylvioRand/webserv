@@ -62,5 +62,6 @@ bool        caseInsensitiveEqual(const std::string& a,
 off_t       getFileSize(const std::string& path);
 std::string toLower(const std::string &s);
 std::string toUpper(const std::string &s);
+std::string unique_filename(const std::string &original);
 
 #endif

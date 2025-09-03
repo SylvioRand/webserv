@@ -128,6 +128,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
           getUriPath_(const int& fd);
     void  respondFallbackError(const int& fd);
     void  saveMultipartFiles(const int&fd);
+    bool  isBodySizeAllowed(const int& fd);
+    void  setAllFilesSaved(const int& fd);
 
     // for cgi
     void  handleCgiGetRequest_(const int fd);
@@ -147,7 +149,6 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleChildProcess(const int& fd, const std::string& localPath, const CgiPipes& cgiPipes);
     void  handleParentProcess(const int& fd, const CgiPipes& cgiPipes);
     void  sendRequestBodyToCgi(const int&fd, const int& clientFd);
-    bool  isBodySizeAllowed(const int& fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

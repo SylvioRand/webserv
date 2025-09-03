@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iosfwd>
 #define READ_CHUNK_SIZE 8192
+//#define READ_CHUNK_SIZE 1600000
 
 #include "../utils/utils.hpp"
 #include <string>

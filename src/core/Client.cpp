@@ -38,7 +38,8 @@ bool  Client::readData(void)
 {
   logger(LOG_DEBUG, "[HTTP] Reading request data from socket (recv).");
   //char buf[8192];
-  char buf[8192];
+  //char buf[8192];
+  char buf[READ_CHUNK_SIZE];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
   if (bytes == -1)
@@ -48,7 +49,6 @@ bool  Client::readData(void)
   }
   else if (bytes == 0)
   {
-    logger(LOG_INFO, "Client closed the connection");
     return (false);
   }
   if (this->_request.getMethod().empty())
@@ -58,6 +58,12 @@ bool  Client::readData(void)
   }
   else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
+    static int  i = 0;
+    i++;
+    if (i % 100 == 0)
+      logger(LOG_INFO, "readed bytes -> " + toString(bytes)
+          + "for total [" + toString(this->getRequest().getBody().size()) + "]");
+
     std::string bodyPart;
     bodyPart.append(buf, bytes);
     this->_request.extractRequestBody(bodyPart);
@@ -79,6 +85,15 @@ void  Client::sendCgiData(void)
   logger(LOG_INFO, "📤 Sending HTTP cgi response to client fd=" + toString(this->_fd) + " ...");
   this->_response.sendCgiResponse(this->_fd);
 }
+
+void  HttpResponse::sendCgiResponse(const int&fd)
+{
+  ssize_t bytesSent = send(fd, this->_cgiResponse.data() + this->_cgiBytesSent,
+                           this->_cgiResponse.size() - this->_cgiBytesSent, 0);
+  if (bytesSent > 0)
+    this->_cgiBytesSent += bytesSent;
+}
+
 
 bool  Client::isRequestComplete(void) const
 {

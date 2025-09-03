@@ -43,7 +43,7 @@ void Server::start_server_(void)
     static bool waitingLogged = false;
     if (!waitingLogged)
     {
-      logger(LOG_DEBUG, "Waiting on poll...");
+      //logger(LOG_DEBUG, "Waiting on poll...");
       waitingLogged = true;
     }
     int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
@@ -223,6 +223,7 @@ void  Server::accept_new_client_(int listener_fd)
   this->setNonBlocking_(client_fd);
   _clients[client_fd] = new Client(client_fd, this->_serverListeners[listener_fd]);
   this->addFdToPoll_(client_fd);
+  logger(LOG_INFO, "New client successfully added to poll fd=[" + toString(client_fd) + "]");
 }
 
 void  Server::setNonBlocking_(int fd)
@@ -255,7 +256,6 @@ void  Server::handle_pollin_(int fd)
       this->setPollOut_(fd);
       return ;
     }
-    //std::string uriPath = this->getUriPath_(fd);
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     logger(LOG_DEBUG, "uriPath [" +  getUriPath_(fd) + "]");
     saveMatchingLocation_(fd, serverConf);
@@ -276,8 +276,6 @@ void  Server::handle_pollin_(int fd)
       this->POSTMethod_(fd);
     else if (method == "DELETE" && this->isMethodAllowedForLocation("DELETE"))
       this->DELETEMethod_(fd);
-    else if (this->getMethod(fd) == "POST" && !this->_clients[fd]->getRequest().isBodySizeAllowed())
-      this->respondPayloadTooLarge(fd);
     else
       this->methodNotAllowed_(fd);
     if (!this->_clients[fd]->getRequest()._isCgiRequest)
@@ -448,12 +446,22 @@ void  Server::handle_pollout_(int fd)
         == client->getResponse().getCgiRespondSize())
       client->getResponse()._isFullySent = true;
   }
-  else
+  else if (this->getMethod(fd) == "POST")
+  {
+    if (this->_clients[fd]->getRequest().hasBoundary_())
+      this->saveMultipartFiles(fd);
+    else
+      this->saveBodyToFile("bigImage.png", fd);
+  }
+
+  if (this->getMethod(fd) != "POST" ||
+      (this->getMethod(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved))
   {
     client->sendData();
     if (client->getResponse().areHeadersFullySent() &&
         client->getResponse().isBodyFullySent())
       client->getResponse()._isFullySent = true;
+
   }
   if (client->getResponse()._isFullySent)
   {
@@ -490,14 +498,14 @@ void Server::close_client_(int fd)
     if (itPollFd->fd == fd)
     {
       itPollFd = this->_pool_fds.erase(itPollFd);
-      logger(LOG_DEBUG,
+      logger(LOG_INFO,
         "🟢 Client fd=" + toString(fd) + " successfully removed from poll monitoring");
       return ;
     }
     else
       ++itPollFd;
   }
-  logger(LOG_DEBUG,
+  logger(LOG_INFO,
     "⚠️ Failed to remove client fd=" + toString(fd) + ": not found in poll monitoring");
 }
 
@@ -820,13 +828,18 @@ bool  Server::existsAtLeastOneIndexFile_(const std::string path)
 
 void  Server::POSTMethod_(const int fd)
 {
-  logger(LOG_DEBUG, "In POSTMethod_");
   LocationConfig  location = this->getCurrentLocation();
   if (location.upload_dir.empty())
   {
     this->respondMissingUploadDir(fd);
     return ;
   }
+  if (!this->_clients[fd]->getRequest().isBodySizeAllowed())
+  {
+    this->respondPayloadTooLarge(fd);
+    return ;
+  }
+
   std::string     localPath;
   std::string     extractUri;
 
@@ -836,18 +849,15 @@ void  Server::POSTMethod_(const int fd)
   {
     // TODO maybe you need more else if
     // TODO Need to parse the body before saving correct data to save in specific file
-    if (this->_clients[fd]->getRequest().getBody().size() < this->getCurrentLocation().client_max_body_size) 
-    {
-      if (this->_clients[fd]->getRequest().hasBoundary_())
-        this->saveMultipartFiles(fd);
-      else
-        this->saveBodyToFile("bigImage.png", fd);
-    }
-    //this->saveBodyToFile("longMovie.mp4", fd);
-    if (this->_clients[fd]->getRequest().getBody().size() > this->getCurrentLocation().client_max_body_size) 
-      this->respondPayloadTooLarge(fd);
+    /*
+    if (this->_clients[fd]->getRequest().hasBoundary_())
+      this->saveMultipartFiles(fd);
     else
-      this->saveUploadedFile_(fd);
+      this->saveBodyToFile("bigImage.png", fd);
+    //this->saveBodyToFile("longMovie.mp4", fd);
+    if (this->_clients[fd]->getRequest()._allFilesSaved)
+    */
+    this->saveUploadedFile_(fd);
   }
   else
     this->respondMissingUploadDir(fd);
@@ -880,25 +890,58 @@ bool  Server::isBodySizeAllowed(const int& fd)
 
 void  Server::saveMultipartFiles(const int& fd)
 {
-  std::vector<MultipartPart> multipart = this->_clients[fd]->getRequest().getMultipart();
+  std::vector<MultipartPart>& multipart = this->_clients[fd]->getRequest().getMultipart();
   std::string path = this->getCurrentLocation().upload_dir + "/";
   for (std::vector<MultipartPart>::iterator it = multipart.begin(); it != multipart.end(); it++)
   {
     if (!it->fullySaved)
     {
       std::string localPath = path.c_str() + it->filename;
-      std::ofstream file(localPath.c_str());
-      if (!file)
+      std::ofstream file(localPath.c_str(), std::ios::app);
+      if (!file.is_open())
       {
         // TODO need to do somethin  in this case
         std::cerr << "Impossible de créer le fichier : " << it->filename << std::endl;
+        logger(LOG_INFO,"Probleme detected");
+        while (1);
         return;
       }
-      file.write(it->data.c_str(), it->data.size());
+
+      if (it->offset + READ_CHUNK_SIZE > it->data.size())
+      {
+        file.write(it->data.c_str() + it->offset, it->data.size() - it->offset);
+        it->offset += it->data.size() - it->offset;
+      }
+      else
+      {
+        file.write(it->data.c_str() + it->offset, READ_CHUNK_SIZE);
+        it->offset += READ_CHUNK_SIZE;
+      }
       file.close();
-      it->fullySaved = true;
+      if (it->offset == it->data.size())
+      {
+        it->fullySaved = true;
+        if (++it == multipart.end())
+        {
+          this->_clients[fd]->getRequest()._allFilesSaved = true;
+          this->saveUploadedFile_(fd);
+        }
+      }
+      return ;
     }
   }
+}
+
+// TODO a supprimer si on ne l`utilise pas`
+void  Server::setAllFilesSaved(const int& fd)
+{
+  std::vector<MultipartPart> multipart = this->_clients[fd]->getRequest().getMultipart();
+  std::vector<MultipartPart>::iterator it = multipart.end();
+  it--;
+  if (!it->fullySaved)
+      this->_clients[fd]->getRequest()._allFilesSaved = true;
+  // TODO je ne sais pas si c`est utile mais au moins le placer autre part
+  this->_clients[fd]->getResponse().initializeState();
 }
 
 void Server::saveBodyToFile(const std::string& filename, const int& fd)
@@ -916,6 +959,8 @@ void Server::saveBodyToFile(const std::string& filename, const int& fd)
   const std::string& body = this->_clients[fd]->getRequest().getBody();
   out.write(body.c_str(), body.size());
   out.close();
+  // TODO ajouter cette ligne quand tout a ete save
+  //this->saveUploadedFile_(fd);
 }
 
 void  Server::saveUploadedFile_(const int fd)

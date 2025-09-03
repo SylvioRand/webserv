@@ -16,16 +16,18 @@
 #include "../utils/utils.hpp"
 #include "../../include/core/Config.hpp"
 #include <cstddef>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <sys/types.h>
 
 struct MultipartPart {
-    bool        fullySaved;
-    std::string name;       // ex: "username"
-    std::string filename;   // ex: "photo.png" (vide si pas de fichier)
-    std::string contentType;// ex: "image/png" (optionnel)
-    std::string data;       // le contenu (texte ou binaire brut)
+    bool          fullySaved;
+    std::string   name;       // ex: "username"
+    std::string   filename;   // ex: "photo.png" (vide si pas de fichier)
+    std::string   contentType;// ex: "image/png" (optionnel)
+    std::string   data;       // le contenu (texte ou binaire brut)
+    size_t        offset;
 };
 
 class HttpRequest
@@ -65,6 +67,7 @@ class HttpRequest
     ~HttpRequest(void);
 
     bool  _isCgiRequest;
+    bool  _allFilesSaved;
 
     void  parse(const std::string &raw_request);
     bool  isValid(void) const;

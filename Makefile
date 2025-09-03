@@ -13,6 +13,7 @@ SRC = ./src/main.cpp \
 			./src/utils/getFileSize.cpp \
 			./src/utils/toLower.cpp \
 			./src/utils/toUpper.cpp \
+			./src/utils/uniqueFilename.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 

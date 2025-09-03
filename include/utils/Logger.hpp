@@ -13,7 +13,7 @@
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-#define PRODUCTION_MODE 0  // 1 = production, 0 = debug
+#define PRODUCTION_MODE 1  // 1 = production, 0 = debug
 
 #include <string>
 
