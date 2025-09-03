@@ -21,10 +21,12 @@
 #include <string>
 #include <sys/types.h>
 
-HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0), _contentLength(0),
-  _isChunked(false), _hasError(false), _cgiOffset(0), _hasContentLength(false), _hasBoundary(false),  _isCgiRequest(false), _allFilesSaved(false)
+HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0),
+  _contentLength(0), _isChunked(false), _hasError(false), _cgiOffset(0),
+  _hasContentLength(false), _hasBoundary(false), _isBodySizeAllowed(true),
+  _isCgiRequest(false), _allFilesSaved(false), _isReadingRequest(false)
 {
-
+  //this->_body.reserve(9999999999);
 }
 
 // TODO verifie for leaks if we need to free something
@@ -46,7 +48,7 @@ void  HttpRequest::parse(const std::string &raw_request)
   oss << std::endl << std::endl;
   logger(LOG_DEBUG, oss.str());
   this->parseHeader_(raw_request, pos);
-}
+  }
 
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
@@ -65,6 +67,17 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   this->setIsChunckedValue();
   this->setHasContentLength();
   this->setHasBoundary();
+  this->_location = this->getMatchingLocation_(this->_path,
+      this->getServerConf());
+  this->_client_max_body_size = this->_location.client_max_body_size;
+  logger(LOG_INFO, "verif location -> " + this->_location.path);
+  if (this->_hasContentLength && this->_contentLength > this->_client_max_body_size)
+  {
+    this->_isBodySizeAllowed = false;
+    this->_allFilesSaved = true;
+    this->markRequestComplete();
+    return ;
+  }
   if (this->_method == "POST")
   {
     std::string bodyPart;
@@ -79,7 +92,14 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 
 void  HttpRequest::extractRequestBody(std::string& bodyPart)
 {
-  if (this->_isChunked)
+  if (this->_body.size() + bodyPart.size() > this->_location.client_max_body_size ||
+      (this->_hasContentLength && this->_contentLength > this->_client_max_body_size))
+  {
+    this->_isBodySizeAllowed = false;
+    this->markRequestComplete();
+    return ;
+  }
+  else if (this->_isChunked)
   {
     this->handleChunkedEncoding(bodyPart);
   }
@@ -95,34 +115,100 @@ void  HttpRequest::extractRequestBody(std::string& bodyPart)
   }
 }
 
+void HttpRequest::extractRequestBody(const char *data, size_t len)
+{
+  if ((this->_isBodySizeAllowed && this->_body.size() + len > this->_location.client_max_body_size) ||
+      (this->_hasContentLength && this->_contentLength > this->_client_max_body_size))
+  {
+    this->_isBodySizeAllowed = false;
+    this->markRequestComplete();
+    return ;
+  }
+  if (_isChunked)
+      handleChunkedEncoding(data, len);
+  else if (_hasBoundary)
+      handleMultipartFormData(data, len);
+  else if (_hasContentLength)
+      handleFixedLengthBody(data, len);
+}
+
 void  HttpRequest::handleMultipartFormData(const std::string& bodyPart)
 {
-  size_t  endOfBody = std::string::npos;
+  //size_t  endOfBody = std::string::npos;
 
   this->_body.append(bodyPart.c_str(), bodyPart.size());
   std::string endBoundary;
-  if (this->_body.size() > this->_endBoundary.size())
-    endBoundary = this->_body.substr(this->_body.size() - this->_endBoundary.size(), this->_endBoundary.size());
+  if (this->_body.size() >= this->_endBoundary.size())
+    endBoundary = this->_body.substr(this->_body.size() - this->_endBoundary.size(),
+        this->_endBoundary.size());
+  //endOfBody = this->_body.find(this->_endBoundary);
+  if (endBoundary != this->_endBoundary)
+    return ;
+  // TODO need to test the first case
+  if (this->_isCgiRequest)
+    this->markRequestComplete();
+  else
+    this->parseMultipartBody();
+}
 
-  endOfBody = this->_body.find(this->_endBoundary);
+void  HttpRequest::handleMultipartFormData(const char* bodyPart, const size_t len)
+{
+  //size_t  endOfBody = std::string::npos;
+
+  this->_body.append(bodyPart, len);
+  std::string endBoundary;
+  if (this->_body.size() >= this->_endBoundary.size())
+    endBoundary = this->_body.substr(this->_body.size() - this->_endBoundary.size(),
+        this->_endBoundary.size());
+
+  //endOfBody = this->_body.find(this->_endBoundary);
   if (endBoundary != this->_endBoundary)
     return ;
   // TODO need to test the first case
   if (this->_isCgiRequest)
   {
     // TODO verify if we need to set POLLOUT
-    if (endOfBody != std::string::npos)
+    //if (endOfBody != std::string::npos)
       this->markRequestComplete();
   }
   else
     this->parseMultipartBody();
 }
 
+
 void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
 {
   size_t contentSize = 0;
 
   this->_bodyBuffChunked.append(bodyPart.c_str(), bodyPart.size());
+  while (this->isNextChunkReady(contentSize))
+  {
+    size_t pos = this->_bodyBuffChunked.find("\r\n");
+    size_t contentStart = pos + 2;
+        while (1);
+    if (contentSize == 0)
+    {
+      logger(LOG_INFO,
+        "[HTTP] Successfully received full request body (chunked transfer completed).");
+
+      if (_hasBoundary)
+        this->parseMultipartBody();
+      this->markRequestComplete();
+      break; // sortir de la boucle
+    }
+    else
+    {
+      this->_body.append(this->_bodyBuffChunked, contentStart, contentSize);
+      this->_bodyBuffChunked.erase(0, contentStart + contentSize + 2);
+    }
+  }
+}
+
+void  HttpRequest::handleChunkedEncoding(const char *bodyPart, size_t len)
+{
+  size_t contentSize = 0;
+
+  this->_bodyBuffChunked.append(bodyPart, len);
   while (this->isNextChunkReady(contentSize))
   {
     size_t pos = this->_bodyBuffChunked.find("\r\n");
@@ -159,6 +245,21 @@ void  HttpRequest::handleFixedLengthBody(std::string& bodyPart)
 
   this->_body.append(bodyPart);
 }
+
+void  HttpRequest::handleFixedLengthBody(const char *bodyPart, const size_t len)
+{
+  if (len >= this->_contentLength)
+  {
+    //bodyPart.resize(this->_contentLength);
+    this->_bodyBytesRead = this->_contentLength;
+    this->markRequestComplete();
+  }
+  else
+    this->_bodyBytesRead = len;
+
+  this->_body.append(bodyPart, len);
+}
+
 
 void  HttpRequest::parseMultipartBody()
 {
@@ -312,31 +413,11 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_hasBoundary = false;
   this->_boundary.clear();
   this->_endBoundary.clear();
+  this->_isBodySizeAllowed = true;
   this->_isCgiRequest = false;
   this->_multiPart.clear();
   this->_allFilesSaved = false;
-}
-
-bool  HttpRequest::isBodySizeAllowed(void)
-{
-  LocationConfig  location = this->getMatchingLocation_(this->_path,
-      this->getServerConf());
-
-  if (this->_contentLength > location.client_max_body_size)
-  {
-    logger(LOG_DEBUG, "Too large");
-    logger(LOG_INFO, 
-      "❌ Client body size (" + toString(this->_contentLength) + 
-      " bytes) exeeds limit (" + 
-      toString(location.client_max_body_size) + " bytes).");
-
-    return (false);
-  }
-  logger(LOG_INFO, 
-    "✅ Client body size (" + toString(this->_contentLength) + 
-    " bytes) is within allowed limit (" + 
-    toString(location.client_max_body_size) + " bytes).");
-  return (true);
+  this->_isReadingRequest = false;
 }
 
 LocationConfig HttpRequest::getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg)
@@ -582,3 +663,17 @@ std::vector<MultipartPart>&  HttpRequest::getMultipart(void)
   return (this->_multiPart);
 }
 
+void  HttpRequest::setClientMaxBodySize(const size_t& size)
+{
+  this->_client_max_body_size = size;
+}
+
+LocationConfig HttpRequest::getLocation(void)
+{
+  return (this->_location);
+}
+
+bool  HttpRequest::isBodySizeAllowed(void)
+{
+  return (this->_isBodySizeAllowed);
+}

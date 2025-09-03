@@ -228,7 +228,8 @@ void  Server::accept_new_client_(int listener_fd)
 
 void  Server::setNonBlocking_(int fd)
 {
-    int flags = fcntl(fd, F_GETFL, 0); if (flags == -1)
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1)
         throwWithLog(LOG_FATAL, "fcntl(F_GETFL) failed");
     if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
         throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
@@ -236,7 +237,7 @@ void  Server::setNonBlocking_(int fd)
 
 void  Server::handle_pollin_(int fd)
 {
-  logger(LOG_DEBUG, "POLLIN event on fd=" + toString(fd));
+  //logger(LOG_DEBUG, "POLLIN event on fd=" + toString(fd));
   //this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   Client *client = this->_clients[fd];
   if (!(*client).readData() || (*client).getRequest().hasError())
@@ -256,9 +257,7 @@ void  Server::handle_pollin_(int fd)
       this->setPollOut_(fd);
       return ;
     }
-    ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
-    logger(LOG_DEBUG, "uriPath [" +  getUriPath_(fd) + "]");
-    saveMatchingLocation_(fd, serverConf);
+    this->_currentLocation = this->_clients[fd]->getRequest().getLocation();
     this->setIsCGIRequest(fd);
     if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
@@ -273,7 +272,14 @@ void  Server::handle_pollin_(int fd)
     else if (method == "GET" && this->isMethodAllowedForLocation("GET"))
       this->GETMethod_(fd);
     else if (method == "POST" && this->isMethodAllowedForLocation("POST"))
+    {
       this->POSTMethod_(fd);
+      if (!this->_clients[fd]->getRequest()._isReadingRequest)
+      {
+        this->_clients[fd]->setPath(this->getCurrentLocation().upload_dir);
+        this->_clients[fd]->getRequest().setClientMaxBodySize(this->getCurrentLocation().client_max_body_size);
+      }
+    }
     else if (method == "DELETE" && this->isMethodAllowedForLocation("DELETE"))
       this->DELETEMethod_(fd);
     else
@@ -436,7 +442,6 @@ void  Server::setPollIn_(const int& fd)
 
 void  Server::handle_pollout_(int fd)
 {
-  logger(LOG_DEBUG, "POLLOUT event on fd=" + toString(fd));
   Client *client = this->_clients[fd];
 
   if (this->_clients[fd]->getRequest()._isCgiRequest)
@@ -446,7 +451,8 @@ void  Server::handle_pollout_(int fd)
         == client->getResponse().getCgiRespondSize())
       client->getResponse()._isFullySent = true;
   }
-  else if (this->getMethod(fd) == "POST")
+  else if (this->getMethod(fd) == "POST"
+      && this->_clients[fd]->getRequest().isBodySizeAllowed())
   {
     if (this->_clients[fd]->getRequest().hasBoundary_())
       this->saveMultipartFiles(fd);
@@ -455,13 +461,12 @@ void  Server::handle_pollout_(int fd)
   }
 
   if (this->getMethod(fd) != "POST" ||
-      (this->getMethod(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved))
+      (this->getMethod(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved) || !this->_clients[fd]->getRequest().isBodySizeAllowed())
   {
     client->sendData();
     if (client->getResponse().areHeadersFullySent() &&
         client->getResponse().isBodyFullySent())
       client->getResponse()._isFullySent = true;
-
   }
   if (client->getResponse()._isFullySent)
   {
@@ -611,7 +616,6 @@ void  Server::GETMethod_(const int& fd)
   else if (!this->getCurrentLocation().autoindex)
     this->respondDirectoryListingForbidden(fd);
 }
-
 
 
 std::string Server::getFileExtension_(std::string path)
@@ -879,31 +883,30 @@ bool  Server::isBodySizeAllowed(const int& fd)
 
     return (false);
   }
+  /*
   logger(LOG_INFO, 
     "✅ Client body size (" + toString(contentLength) + 
     " bytes) is within allowed limit (" + 
     toString(location.client_max_body_size) + " bytes).");
+    */
   return (true);
 }
-
-
 
 void  Server::saveMultipartFiles(const int& fd)
 {
   std::vector<MultipartPart>& multipart = this->_clients[fd]->getRequest().getMultipart();
-  std::string path = this->getCurrentLocation().upload_dir + "/";
+  LocationConfig location = this->_clients[fd]->getRequest().getLocation(); 
   for (std::vector<MultipartPart>::iterator it = multipart.begin(); it != multipart.end(); it++)
   {
     if (!it->fullySaved)
     {
-      std::string localPath = path.c_str() + it->filename;
+      std::string localPath = location.upload_dir + "/" + it->filename;
       std::ofstream file(localPath.c_str(), std::ios::app);
       if (!file.is_open())
       {
         // TODO need to do somethin  in this case
         std::cerr << "Impossible de créer le fichier : " << it->filename << std::endl;
-        logger(LOG_INFO,"Probleme detected");
-        while (1);
+        logger(LOG_INFO,"Probleme detected -> " + localPath);
         return;
       }
 

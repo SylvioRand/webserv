@@ -19,7 +19,8 @@
 HttpResponse::HttpResponse(void)
     : _status_code(200), _headersSize(0), _headersOffset(0),
       _bodySize(0), _bufferSize(0), _bufferOffset(0), _bodyBytesSent(0),
-      _keepAlive(true), _cgiBytesSent(0), _streamOffset(0), _isFullySent(false) {}
+      _keepAlive(true), _cgiBytesSent(0), _streamOffset(0), _isSending(false),
+      _isFullySent(false) {}
 
 void HttpResponse::initializeState(void)
 {
@@ -32,9 +33,10 @@ void HttpResponse::initializeState(void)
   this->_bufferOffset = 0;
   this->_bodyBytesSent = 0;
   this->_keepAlive = true;
-  this->_isFullySent = false;
   this->_cgiBytesSent = 0;
   this->_streamOffset = 0;
+  this->_isSending = false;
+  this->_isFullySent = false;
 }
 
 void  HttpResponse::openAndSaveBodyFileStream(const std::string& path)

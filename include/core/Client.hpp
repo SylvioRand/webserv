@@ -36,6 +36,9 @@ class Client
     HttpResponse& getResponse(void);
     ServerConfigConstIterator getServerConfig(void) const;
     void  clearBuffer(void);
+    void  setPath(const std::string);
+    const std::string& getPath(void);
+    void  setCurrentLocation(LocationConfig& location);
 
   private:
     Client(void);
@@ -49,6 +52,9 @@ class Client
     std::string               _buffer;
     time_t                    _lastActivity; // Pour timeout
     ServerConfigConstIterator _cfg;
+    std::string               _path;
+    LocationConfig            _currentLocation;
+    
 
 };
 

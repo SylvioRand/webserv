@@ -15,7 +15,7 @@
 
 #include <fstream>
 #include <iosfwd>
-#define READ_CHUNK_SIZE 8192
+#define READ_CHUNK_SIZE 64000
 //#define READ_CHUNK_SIZE 1600000
 
 #include "../utils/utils.hpp"
@@ -81,6 +81,7 @@ class HttpResponse
     void  closeBodyFileFd(const std::string path);
     void  openAndSaveBodyFileStream(const std::string& path);
 
+    bool  _isSending;
     bool  _isFullySent;
 };
 

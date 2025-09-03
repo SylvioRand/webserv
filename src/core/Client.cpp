@@ -36,44 +36,53 @@ Client::~Client(void)
 
 bool  Client::readData(void)
 {
-  logger(LOG_DEBUG, "[HTTP] Reading request data from socket (recv).");
-  //char buf[8192];
-  //char buf[8192];
   char buf[READ_CHUNK_SIZE];
   ssize_t bytes;
   bytes = recv(_fd, buf, sizeof(buf), 0);
   if (bytes == -1)
   {
-    logger(LOG_ERROR, "[RECV] Failed to receive data from client");
+    logger(LOG_INFO, "[RECV] Failed to receive data from client");
     return (false);
   }
   else if (bytes == 0)
   {
     return (false);
   }
-  if (this->_request.getMethod().empty())
+  if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
-    this->_buffer.append(buf, bytes);
-    this->_request.parse(_buffer);
-  }
-  else if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
-  {
+    /*
     static int  i = 0;
     i++;
     if (i % 100 == 0)
+    {
       logger(LOG_INFO, "readed bytes -> " + toString(bytes)
           + "for total [" + toString(this->getRequest().getBody().size()) + "]");
-
-    std::string bodyPart;
-    bodyPart.append(buf, bytes);
-    this->_request.extractRequestBody(bodyPart);
+      logger(LOG_INFO, "capacity -> " + toString(this->getRequest().getBody().capacity()));
+    }
+    */
+    this->_request.extractRequestBody(buf, bytes);
+  }
+  else if (this->_request.getMethod().empty())
+  {
+    if (!this->_request._isReadingRequest)
+    {
+      logger(LOG_INFO, "[HTTP] Reading request data from socket (recv) from client fd=" + toString(this->_fd) + " ...");
+      this->_request._isReadingRequest = true;
+      this->_request.setServerConf(this->_cfg);
+    }
+    this->_buffer.append(buf, bytes);
+    this->_request.parse(_buffer);
   }
   return (true);
 }
 
 void  Client::sendData(void)
 {
-  logger(LOG_INFO, "📤 Sending HTTP response to client fd=" + toString(this->_fd) + " ...");
+  if (!this->_response._isSending)
+  {
+    logger(LOG_INFO, "📤 Sending HTTP response to client fd=" + toString(this->_fd) + " ...");
+    this->_response._isSending = true;
+  }
   if (!this->_response.areHeadersFullySent())
     this->_response.sendHeaders(this->_fd);
   else if (!this->_response.isBodyFullySent())
@@ -82,7 +91,11 @@ void  Client::sendData(void)
 
 void  Client::sendCgiData(void)
 {
-  logger(LOG_INFO, "📤 Sending HTTP cgi response to client fd=" + toString(this->_fd) + " ...");
+  if (!this->_response._isSending)
+  {
+    logger(LOG_INFO, "📤 Sending HTTP cgi response to client fd=" + toString(this->_fd) + " ...");
+    this->_response._isSending = true;
+  }
   this->_response.sendCgiResponse(this->_fd);
 }
 
@@ -119,3 +132,19 @@ void  Client::clearBuffer(void)
 {
   this->_buffer.clear();
 }
+
+void  Client::setPath(const std::string path)
+{
+  this->_path = path;
+}
+
+const std::string&  Client::getPath()
+{
+  return (this->_path);
+}
+
+void  Client::setCurrentLocation(LocationConfig& location)
+{
+  this->_currentLocation = location;
+}
+
