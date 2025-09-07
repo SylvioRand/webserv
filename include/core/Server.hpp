@@ -96,6 +96,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  respondIndexFilesUnreadable_(const int fd);
     void  respondNoIndexFileFound_(const int fd);
     void  respondMissingUploadDir(const int fd);
+    void  respondWithUploadError(const int fd);
     void  saveUploadedFile_(const int fd);
     std::string
           getAllowedMethodsForLocation(void);

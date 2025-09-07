@@ -48,7 +48,7 @@ void  HttpRequest::parse(const std::string &raw_request)
   oss << std::endl << std::endl;
   logger(LOG_DEBUG, oss.str());
   this->parseHeader_(raw_request, pos);
-  }
+}
 
 void  HttpRequest::parseHeader_(const std::string &raw_request,
     const size_t endOfHeader)
@@ -70,7 +70,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   this->_location = this->getMatchingLocation_(this->_path,
       this->getServerConf());
   this->_client_max_body_size = this->_location.client_max_body_size;
-  logger(LOG_INFO, "verif location -> " + this->_location.path);
   if (this->_hasContentLength && this->_contentLength > this->_client_max_body_size)
   {
     this->_isBodySizeAllowed = false;

@@ -326,7 +326,6 @@ std::string  Server::getVersion(int fd)
   return (this->_clients[fd]->getRequest().getVersion());
 }
 
-
 const std::string& Server::getRequestUri_(int fd)
 {
   return (this->_clients[fd]->getRequest().getPath());
@@ -443,6 +442,7 @@ void  Server::setPollIn_(const int& fd)
 void  Server::handle_pollout_(int fd)
 {
   Client *client = this->_clients[fd];
+  std::string path = client->getRequest().getLocation().upload_dir;
 
   if (this->_clients[fd]->getRequest()._isCgiRequest)
   {
@@ -452,7 +452,8 @@ void  Server::handle_pollout_(int fd)
       client->getResponse()._isFullySent = true;
   }
   else if (this->getMethod(fd) == "POST"
-      && this->_clients[fd]->getRequest().isBodySizeAllowed())
+      && this->_clients[fd]->getRequest().isBodySizeAllowed()
+      && this->directoryExists_(path))
   {
     if (this->_clients[fd]->getRequest().hasBoundary_())
       this->saveMultipartFiles(fd);
@@ -461,7 +462,9 @@ void  Server::handle_pollout_(int fd)
   }
 
   if (this->getMethod(fd) != "POST" ||
-      (this->getMethod(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved) || !this->_clients[fd]->getRequest().isBodySizeAllowed())
+      (this->getMethod(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved)
+      || !this->_clients[fd]->getRequest().isBodySizeAllowed()
+      || (this->getMethod(fd) == "POST" && !this->directoryExists_(path)))
   {
     client->sendData();
     if (client->getResponse().areHeadersFullySent() &&
@@ -768,6 +771,43 @@ void  Server::respondNoIndexFileFound_(const int fd)
   response.setBody(body);
 }
 
+void  Server::respondWithUploadError(const int fd)
+{
+  logger(LOG_DEBUG, "In function respondWithUploadError");
+  /*
+   HTTP/1.1 500 Internal Server Error
+  Content-Type: text/plain
+  Content-Length: 49
+
+  Server misconfiguration: upload_dir not specified.
+  */
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(500, fd);
+  if (this->hasCustomErrorPage(500, fd))
+    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  else
+  {
+    body = "500 Internal Server Error: Upload directory does not exist";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 500 Internal Server Error: Upload directory does not exist\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+}
+
+
+
 void  Server::serveIndexContent_(const std::string path, const int fd)
 {
   logger(LOG_DEBUG, "In function serveIndexContent_");
@@ -838,31 +878,23 @@ void  Server::POSTMethod_(const int fd)
     this->respondMissingUploadDir(fd);
     return ;
   }
-  if (!this->_clients[fd]->getRequest().isBodySizeAllowed())
+  else if (!this->directoryExists_(location.upload_dir))
+  {
+    this->respondWithUploadError(fd);
+    return ;
+  }
+  else if (!this->_clients[fd]->getRequest().isBodySizeAllowed())
   {
     this->respondPayloadTooLarge(fd);
     return ;
   }
-
   std::string     localPath;
   std::string     extractUri;
 
   localPath = location.upload_dir + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
   if (directoryExists_(localPath))
-  {
-    // TODO maybe you need more else if
-    // TODO Need to parse the body before saving correct data to save in specific file
-    /*
-    if (this->_clients[fd]->getRequest().hasBoundary_())
-      this->saveMultipartFiles(fd);
-    else
-      this->saveBodyToFile("bigImage.png", fd);
-    //this->saveBodyToFile("longMovie.mp4", fd);
-    if (this->_clients[fd]->getRequest()._allFilesSaved)
-    */
     this->saveUploadedFile_(fd);
-  }
   else
     this->respondMissingUploadDir(fd);
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
@@ -1280,8 +1312,11 @@ void  Server::buildDirectoryListing_(const int fd)
 
 const std::string Server::generateAutoIndexHtml(const int& fd)
 {
-  const std::string uriPath = this->getUriPath_(fd);
-  const std::string localPath= this->getCurrentLocation().root + "/" + uriPath;
+  std::string uriPath = this->getUriPath_(fd);
+  if (uriPath.at(uriPath.size() - 1) == '/')
+    uriPath.erase(uriPath.size() - 1);
+
+  const std::string localPath = this->getCurrentLocation().root + uriPath;
   DIR *dir_ptr = opendir(localPath.c_str());
   
   struct dirent *entry;
