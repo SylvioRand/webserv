@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 08:22:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/08 11:01:32 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,6 +75,8 @@ class Config
     std::string               extractBlockContentLocation(const std::string &block, std::string &path);
     std::string               insertSpaceBeforeBrace(const std::string& line);
     void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
+    
+    bool                      blockServerIsValid(const std::string& input, size_t braceStart);
 
 void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
 
