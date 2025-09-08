@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/08 11:13:42 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/08 12:07:56 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -171,14 +171,14 @@ std::string                   Config::extractBlockContentServer(const std::strin
     return block.substr(start + 1, end - start - 1);
 }
 
-bool  Config::blockServerIsValid(const std::string& input, size_t braceStart)
+bool  Config::blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos)
 {
     (void)input;
-    if (braceStart == 6) // server{
+    if (braceStart == pos + 6) // server{
       return (true);
     else // server { ou server a{
     {
-      std::istringstream iss(input);
+      std::istringstream iss(input.substr(pos));
       std::string     arg, key;
       iss >> key >> arg;
       if (arg.at(0) == '{') // server {
@@ -190,7 +190,8 @@ bool  Config::blockServerIsValid(const std::string& input, size_t braceStart)
 
 std::vector<std::string>      Config::extractServerBlocks(const std::string& input) {
     std::vector<std::string> blocks;
-    size_t pos = 0;
+    size_t  pos = 0;
+    size_t  i = 0;
 
 
     std::cout << "input = |" << input << "|" <<std::endl << std::endl;
@@ -202,12 +203,12 @@ std::vector<std::string>      Config::extractServerBlocks(const std::string& inp
         throwWithLog(LOG_ERROR,
             "Expected '{' after 'server' at position " + toString(161));
       }
-      if (pos != 0 || !this->blockServerIsValid(input, braceStart))
+      if (pos != i || !this->blockServerIsValid(input, braceStart, pos))
         throwWithLog(LOG_ERROR, "Unknown directive");
  
       // Trouver la fin du bloc avec gestion des accolades imbriquéesint
       int depth = 1;
-      size_t i = braceStart + 1;
+      i = braceStart + 1;
       while (i < input.size() && depth > 0) {
         if (input[i] == '{') depth++;
         else if (input[i] == '}') depth--;

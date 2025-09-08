@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/08 11:01:32 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/08 11:55:14 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define CONFIG_HPP
 
 #include "../utils/utils.hpp"
+#include <cstddef>
 
 struct LocationConfig {
     std::string                 path;                 // Chemin de la location (ex: "/", "/upload")
@@ -76,7 +77,7 @@ class Config
     std::string               insertSpaceBeforeBrace(const std::string& line);
     void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
     
-    bool                      blockServerIsValid(const std::string& input, size_t braceStart);
+    bool                      blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos);
 
 void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
 
