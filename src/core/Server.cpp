@@ -238,7 +238,6 @@ void  Server::setNonBlocking_(int fd)
 void  Server::handle_pollin_(int fd)
 {
   //logger(LOG_DEBUG, "POLLIN event on fd=" + toString(fd));
-  //this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   Client *client = this->_clients[fd];
   if (!(*client).readData() || (*client).getRequest().hasError())
   {
@@ -421,6 +420,7 @@ void  Server::setPollOut_(int fd)
 
 void  Server::setPollIn_(const int& fd)
 {
+  this->_clients[fd]->getResponse().initializeState();
   this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   this->_clients[fd]->clearBuffer();
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
@@ -453,12 +453,13 @@ void  Server::handle_pollout_(int fd)
   }
   else if (this->getMethod(fd) == "POST"
       && this->_clients[fd]->getRequest().isBodySizeAllowed()
-      && this->directoryExists_(path))
+      && this->directoryExists_(path)
+      && !this->_clients[fd]->getRequest()._allFilesSaved)
   {
     if (this->_clients[fd]->getRequest().hasBoundary_())
       this->saveMultipartFiles(fd);
     else
-      this->saveBodyToFile("bigImage.png", fd);
+      this->saveBodyToBinary(fd);
   }
 
   if (this->getMethod(fd) != "POST" ||
@@ -481,7 +482,6 @@ void  Server::handle_pollout_(int fd)
     if (client->getResponse().isKeepAlive())
     {
       this->setPollIn_(fd);
-      client->getResponse().initializeState();
     }
     else
       close_client_(fd);
@@ -664,7 +664,7 @@ bool Server::isExecutable_(const std::string& path)
   return false;
 }
 
-void  Server::responsNotExecutable(const int& fd)
+void  Server::respondNotExecutable(const int& fd)
 {
   logger(LOG_DEBUG, "in function responsNotExecutable");
 
@@ -979,11 +979,11 @@ void  Server::setAllFilesSaved(const int& fd)
   this->_clients[fd]->getResponse().initializeState();
 }
 
-void Server::saveBodyToFile(const std::string& filename, const int& fd)
+void Server::saveBodyToBinary(const int& fd)
 {
-  logger(LOG_INFO, "In saveBodyToFile");
   std::string path;
-  path = this->getCurrentLocation().upload_dir + "/" + filename;
+  std::string filename;
+  path = this->getCurrentLocation().upload_dir + "/" + unique_filename("upload.bin");
   std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);
   if (!out)
   {
@@ -994,6 +994,7 @@ void Server::saveBodyToFile(const std::string& filename, const int& fd)
   const std::string& body = this->_clients[fd]->getRequest().getBody();
   out.write(body.c_str(), body.size());
   out.close();
+  this->_clients[fd]->getRequest()._allFilesSaved = true;
   // TODO ajouter cette ligne quand tout a ete save
   //this->saveUploadedFile_(fd);
 }

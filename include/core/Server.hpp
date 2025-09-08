@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/29 09:58:02 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/08 18:51:48 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -124,7 +124,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  setBodySize(const int& fd, const ssize_t& bodySize);
     void  setPollIn_(const int& fd);
     void  respondPayloadTooLarge(const int& fd);
-    void  saveBodyToFile(const std::string& filename, const int& fd);
+    void  saveBodyToBinary(const int& fd);
     std::string
           getUriPath_(const int& fd);
     void  respondFallbackError(const int& fd);
@@ -141,8 +141,8 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     std::string
           getFileExtension_(std::string path);
     bool  isExecutable_(const std::string& path);
-    void  responsNotExecutable(const int& fd);
-    char  **buildEnvpForExecve_(const int fd);
+    void  respondNotExecutable(const int& fd);
+    char  **buildEnvpForExecve_(const int& fd);
     void  readCgiResponse(const int& pipeFd, const int& clientFd);
     const std::string getFileName(const std::string uriPath);
     void  unregisterCgiFd(const int& fd);

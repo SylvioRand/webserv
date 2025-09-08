@@ -6,9 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/27 07:53:53 by srandria         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+/*   Updated: 2025/09/08 19:09:24 by srandria         ###   ########.fr       */
 
 #include "../../include/core/Server.hpp"
 #include <cstddef>
@@ -38,7 +36,10 @@ void  Server::prepareAndLaunchCGI(const int& fd)
       this->launchCgiProcess(fd, localPath);
   }
   else
-    this->responsNotExecutable(fd);
+  {
+    this->respondNotExecutable(fd);
+    logger(LOG_INFO, "resp -> " + localPath);
+  }
 }
 
 void  Server::respondInternalServerError(const int&fd)
@@ -139,6 +140,7 @@ void  Server::handleParentProcess(const int&fd, const CgiPipes& cgiPipes)
     this->_pipeFdClient[cgiPipes.in_pipe[1]] = fd;
     this->setNonBlocking_(cgiPipes.in_pipe[1]);
     this->addFdToPoll_(cgiPipes.in_pipe[1]);
+    this->setPollOut_(cgiPipes.in_pipe[1]);
     close(cgiPipes.in_pipe[0]);
   }
 }
@@ -156,15 +158,20 @@ void  Server::setIsCGIRequest(const int&fd)
     this->_clients[fd]->getRequest()._isCgiRequest = true;
 }
 
-char  **Server::buildEnvpForExecve_(const int fd)
+char  **Server::buildEnvpForExecve_(const int& fd)
 {
+  logger(LOG_INFO, "In function buildEnvpForExecve_");
   std::map<std::string, std::string>  envMap;
   std::ostringstream  oss;
 
-  envMap["VERSION"] = this->getVersion(fd);
-  oss << "        " << "VERSION = " << envMap["VERSION"] << std::endl;;
-  envMap["REQUEST_METHOD"] = this->getMethod(fd);
-  oss << "        " << "REQUEST_METHOD = " << envMap["REQUEST_METHOD"] << std::endl;;
+  Client *client = this->_clients[fd];
+  envMap["CONTENT_LENGTH"] = toString(client->getRequest().getBody().size());
+  oss << "        " << "CONTENT_LENGTH = " << envMap["CONTENT_LENGTH"] << std::endl;
+  const std::map<std::string, std::string>& headers = client->getRequest().getHeaders();
+  if (headers.find("CONTENT-TYPE") != headers.end())
+    envMap["CONTENT_TYPE"] = headers.at("CONTENT-TYPE");
+  envMap["GATEWAY_INTERFACE"] = "CGI/1.1";
+  envMap["GATEWAY_INTERFACE"] = "CGI/1.1";
   size_t pos = this->getRequestUri_(fd).rfind("?");
   if (pos != std::string::npos)
   {
@@ -172,13 +179,22 @@ char  **Server::buildEnvpForExecve_(const int fd)
     envMap["QUERY_STRING"] = queryString;
     oss << "        " << "QUERY_STRING = " << envMap["QUERY_STRING"] << std::endl;;
   }
+  envMap["REQUEST_METHOD"] = this->getMethod(fd);
   envMap["SCRIPT_NAME"] = this->getUriPath_(fd);
   oss << "        " << "SCRIPT_NAME = " << envMap["SCRIPT_NAME"] << std::endl;
+  std::string host = headers.at("HOST");
+  envMap["SERVER_NAME"] = host.substr(0, host.find(":"));
+  envMap["SERVER_PORT"] = client->getRequest().getServerConf()->port;
   envMap["SERVER_PROTOCOL"] = this->getVersion(fd);
   oss << "        " << "SERVER_PROTOCOL = " << envMap["SERVER_PROTOCOL"] << std::endl;
-  envMap["CONNECTION"] = this->buildConnectionHeader(fd);
-  oss << "        " << "CONNECTION = " << envMap["CONNECTION"] << std::endl;;
-  logger(LOG_DEBUG, "⚙️  CGI environment variables set for child process\n" + oss.str());
+  envMap["SERVER_SOFTWARE"] = "webserv/1.0";
+  if (headers.find("USER-AGENT") != headers.end())
+    envMap["HTTP_USER_AGENT"] = headers.at("USER-AGENT");
+  if (headers.find("ACCEPT") != headers.end())
+    envMap["HTTP_ACCEPT"] = headers.at("ACCEPT");
+  envMap["UPLOAD_DIR"] = client->getRequest().getLocation().upload_dir;
+
+  std::cout << oss.str();
   std::vector<std::string>  envVars;
   for (std::map<std::string, std::string>::iterator it = envMap.begin();
       it != envMap.end(); it++)
@@ -235,6 +251,7 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
 
 void  Server::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)
 {
+  logger(LOG_INFO, "in function sendRequestBodyToCgi");
   (void)pipeFd;
   (void)clientFd;
   Client* client = this->_clients[clientFd];

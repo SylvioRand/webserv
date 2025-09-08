@@ -28,9 +28,7 @@ def main():
         sys.stdout.write(top_header_string)
         sys.stdout.write("Content-Type: text/html\r\n")
         sys.stdout.write(f"Content-Length: {len(html_content)}\r\n")
-        sys.stdout.write("Connection: keep-alive\r\n")
         sys.stdout.write(connection_string)
-
 
         # Body
         sys.stdout.write(html_content)

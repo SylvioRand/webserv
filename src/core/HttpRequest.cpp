@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/29 08:29:07 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/08 18:54:13 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -82,7 +82,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
     std::string bodyPart;
 
     bodyPart = raw_request.substr(endOfHeader + std::string ("\r\n\r\n").size());
-   
     this->extractRequestBody(bodyPart);
   }
   else
@@ -99,19 +98,11 @@ void  HttpRequest::extractRequestBody(std::string& bodyPart)
     return ;
   }
   else if (this->_isChunked)
-  {
     this->handleChunkedEncoding(bodyPart);
-  }
   else if (this->_hasBoundary)
-  {
     this->handleMultipartFormData(bodyPart);
-  }
   else if (this->_hasContentLength)
-  {
-    logger(LOG_FATAL, "yes headers has Content-Length");
-    while (1) ;
     this->handleFixedLengthBody(bodyPart);
-  }
 }
 
 void HttpRequest::extractRequestBody(const char *data, size_t len)
@@ -235,14 +226,13 @@ void  HttpRequest::handleFixedLengthBody(std::string& bodyPart)
 {
   if (bodyPart.size() >= this->_contentLength)
   {
-    bodyPart.resize(this->_contentLength);
     this->_bodyBytesRead = this->_contentLength;
     this->markRequestComplete();
   }
   else
     this->_bodyBytesRead = bodyPart.size();
 
-  this->_body.append(bodyPart);
+  this->_body.append(bodyPart.c_str(), bodyPart.size());
 }
 
 void  HttpRequest::handleFixedLengthBody(const char *bodyPart, const size_t len)

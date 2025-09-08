@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/29 12:04:10 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/08 10:57:25 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,8 +24,10 @@ HttpResponse::HttpResponse(void)
 
 void HttpResponse::initializeState(void)
 {
-  this->_bodyFileStream.close();
   this->_bodyFilePath.clear();
+  this->_bodyFileStream.close();
+  this->_body.clear();
+  this->_headers.clear();
   this->_headersSize = 0;
   this->_headersOffset = 0;
   this->_bodySize = 0;
