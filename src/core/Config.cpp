@@ -6,13 +6,14 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/08 12:07:56 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/08 13:42:33 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Config.hpp"
 #include <cstddef>
 #include <iterator>
+#include <sstream>
 #include <string>
 
 std::string cleanBlock(const std::string& raw);
@@ -173,7 +174,6 @@ std::string                   Config::extractBlockContentServer(const std::strin
 
 bool  Config::blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos)
 {
-    (void)input;
     if (braceStart == pos + 6) // server{
       return (true);
     else // server { ou server a{
@@ -194,14 +194,13 @@ std::vector<std::string>      Config::extractServerBlocks(const std::string& inp
     size_t  i = 0;
 
 
-    std::cout << "input = |" << input << "|" <<std::endl << std::endl;
     while ((pos = input.find("server", pos)) != std::string::npos) {
       // Vérifie que "server" est suivi d'une accolade
       size_t braceStart = input.find("{", pos);
       if (braceStart == std::string::npos)
       {
         throwWithLog(LOG_ERROR,
-            "Expected '{' after 'server' at position " + toString(161));
+            "Expected '{' after 'server' at position " + toString(203));
       }
       if (pos != i || !this->blockServerIsValid(input, braceStart, pos))
         throwWithLog(LOG_ERROR, "Unknown directive");
@@ -227,6 +226,28 @@ std::vector<std::string>      Config::extractServerBlocks(const std::string& inp
     return blocks;
 }
 
+bool  Config::blockLocationIsValid(const std::string& content, size_t braceStart, size_t pos)
+{
+  std::istringstream iss(content.substr(pos));
+  std::string        key, arg;
+  iss >> key >> arg;
+  (void)arg;
+  (void)braceStart;
+  if (key != "location"){ // locations ou locationnn ...
+    return (false);
+  }
+  if (arg.at(0) == '{') // location {
+    return (true);
+  else if (arg.at(0) == '/') // location /...
+  {
+    std::string   brace;
+    iss >> brace;
+    if (brace.at(0) == '{') // location /... {
+      return (true);
+    return (false); // location /... a
+  }
+  return (false); // location a
+}
 
 std::vector<std::string>  Config::extractLocationBlocks(const std::string& content)
 {
@@ -235,8 +256,13 @@ std::vector<std::string>  Config::extractLocationBlocks(const std::string& conte
 
   while ((pos = content.find("location", pos)) != std::string::npos)
   {
+    // Vérifie que "location" est suivi d'une accolade
     size_t braceStart = content.find("{", pos);
-    if (braceStart == std::string::npos) break;
+    if (braceStart == std::string::npos) {
+      throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + toString(240));
+    }
+    if (!this->blockLocationIsValid(content, braceStart, pos))
+      throwWithLog(LOG_ERROR, "Unknown directive or argument invalid at position " + toString(261));
 
     int depth = 1;
     size_t i = braceStart + 1;
@@ -393,12 +419,32 @@ void                          Config::parseLocationBlocks(std::string &block, Se
   config.locations[path] = location_config;
 }
 
+void                          Config::parseDirectivesIntoConfig(const std::string& block, ServerConfig& config) {
+  std::istringstream contentStream(block);
+  std::string directive;
+
+  while (std::getline(contentStream, directive, ';')) {
+    directive = trim(directive);
+        
+    std::istringstream lineStream(directive);
+    std::string key;
+    lineStream >> key;
+
+    std::string value;
+    std::getline(lineStream, value);
+    value = trim(value);
+
+    applyDirectiveToServerConfig(key, value, config);
+  }
+}
 
 void                          Config::parseServerBlock_(std::string &content)
 {
   ServerConfig config;
   content = extractBlockContentServer(content);
   
+  std::cout << "content = |" + content + "|" << std::endl;
+
   // Extraire les blocs location
   std::vector<std::string> locationBlocks = extractLocationBlocks(content);
 
@@ -419,26 +465,6 @@ void                          Config::parseServerBlock_(std::string &content)
   }
   
   this->_servers.push_back(config);
-}
-
-
-void                          Config::parseDirectivesIntoConfig(const std::string& block, ServerConfig& config) {
-  std::istringstream contentStream(block);
-  std::string directive;
-
-  while (std::getline(contentStream, directive, ';')) {
-    directive = trim(directive);
-        
-    std::istringstream lineStream(directive);
-    std::string key;
-    lineStream >> key;
-
-    std::string value;
-    std::getline(lineStream, value);
-    value = trim(value);
-
-    applyDirectiveToServerConfig(key, value, config);
-  }
 }
 
 

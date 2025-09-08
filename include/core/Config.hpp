@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/08 11:55:14 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/08 12:32:33 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,6 +78,7 @@ class Config
     void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
     
     bool                      blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos);
+    bool                      blockLocationIsValid(const std::string& content, size_t braceStart, size_t pos);
 
 void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
 
