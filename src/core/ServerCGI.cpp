@@ -6,7 +6,9 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 13:33:57 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 18:12:42 by srandria         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
 #include <cstddef>
@@ -252,6 +254,7 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
     logger(LOG_INFO,
       "Parent received CGI response, ready to send to client fd=" + toString(clientFd));
     client->_isReadingCgiResponse = false;
+    client->getResponse().addConnectionHeader(this->buildConnectionHeader(clientFd));
     client->getResponse().saveCgiRespondSize(clientFd);
     this->unregisterCgiFd(pipeFd);
     this->setPollOut_(clientFd);
@@ -266,8 +269,6 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
 void  Server::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)
 {
   logger(LOG_INFO, "in function sendRequestBodyToCgi");
-  (void)pipeFd;
-  (void)clientFd;
   Client* client = this->_clients[clientFd];
   client->getRequest().sendRequestBodyToCgi(pipeFd, clientFd);
 }

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 08:01:39 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 17:40:56 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -129,7 +129,6 @@ class Server
     void  respondFallbackError(const int& fd);
     void  saveMultipartFiles(const int&fd);
     bool  isBodySizeAllowed(const int& fd);
-    void  setAllFilesSaved(const int& fd);
 
     // for cgi
     void  handleCgiGetRequest_(const int fd);

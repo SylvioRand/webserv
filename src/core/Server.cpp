@@ -49,7 +49,6 @@ void Server::start_server_(void)
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
 
-    // On itère à l'envers pour éviter les problèmes avec erase()
     for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
     {
       if (_pool_fds[i].revents == 0)
@@ -59,13 +58,11 @@ void Server::start_server_(void)
       int fd = _pool_fds[i].fd;
       short revents = _pool_fds[i].revents;
 
-      // Si c'est un listener
       if (std::find(_listener_fds.begin(), _listener_fds.end(), fd) != _listener_fds.end())
       {
         if (revents & POLLIN)
           this->accept_new_client_(fd);
       }
-      // Sinon, c'est un client connu
       else if (_clients.find(fd) != _clients.end())
       {
         if (revents & POLLIN)
@@ -99,7 +96,6 @@ void Server::start_server_(void)
 }
 
 
-// TODO
 void  Server::stop_server(void)
 {
   std::map<int, Client*>::iterator it = this->_clients.begin();
@@ -132,7 +128,7 @@ void  Server::create_all_listeners_(void)
 
     struct sockaddr_in  addr;
 
-    this->buildIpv4Sockaddr_(addr, cfg);       // fill struct sockaddr_in for binding
+    this->buildIpv4Sockaddr_(addr, cfg);
     this->bindSocket_(fd, cfg, addr);
     this->startListener_(fd, it);
     this->addFdToPoll_(fd);
@@ -174,14 +170,12 @@ void  Server::buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& c
   addr.sin_addr.s_addr = inet_addr(cfg.host.c_str());
 }
 
-
 void  Server::setSocketReuseAddr_(int fd)
 {
   int opt = 1;
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
     throwWithLog(LOG_FATAL, "setsockopt() failed");
 }
-
 
 void Server::startListener_(int fd, ServerConfigConstIterator cfg)
 {
@@ -204,9 +198,10 @@ void Server::startListener_(int fd, ServerConfigConstIterator cfg)
 void  Server::addFdToPoll_(int fd)
 {
   struct pollfd pfd;
+
   pfd.fd = fd;
   pfd.events = POLLIN;
-  pfd.revents = 0;            // poll() will overwrite this value when an event is captured.
+  pfd.revents = 0;
 
   _pool_fds.push_back(pfd);
 }
@@ -306,7 +301,6 @@ void  Server::handle_pollin_(int fd)
     logger(LOG_DEBUG, "on a detecte un erreur");
 }
 
-
 std::string  Server::getUriPath_(const int& fd)
 {
   std::string uriPath = this->getRequestUri_(fd);
@@ -316,7 +310,6 @@ std::string  Server::getUriPath_(const int& fd)
   else
     return (uriPath.substr(0, pos));
 }
-
 
 void  Server::saveHeaderAndBodySize(const int& fd)
 {
@@ -450,7 +443,6 @@ void  Server::setPollIn_(const int& fd)
   logger(LOG_ERROR,
     "Failed to monitor input events (POLLIN) on fd=" + toString(fd) + " — descriptor not found");
 }
-
 
 void  Server::handle_pollout_(int fd)
 {
@@ -978,18 +970,6 @@ void  Server::saveMultipartFiles(const int& fd)
       return ;
     }
   }
-}
-
-// TODO a supprimer si on ne l`utilise pas`
-void  Server::setAllFilesSaved(const int& fd)
-{
-  std::vector<MultipartPart> multipart = this->_clients[fd]->getRequest().getMultipart();
-  std::vector<MultipartPart>::iterator it = multipart.end();
-  it--;
-  if (!it->fullySaved)
-      this->_clients[fd]->getRequest()._allFilesSaved = true;
-  // TODO je ne sais pas si c`est utile mais au moins le placer autre part
-  this->_clients[fd]->getResponse().initializeState();
 }
 
 void Server::saveBodyToBinary(const int& fd)
@@ -1520,7 +1500,6 @@ void  Server::handleNoMatchingLocation_(const int fd)
   response.setBody(body);
 }
 
-// TODO need more test
 void Server::saveErrorBodyFilePath(const int code, const int& fd,
     std::string& contentType, std::string& contentLength)
 {
@@ -1598,7 +1577,6 @@ std::string Server::buildConnectionHeader(const int fd)
       {
         this->_clients[fd]->getResponse().setKeepAliveStatus(false);
         return "Connection: close\r\n\r\n";
-        //return "Connection: " + it->second + "\r\n\r\n";
       }
       else
       {

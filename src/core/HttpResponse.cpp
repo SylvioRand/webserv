@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 13:34:01 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 18:11:02 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -244,3 +244,16 @@ void  HttpResponse::appendCgiResponse(const std::string& buff, const ssize_t& si
   this->_cgiResponse.append(buff.c_str(), size);
 }
 
+
+void  HttpResponse::addConnectionHeader(const std::string& connectionHeader)
+{
+  size_t  pos = this->_cgiResponse.find("\r\n\r\n");
+
+  if (pos == std::string::npos)
+    logger(LOG_WARNING, "Unable to add the connection header");
+  else
+  {
+    this->_cgiResponse.insert(pos + 2, connectionHeader.substr(0, connectionHeader.size() - 2));
+    logger(LOG_DEBUG, "cgi response:\n" + this->_cgiResponse + "\n");
+  }
+}

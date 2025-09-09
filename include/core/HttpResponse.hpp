@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:07:55 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/29 12:02:39 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 17:49:03 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,6 +70,10 @@ class HttpResponse
     void  initializeState(void);
     void  setKeepAliveStatus(bool value);
     bool  isKeepAlive(void);
+    void  closeBodyFileFd(const std::string path);
+    void  openAndSaveBodyFileStream(const std::string& path);
+
+    // for cgi
     ssize_t
           getCgiBytesSent(void);
     ssize_t
@@ -78,8 +82,8 @@ class HttpResponse
     void  appendCgiResponse(const std::string& buff, const ssize_t& size);
     void  sendCgiResponse(const int&fd);
     bool  isCgiResponseFullySent(void);
-    void  closeBodyFileFd(const std::string path);
-    void  openAndSaveBodyFileStream(const std::string& path);
+
+    void  addConnectionHeader(const std::string& connectionHeader);
 
     bool  _isSending;
     bool  _isFullySent;

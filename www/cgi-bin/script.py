@@ -48,10 +48,8 @@ def main():
         name = params.get("name", [""])[0]
         display_name = name.strip() if name and name.strip() else "Player"
 
-        connection = os.environ.get("CONNECTION", "Connection: close\r\n\r\n")
         version = os.environ.get("VERSION", "HTTP/1.1")
         top_header_string = f"""{version} 200 OK\r\n"""
-        connection_string = f"""{connection}"""
         guess_str = params.get("guess", [None])[0]
         if guess_str is not None:
             try:
@@ -87,8 +85,7 @@ def main():
         # Envoi headers HTTP
         sys.stdout.write("HTTP/1.0 200 OK\r\n")
         sys.stdout.write("Content-Type: text/html\r\n")
-        sys.stdout.write(f"Content-Length: {len(html_content)}\r\n")
-        sys.stdout.write(connection_string)
+        sys.stdout.write(f"Content-Length: {len(html_content)}\r\n\r\n")
         sys.stdout.write(html_content)
         sys.stdout.flush()
 
@@ -147,8 +144,7 @@ def main():
         # Envoi headers HTTP
         sys.stdout.write("HTTP/1.0 200 OK\r\n")
         sys.stdout.write("Content-Type: text/html\r\n")
-        sys.stdout.write(f"Content-Length: {len(html_content)}\r\n")
-        sys.stdout.write("Connection: close\r\n\r\n")
+        sys.stdout.write(f"Content-Length: {len(html_content)}\r\n\r\n")
         sys.stdout.write(html_content)
         sys.stdout.flush()
 
