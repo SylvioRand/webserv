@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 16:25:20 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 17:08:05 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -76,7 +76,7 @@ class Config
     void                      parseLocationBlocks(std::string &block, ServerConfig &config);
     std::string               extractBlockContentLocation(const std::string &block, std::string &path);
     std::string               insertSpaceBeforeBrace(const std::string& line);
-    void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
+    void                      applyDirectiveTolocationConfig(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config);
     
     bool                      blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos);
     bool                      blockLocationIsValid(const std::string& content, size_t pos);

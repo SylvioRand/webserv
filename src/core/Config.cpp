@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 16:59:23 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 17:55:29 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -320,55 +320,77 @@ std::string Config::insertSpaceBeforeBrace(const std::string& line)
   return result;
 }
 
-void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config)
+void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config)
 {
-  if (key == "path") {
-    location_config.path = value;
+  if (key == "path" && location_config.path.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.path = value[0];
   }
-  else if (key == "root") {
-    location_config.root = value;
+  else if (key == "root" && location_config.root.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.root = value[0];
   }
+  // TODO : client_max_body_size n'est pas repetable
   else if (key == "client_max_body_size") {
-    location_config.client_max_body_size = parseSize(key, value);
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.client_max_body_size = parseSize(key, value[0]);
   }
-  else if (key == "upload_dir") {
-    location_config.upload_dir = value;
+  else if (key == "upload_dir" && location_config.upload_dir.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.upload_dir = value[0];
   }
-  else if (key == "cgi_extension") {
-    location_config.cgi_extension = value;
+  else if (key == "cgi_extension" && location_config.cgi_extension.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+
+    location_config.cgi_extension = value[0];
   }
-  else if (key == "cgi_path") {
-    location_config.cgi_path = value;
+  else if (key == "cgi_path" && location_config.cgi_path.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.cgi_path = value[0];
   }
-  else if (key == "return") {
-    //location_config.redirect = value; // TODO
+  else if (key == "return" && location_config.redirect.size() == 0) {
+    if (value.size() == 0 || value.size() > 2)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    int code = stringToInt(key, value[0]);
+    if (value.size() == 1)
+      location_config.redirect[code] = "";
+    else {
+      // TODO : verifier si la valeur de value[1] = "..." ou /... ou http(s)://
+      location_config.redirect[code] = value[1];
+    }
+
   }
-  else if (key == "autoindex" && value == "on") {
-    location_config.autoindex = true;
-  }
-  else if (key == "autoindex" && value == "off") {
-    location_config.autoindex = false;
+  // TODO : autoindex n'est pas repetable
+  else if (key == "autoindex") {
+    if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (value[0] == "on")
+      location_config.autoindex = true;
+    else
+      location_config.autoindex = false;
   }
   else if (key == "index") {
-    std::istringstream iss(value);
-    std::string token;
-    while (iss >> token) {
-        location_config.indexs.push_back(token);
-    }
+    if (value.size() == 0)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.indexs.insert(location_config.indexs.end(), value.begin(), value.end());
+
   }
   else if (key == "methods") {
-    std::istringstream iss(value);
-    std::string token;
-    while (iss >> token) {
-        location_config.methods.push_back(token);
-    }
+    if (value.size() == 0)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.methods = value;
   }
   else if (key == "error_page") {
-    std::istringstream iss(value);
-    std::string codeStr, path;
-    iss >> codeStr >> path;
-    int code = stringToInt(key, codeStr);
-    location_config.error_pages[code] = path;
+    if (value.size() != 2)
+        throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    int code = stringToInt(key, value[0]);
+    location_config.error_pages[code] = value[1];
   }
   else {
     throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in location block");
@@ -406,9 +428,14 @@ void                          Config::parseLocationBlocks(std::string &block, Se
     std::string key;
     lineStream >> key;
 
-    std::string value;
-    std::getline(lineStream, value);
-    value = trim(value);
+    if (key.empty())
+      continue;
+
+    std::vector<std::string> value;
+    std::string token;
+    while (lineStream >> token)
+      value.push_back(token);
+
 
     applyDirectiveTolocationConfig(key, value, location_config);
   }
@@ -445,7 +472,7 @@ void                          Config::applyDirectiveToServerConfig(const std::st
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.server_name = value[0];
   }
-  else if (key == "root") {
+  else if (key == "root" && config.root.empty()) {
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.root = value[0];
@@ -455,6 +482,7 @@ void                          Config::applyDirectiveToServerConfig(const std::st
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.indexs.insert(config.indexs.end(), value.begin(), value.end());
   }
+  // TODO : autoindex n'est pas repetable
   else if (key == "autoindex") {
     if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
@@ -469,13 +497,13 @@ void                          Config::applyDirectiveToServerConfig(const std::st
     int code = stringToInt(key, value[0]);
     config.error_pages[code] = value[1];
   }
+  // TODO : client_max_body_size n'est pas repetable
   else if (key == "client_max_body_size") {
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.client_max_body_size = parseSize(key, value[0]); // gère les suffixes M, K
-    std::cout << "config.client_max_body_size = " << config.client_max_body_size << std::endl;
   }
-  else if (key == "return") {
+  else if (key == "return" && config.redirect.size() == 0) {
     if (value.size() == 0 || value.size() > 2)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     int code = stringToInt(key, value[0]);
@@ -657,6 +685,12 @@ void                          Config::printServers() const {
             std::cout << "server[" << i << "].locations[" << path << "].upload_dir = |" << lcfg.upload_dir << "|" << std::endl;
             // TODO redirect has been modified on config.hpp file
             //std::cout << "server[" << i << "].locations[" << path << "].redirect = |" << lcfg.redirect << "|" << std::endl;
+
+
+            for (std::map<int, std::string>::const_iterator ep = lcfg.redirect.begin(); ep != lcfg.redirect.end(); ++ep) {
+                std::cout << "server[" << i << "].locations[" << path << "].redirect[" << ep->first << "] = |" << ep->second << "|" << std::endl;
+            }
+            
             std::cout << "server[" << i << "].locations[" << path << "].cgi_extension = |" << lcfg.cgi_extension << "|" << std::endl;
             std::cout << "server[" << i << "].locations[" << path << "].cgi_path = |" << lcfg.cgi_path << "|" << std::endl;
 
