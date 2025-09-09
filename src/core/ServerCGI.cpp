@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 18:12:42 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 18:24:35 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,10 +38,7 @@ void  Server::prepareAndLaunchCGI(const int& fd)
       this->launchCgiProcess(fd, localPath);
   }
   else
-  {
     this->respondNotExecutable(fd);
-    logger(LOG_INFO, "resp -> " + localPath);
-  }
 }
 
 void  Server::respondInternalServerError(const int&fd)
@@ -162,7 +159,7 @@ void  Server::setIsCGIRequest(const int&fd)
 
 char  **Server::buildEnvpForExecve_(const int& fd)
 {
-  logger(LOG_INFO, "In function buildEnvpForExecve_");
+  logger(LOG_DEBUG, "In function buildEnvpForExecve_");
   std::map<std::string, std::string>  envMap;
   std::ostringstream  oss;
 
