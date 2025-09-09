@@ -6,13 +6,16 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/08 13:42:33 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 12:33:27 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Config.hpp"
+#include <cstdarg>
 #include <cstddef>
+#include <cstdlib>
 #include <iterator>
+#include <ostream>
 #include <sstream>
 #include <string>
 
@@ -419,6 +422,67 @@ void                          Config::parseLocationBlocks(std::string &block, Se
   config.locations[path] = location_config;
 }
 
+void                          Config::applyDirectiveToServerConfig(const std::string& key, std::vector<std::string>& value, ServerConfig& config) {
+  if (key == "listen" && config.host.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    size_t colon = value[0].find(":");
+    std::string portStr;
+    if (colon == std::string::npos){
+      if (value[0].find(".") != std::string::npos)
+        throwWithLog(LOG_ERROR, key + " Invalid port format: " + value[0]);
+      config.host = "0.0.0.0";
+      portStr = value[0];
+    }
+    else {
+      config.host = value[0].substr(0, colon);
+      portStr = value[0].substr(colon + 1);
+    }
+    if (portStr.empty())
+      throwWithLog(LOG_ERROR, key + " Invalid listen format: " + value[0]);
+    config.port = stringToInt(portStr); // C++98-compatible stoi
+  }
+  else if (key == "server_name" && config.server_name.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.server_name = value[0];
+  }
+  else if (key == "root") {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.root = value[0];
+  }
+  else if (key == "index") {
+    if (value.size() == 0)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.indexs.insert(config.indexs.end(), value.begin(), value.end());
+  }
+  else if (key == "error_page") {
+    if (value.size() != 2)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    int code = stringToInt(value[0]);
+    config.error_pages[code] = value[1];
+  }
+  else if (key == "client_max_body_size") {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.client_max_body_size = parseSize(value[0]); // gère les suffixes M, K
+  }
+  else {
+    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in server block or there is a duplication");
+  }
+}
+
+void                          Config::setDirectiveToServerConfig(ServerConfig& config)
+{
+  if (config.host.empty()) {
+    config.host = "0.0.0.0";
+    config.port = 8081;
+  }
+  if (config.indexs.size() == 0)
+    config.indexs.push_back("index.html");
+}
+
 void                          Config::parseDirectivesIntoConfig(const std::string& block, ServerConfig& config) {
   std::istringstream contentStream(block);
   std::string directive;
@@ -430,11 +494,18 @@ void                          Config::parseDirectivesIntoConfig(const std::strin
     std::string key;
     lineStream >> key;
 
-    std::string value;
-    std::getline(lineStream, value);
-    value = trim(value);
+    if (key.empty())
+      continue;
 
+    std::vector<std::string> value;
+    std::string token;
+    while (lineStream >> token)
+      value.push_back(token);
+    
+    config.client_max_body_size = 1048576;
     applyDirectiveToServerConfig(key, value, config);
+
+    setDirectiveToServerConfig(config);
   }
 }
 
@@ -468,43 +539,6 @@ void                          Config::parseServerBlock_(std::string &content)
 }
 
 
-void                          Config::applyDirectiveToServerConfig(const std::string& key, const std::string& value, ServerConfig& config) {
-  if (key == "listen") {
-    size_t colon = value.find(":");
-    if (colon == std::string::npos)
-        throwWithLog(LOG_ERROR, "Invalid listen format: " + value);
-    config.host = value.substr(0, colon);
-    std::string portStr = value.substr(colon + 1);
-    config.port = stringToInt(portStr); // C++98-compatible stoi
-  }
-  else if (key == "server_name") {
-    config.server_name = value;
-  }
-  else if (key == "root") {
-    config.root = value;
-  }
-  else if (key == "index") {
-    std::istringstream iss(value);
-    std::string token;
-    while (iss >> token) {
-        config.indexs.push_back(token);
-    }
-  }
-  else if (key == "error_page") {
-    std::istringstream iss(value);
-    std::string codeStr, path;
-    iss >> codeStr >> path;
-    int code = stringToInt(codeStr);
-    config.error_pages[code] = path;
-  }
-  else if (key == "client_max_body_size") {
-    config.client_max_body_size = parseSize(value); // gère les suffixes M, K
-  }
-  else {
-    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in server block");
-  }
-}
-
 
 std::string                   Config::trim(const std::string& str)
 {
@@ -527,18 +561,32 @@ int                           Config::stringToInt(const std::string& str)
 
 size_t                        Config::parseSize(const std::string& str)
 {
-    if (str.empty()) return 0;
+    if (str.empty())
+      throwWithLog(LOG_FATAL, \
+          "[emerg] invalid client_max_body_size " + str + " in /etc/nginx/nginx.conf:45");
+
     char suffix = str[str.size() - 1];
     std::string number = str;
 
-    if (suffix == 'M' || suffix == 'K') {
+    if (suffix == 'M' || suffix == 'M' || \
+          suffix == 'K' || suffix == 'k' || \
+            suffix == 'G' || suffix == 'g') {
         number = str.substr(0, str.size() - 1);
     }
 
-    size_t base = stringToInt(number);
-    if (suffix == 'M') return base * 1024 * 1024;
-    if (suffix == 'K') return base * 1024;
-    return base;
+    char *endptr = NULL;
+    long value = std::strtol(number.c_str(), &endptr, 10);
+    if (*endptr == '\0' && value >= 0) {
+      size_t base = stringToInt(number);
+      if (suffix == 'G' || suffix == 'g') return (base * 1024 * 1024 * 1024);
+      if (suffix == 'M' || suffix == 'm') return (base * 1024 * 1024);
+      if (suffix == 'K' || suffix == 'k') return (base * 1024);
+      return base;
+    }
+    else
+      throwWithLog(LOG_FATAL, \
+          "[emerg] invalid client_max_body_size " + str + " in /etc/nginx/nginx.conf:45");
+    return (0);
 }
 
 

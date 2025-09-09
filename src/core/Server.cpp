@@ -259,7 +259,11 @@ void  Server::handle_pollin_(int fd)
     }
     this->_currentLocation = this->_clients[fd]->getRequest().getLocation();
     this->setIsCGIRequest(fd);
-    if (this->getCurrentLocation().path.empty())
+
+    // TODO : srandria
+    if (!this->directoryExists_(this->_currentLocation.root))
+      this->handleReturnWithoutUrl_(fd);
+    else if (this->getCurrentLocation().path.empty())
       this->handleNoMatchingLocation_(fd);
     else if (!this->getCurrentLocation().redirect.empty())
       this->handleRedirect_(fd);
