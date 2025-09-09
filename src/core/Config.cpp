@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 13:54:03 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 16:59:23 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -229,13 +229,11 @@ std::vector<std::string>      Config::extractServerBlocks(const std::string& inp
     return blocks;
 }
 
-bool  Config::blockLocationIsValid(const std::string& content, size_t braceStart, size_t pos)
+bool  Config::blockLocationIsValid(const std::string& content, size_t pos)
 {
   std::istringstream iss(content.substr(pos));
   std::string        key, arg;
   iss >> key >> arg;
-  (void)arg;
-  (void)braceStart;
   if (key != "location"){ // locations ou locationnn ...
     return (false);
   }
@@ -264,7 +262,7 @@ std::vector<std::string>  Config::extractLocationBlocks(const std::string& conte
     if (braceStart == std::string::npos) {
       throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + toString(240));
     }
-    if (!this->blockLocationIsValid(content, braceStart, pos))
+    if (!this->blockLocationIsValid(content, pos))
       throwWithLog(LOG_ERROR, "Unknown directive or argument invalid at position " + toString(261));
 
     int depth = 1;
@@ -297,11 +295,9 @@ std::string Config::extractBlockContentLocation(const std::string &block, std::s
   {
     std::string loc = block.substr(0, start);
     std::istringstream  iss(loc);
-    std::string key, arg3;
-  
-    iss >> key >> path >> arg3;
-    if (!arg3.empty() || path.empty() || path.at(0) != '/')
-      throwWithLog(LOG_ERROR, "location argument invalid");
+    std::string key;
+
+    iss >> key >> path;
   }
   return block.substr(start + 1, end - start - 1);
 }
@@ -324,10 +320,12 @@ std::string Config::insertSpaceBeforeBrace(const std::string& line)
   return result;
 }
 
-
 void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config)
 {
-  if (key == "root") {
+  if (key == "path") {
+    location_config.path = value;
+  }
+  else if (key == "root") {
     location_config.root = value;
   }
   else if (key == "client_max_body_size") {
@@ -373,37 +371,34 @@ void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::
     location_config.error_pages[code] = path;
   }
   else {
-    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in server block");
+    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in location block");
   }
 }
 
 void  Config::appendHeritedDirective(ServerConfig &config,
     LocationConfig &location_config)
 {
-  location_config.root = config.root;
-  for (std::vector<std::string>::iterator it = config.indexs.begin();
-      it != config.indexs.end(); ++it){
-    location_config.indexs.push_back(*it);
+  if (location_config.root.empty())
+    location_config.root = config.root;
+  if (location_config.indexs.size() == 0) { 
+    location_config.indexs = config.indexs;
   }
-  for (std::map<int, std::string>::iterator it = config.error_pages.begin(); 
-      it != config.error_pages.end(); ++it){
-    location_config.error_pages[it->first] = it->second;
-  }
-  location_config.client_max_body_size = config.client_max_body_size;
 }
 
 void                          Config::parseLocationBlocks(std::string &block, ServerConfig &config)
 {
-  std::string     path;
   LocationConfig  location_config;
 
   block = insertSpaceBeforeBrace(block);
-  block = extractBlockContentLocation(block, path);
+  block = extractBlockContentLocation(block, location_config.path);
   
   std::istringstream contentStream(block);
   std::string directive;
 
-  appendHeritedDirective(config, location_config);
+  location_config.client_max_body_size = config.client_max_body_size;
+  location_config.error_pages = config.error_pages;
+  location_config.autoindex = config.autoindex;
+
   while (std::getline(contentStream, directive, ';')) {
     directive = trim(directive);
         
@@ -417,9 +412,12 @@ void                          Config::parseLocationBlocks(std::string &block, Se
 
     applyDirectiveTolocationConfig(key, value, location_config);
   }
- 
-  location_config.path = path;
-  config.locations[path] = location_config;
+
+  appendHeritedDirective(config, location_config);
+
+  if (location_config.path.empty())
+    throwWithLog(LOG_ERROR, "path of location is empty");
+  config.locations[location_config.path] = location_config;
 }
 
 void                          Config::applyDirectiveToServerConfig(const std::string& key, std::vector<std::string>& value, ServerConfig& config) {
@@ -457,6 +455,14 @@ void                          Config::applyDirectiveToServerConfig(const std::st
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.indexs.insert(config.indexs.end(), value.begin(), value.end());
   }
+  else if (key == "autoindex") {
+    if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (value[0] == "on")
+      config.autoindex = true;
+    else
+      config.autoindex = false;
+  }
   else if (key == "error_page") {
     if (value.size() != 2)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
@@ -469,6 +475,17 @@ void                          Config::applyDirectiveToServerConfig(const std::st
     config.client_max_body_size = parseSize(key, value[0]); // gère les suffixes M, K
     std::cout << "config.client_max_body_size = " << config.client_max_body_size << std::endl;
   }
+  else if (key == "return") {
+    if (value.size() == 0 || value.size() > 2)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    int code = stringToInt(key, value[0]);
+    if (value.size() == 1)
+      config.redirect[code] = "";
+    else {
+      // TODO : verifier si la valeur de value[1] = "..." ou /... ou http(s)://
+      config.redirect[code] = value[1];
+    }
+  }
   else {
     throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in server block or there is a duplication");
   }
@@ -480,8 +497,9 @@ void                          Config::setDirectiveToServerConfig(ServerConfig& c
     config.host = "0.0.0.0";
     config.port = 8081;
   }
-  if (config.indexs.size() == 0)
+  if (config.indexs.size() == 0) {
     config.indexs.push_back("index.html");
+  }
 }
 
 void                          Config::parseDirectivesIntoConfig(const std::string& block, ServerConfig& config) {
@@ -489,6 +507,8 @@ void                          Config::parseDirectivesIntoConfig(const std::strin
   std::string directive;
 
   config.client_max_body_size = 1048576;
+  config.autoindex = false;
+
   while (std::getline(contentStream, directive, ';')) {
     directive = trim(directive);
         
@@ -506,8 +526,8 @@ void                          Config::parseDirectivesIntoConfig(const std::strin
     
     applyDirectiveToServerConfig(key, value, config);
 
-    setDirectiveToServerConfig(config);
   }
+  setDirectiveToServerConfig(config);
 }
 
 void                          Config::parseServerBlock_(std::string &content)
@@ -597,6 +617,10 @@ void                          Config::printServers() const {
         std::cout << "server[" << i << "].host = |" << config.host << "|" << std::endl;
         std::cout << "server[" << i << "].port = |" << config.port << "|" << std::endl;
         std::cout << "server[" << i << "].server_name = |" << config.server_name << "|" << std::endl;
+
+        for (std::map<int, std::string>::const_iterator it = config.redirect.begin(); it != config.redirect.end(); ++it)
+        std::cout << "server[" << i << "].redirect[" << it->first << "] = |" << it->second << "|" << std::endl;
+
         std::cout << "server[" << i << "].root = |" << config.root << "|" << std::endl;
 
         std::cout << "server[" << i << "].index = |";
@@ -606,6 +630,7 @@ void                          Config::printServers() const {
         }
         std::cout << "|" << std::endl;
 
+        std::cout << "server[" << i << "].autoindex = |" << (config.autoindex ? "true" : "false") << "|" << std::endl;
         std::cout << "server[" << i << "].client_max_body_size = |" << config.client_max_body_size << "|" << std::endl;
 
         for (std::map<int, std::string>::const_iterator ep = config.error_pages.begin(); ep != config.error_pages.end(); ++ep) {
@@ -618,6 +643,8 @@ void                          Config::printServers() const {
 
             std::cout << "server[" << i << "].locations[" << path << "].path = |" << lcfg.path << "|" << std::endl;
             std::cout << "server[" << i << "].locations[" << path << "].root = |" << lcfg.root << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].client_max_body_size = |" << lcfg.client_max_body_size << "|" << std::endl;
+
             std::cout << "server[" << i << "].locations[" << path << "].autoindex = |" << (lcfg.autoindex ? "true" : "false") << "|" << std::endl;
 
             std::cout << "server[" << i << "].locations[" << path << "].index = |";

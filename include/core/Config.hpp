@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 14:02:09 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 16:25:20 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,6 +38,7 @@ struct ServerConfig {
     std::string                           server_name;          // Nom du serveur (ex: "localhost")
     bool                                  autoindex;            // Si true, liste les répertoires (comme "ls")
     std::string                           upload_dir;           // Dossier pour les uploads (POST)
+    std::map<int, std::string>            redirect;             // URL de redirection (ex: "301 http://example.com")
     std::string                           root;                 // Racine par défaut des fichiers
     std::vector<std::string>              indexs;                // Fichier index par défaut    
     std::vector<std::string>              methods;              // Méthodes autorisées (GET, POST, DELETE)
@@ -78,7 +79,7 @@ class Config
     void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
     
     bool                      blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos);
-    bool                      blockLocationIsValid(const std::string& content, size_t braceStart, size_t pos);
+    bool                      blockLocationIsValid(const std::string& content, size_t pos);
     void                      setDirectiveToServerConfig(ServerConfig& config);
 
 void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
