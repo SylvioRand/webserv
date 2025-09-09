@@ -110,7 +110,6 @@ void Server::start_server_(void)
 // TODO
 void  Server::stop_server(void)
 {
-  logger(LOG_INFO, "IN  function stop_server");
   std::map<int, Client*>::iterator it = this->_clients.begin();
   for (; it != this->_clients.end(); it++)
     delete it->second;
@@ -120,7 +119,7 @@ bool  Server::checkShutdownRequest(void)
 {
   if (g_shouldStop == 1)
   {
-    logger(LOG_WARNING, "[INFO] Signal reçu. Fermeture du serveur demandée.\n");
+    logger(LOG_INFO, "Shutting down server...\n");
     this->stop_server();
     return (true);
   }

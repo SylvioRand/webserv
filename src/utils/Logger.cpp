@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/17 08:23:20 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/17 09:13:53 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 08:46:16 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,14 +22,23 @@ void logger(LogLevel level, const std::string &message)
   const std::string prefix[5] = {"INFO ", "DEBUG", "WARNING", "ERROR", "FATAL"};
   std::ostream& out = (level > 1) ? std::cerr : std::cout;
 
-  if (level == 0)
-    out << COLOR_INFO << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
-  else if (level == 1)
-    out << COLOR_DEBUG << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
-  else if (level == 2)
-    out << COLOR_DEBUG << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
-  else if (level == 3)
-    out << COLOR_ERROR << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
-  else if (level == 4)
-    out << COLOR_FATAL << "[" << prefix[level] << "] " << message << COLOR_RESET <<  std::endl;
+
+  switch (level) {
+    case 0: // INFO
+      out << COLOR_INFO << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
+      break;
+    case 1: // DEBUG
+    case 2: // WARNING
+      out << COLOR_DEBUG << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
+      break;
+    case 3: // ERROR
+      out << COLOR_ERROR << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
+      break;
+    case 4: // FATAL
+      out << COLOR_FATAL << "[" << prefix[level] << "] " << message << COLOR_RESET << std::endl;
+      break;
+    default:
+      out << "[" << prefix[level] << "] " << message << std::endl; // fallback sans couleur
+      break;
+  }
 }
