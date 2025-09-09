@@ -6,14 +6,14 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/17 08:20:51 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 08:40:27 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 12:42:32 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef LOGGER_HPP
 #define LOGGER_HPP
 
-#define PRODUCTION_MODE 1  // 1 = production, 0 = debug
+#define PRODUCTION_MODE 0  // 1 = production, 0 = debug
 
 #include <string>
 

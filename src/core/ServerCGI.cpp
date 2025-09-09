@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/08 19:09:24 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 13:33:57 by srandria         ###   ########.fr       */
 
 #include "../../include/core/Server.hpp"
 #include <cstddef>
@@ -180,21 +180,32 @@ char  **Server::buildEnvpForExecve_(const int& fd)
     oss << "        " << "QUERY_STRING = " << envMap["QUERY_STRING"] << std::endl;;
   }
   envMap["REQUEST_METHOD"] = this->getMethod(fd);
+  oss << "        " << "REQUEST_METHOD = " << envMap["REQUEST_METHOD"] << std::endl;
   envMap["SCRIPT_NAME"] = this->getUriPath_(fd);
   oss << "        " << "SCRIPT_NAME = " << envMap["SCRIPT_NAME"] << std::endl;
   std::string host = headers.at("HOST");
   envMap["SERVER_NAME"] = host.substr(0, host.find(":"));
-  envMap["SERVER_PORT"] = client->getRequest().getServerConf()->port;
+  oss << "        " << "SERVER_NAME = " << envMap["SERVER_NAME"] << std::endl;
+  envMap["SERVER_PORT"] = toString(client->getRequest().getServerConf()->port);
+  oss << "        " << "SERVER_PORT = " << envMap["SERVER_PORT"] << std::endl;
   envMap["SERVER_PROTOCOL"] = this->getVersion(fd);
   oss << "        " << "SERVER_PROTOCOL = " << envMap["SERVER_PROTOCOL"] << std::endl;
   envMap["SERVER_SOFTWARE"] = "webserv/1.0";
+  oss << "        " << "SERVER_SOFTWARE = " << envMap["SERVER_SOFTWARE"] << std::endl;
   if (headers.find("USER-AGENT") != headers.end())
+  {
     envMap["HTTP_USER_AGENT"] = headers.at("USER-AGENT");
+    oss << "        " << "HTTP_USER_AGENT = " << envMap["HTTP_USER_AGENT"] << std::endl;
+  }
   if (headers.find("ACCEPT") != headers.end())
+  {
     envMap["HTTP_ACCEPT"] = headers.at("ACCEPT");
+    oss << "        " << "HTTP_ACCEPT = " << envMap["HTTP_ACCEPT"] << std::endl;
+  }
   envMap["UPLOAD_DIR"] = client->getRequest().getLocation().upload_dir;
+  oss << "        " << "UPLOAD_DIR = " << envMap["UPLOAD_DIR"] << std::endl;
 
-  std::cout << oss.str();
+  logger(LOG_DEBUG, "Here are the environment variables passed to the CGI:\n" + oss.str());
   std::vector<std::string>  envVars;
   for (std::map<std::string, std::string>::iterator it = envMap.begin();
       it != envMap.end(); it++)
@@ -226,7 +237,7 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
     client->_isReadingCgiResponse = true;
   }
   char buffer[8192];
-  int count = read(pipeFd, buffer, sizeof(buffer));
+  int count = read(pipeFd, buffer, sizeof(buffer) - 1);
   if (count == -1)
   {
     logger(LOG_ERROR, "CGI read failure, fallback response will be sent");
@@ -246,7 +257,10 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
     this->setPollOut_(clientFd);
   }
   else if (count > 0)
+  {
+    buffer[count] = '\0';
     client->getResponse().appendCgiResponse(buffer, count);
+  }
 }
 
 void  Server::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)

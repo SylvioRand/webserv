@@ -6,12 +6,11 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 08:04:30 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 13:20:12 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Client.hpp"
-#include <cerrno>
 #include <cstddef>
 #include <cstdio>
 #include <sys/socket.h>
@@ -25,7 +24,6 @@ Client::Client(int fd, ServerConfigConstIterator cfg) : _isReadingCgiResponse(fa
 }
 
 
-// TODO Make sure we handle everything to avoid memory leaks
 Client::~Client(void)
 {
   if (_fd != -1)
@@ -48,7 +46,9 @@ bool  Client::readData(void)
     return (false);
 
   if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
+  {
     this->_request.extractRequestBody(buf, bytes);
+  }
   else if (this->_request.getMethod().empty())
   {
     if (!this->_request._isReadingRequest)

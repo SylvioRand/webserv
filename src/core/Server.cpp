@@ -43,12 +43,6 @@ void Server::start_server_(void)
 
   while (true)
   {
-    static bool waitingLogged = false;
-    if (!waitingLogged)
-    {
-      //logger(LOG_DEBUG, "Waiting on poll...");
-      waitingLogged = true;
-    }
     int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
     if (this->checkShutdownRequest())
       return ;
@@ -58,7 +52,6 @@ void Server::start_server_(void)
     // On itère à l'envers pour éviter les problèmes avec erase()
     for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
     {
-      waitingLogged = false;
       if (_pool_fds[i].revents == 0)
         continue;
 
@@ -82,7 +75,6 @@ void Server::start_server_(void)
         if (revents & (POLLERR | POLLHUP | POLLNVAL))
           this->close_client_(fd);
       }
-      // TODO c`est ici qu`on va lire avec readFromPipe
       else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
       {
         // TODO
@@ -255,7 +247,6 @@ void  Server::setNonBlocking_(int fd)
 
 void  Server::handle_pollin_(int fd)
 {
-  //logger(LOG_DEBUG, "POLLIN event on fd=" + toString(fd));
   Client *client = this->_clients[fd];
   if (!(*client).readData() || (*client).getRequest().hasError())
   {

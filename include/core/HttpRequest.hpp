@@ -4,8 +4,7 @@
 /*   HttpRequest.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
+/*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
 /*   Updated: 2025/08/28 11:16:36 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
@@ -55,7 +54,6 @@ class HttpRequest
     std::string                         _boundary;
     std::string                         _endBoundary;
     std::vector<MultipartPart>          _multiPart;
-    // TODO otrany tsy ilaina
     size_t                              _client_max_body_size;
     bool                                _isBodySizeAllowed;
     LocationConfig                      _location;

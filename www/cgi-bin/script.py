@@ -7,6 +7,29 @@ import json
 import random
 from urllib.parse import parse_qs
 
+def read_stdin_content(length):
+    """Lit le contenu de stdin de manière sécurisée"""
+    if length <= 0:
+        return ''
+    
+    try:
+        # Lire le contenu progressivement par blocs
+        data = b''
+        remaining = length
+        
+        while remaining > 0:
+            chunk_size = min(4096, remaining)
+            chunk = sys.stdin.buffer.read(chunk_size)
+            if not chunk:
+                break
+            data += chunk
+            remaining -= len(chunk)
+        
+        return data.decode('utf-8')
+    
+    except Exception as e:
+        print(f"Error reading stdin: {e}", file=sys.stderr)
+        return ''
 
 def main():
     # Récupérer la méthode de requête
@@ -71,16 +94,27 @@ def main():
 
     # Traiter les données POST
     elif method == 'POST':
-        # Lire la longueur du corps
+        # Lire la longueur du corps de manière sécurisée
         try:
             content_length = int(os.environ.get('CONTENT_LENGTH', 0))
-        except ValueError:
+        except (ValueError, TypeError):
             content_length = 0
+        
         path = os.environ.get('UPLOAD_DIR', "./")
+        
+        # Créer le répertoire s'il n'existe pas
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
 
-        # Lire le corps
-        post_body = sys.stdin.read(content_length) if content_length > 0 else ""
-        params = parse_qs(post_body)
+        # Lire le corps de la requête POST de manière sécurisée
+        post_body = read_stdin_content(content_length)
+        
+        # Parser les données POST
+        try:
+            params = parse_qs(post_body)
+        except Exception as e:
+            params = {}
+            print(f"Error parsing POST data: {e}", file=sys.stderr)
 
         name = params.get("name", [""])[0].strip() or "Anonymous"
         email = params.get("email", [""])[0].strip() or "No email"
@@ -92,10 +126,14 @@ def main():
         filename = f"{safe_name}_{random_suffix}.txt"
 
         # Écrire dans le fichier
-        with open(path + "/" + filename, "w", encoding="utf-8") as f:
-            f.write(f"Name: {name}\n")
-            f.write(f"Email: {email}\n")
-            f.write(f"Message: {message_text}\n")
+        try:
+            with open(os.path.join(path, filename), "w", encoding="utf-8") as f:
+                f.write(f"Name: {name}\n")
+                f.write(f"Email: {email}\n")
+                f.write(f"Message: {message_text}\n")
+        except Exception as e:
+            print(f"Error writing file: {e}", file=sys.stderr)
+            filename = f"error_{random_suffix}.txt"
 
         # Réponse HTML
         html_content = f"""<html>
