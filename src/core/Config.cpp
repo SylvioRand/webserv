@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 17:55:29 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 19:01:55 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -364,7 +364,6 @@ void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::
       // TODO : verifier si la valeur de value[1] = "..." ou /... ou http(s)://
       location_config.redirect[code] = value[1];
     }
-
   }
   // TODO : autoindex n'est pas repetable
   else if (key == "autoindex") {
@@ -400,11 +399,9 @@ void  Config::applyDirectiveTolocationConfig(const std::string& key, const std::
 void  Config::appendHeritedDirective(ServerConfig &config,
     LocationConfig &location_config)
 {
-  if (location_config.root.empty())
-    location_config.root = config.root;
-  if (location_config.indexs.size() == 0) { 
-    location_config.indexs = config.indexs;
-  }
+  if (location_config.root.empty()) location_config.root = config.root;
+  if (location_config.indexs.size() == 0) location_config.indexs = config.indexs;
+  if (location_config.upload_dir.empty()) location_config.upload_dir = config.upload_dir;
 }
 
 void                          Config::parseLocationBlocks(std::string &block, ServerConfig &config)
@@ -482,6 +479,12 @@ void                          Config::applyDirectiveToServerConfig(const std::st
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.indexs.insert(config.indexs.end(), value.begin(), value.end());
   }
+  else if (key == "upload_dir" && config.upload_dir.empty()) {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.upload_dir = value[0];
+  }
+
   // TODO : autoindex n'est pas repetable
   else if (key == "autoindex") {
     if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
@@ -558,6 +561,23 @@ void                          Config::parseDirectivesIntoConfig(const std::strin
   setDirectiveToServerConfig(config);
 }
 
+void                          Config::createLocationDefautl(ServerConfig& config)
+{
+  LocationConfig  location_config;
+  
+  location_config.path = "/";
+  location_config.root = config.root;
+  location_config.indexs = config.indexs;
+  location_config.upload_dir = config.upload_dir;
+  location_config.client_max_body_size = config.client_max_body_size;
+  location_config.error_pages = config.error_pages;
+  location_config.autoindex = config.autoindex;
+  location_config.methods.push_back("GET");
+
+
+  config.locations[location_config.path] = location_config;
+}
+
 void                          Config::parseServerBlock_(std::string &content)
 {
   ServerConfig config;
@@ -583,7 +603,9 @@ void                          Config::parseServerBlock_(std::string &content)
   for (std::vector<std::string>::iterator it = locationBlocks.begin(); it != locationBlocks.end(); ++it){
     parseLocationBlocks(*it, config);
   }
-  
+  if (config.locations.find("/") == config.locations.end())
+    createLocationDefautl(config);
+
   this->_servers.push_back(config);
 }
 
@@ -644,11 +666,6 @@ void                          Config::printServers() const {
 
         std::cout << "server[" << i << "].host = |" << config.host << "|" << std::endl;
         std::cout << "server[" << i << "].port = |" << config.port << "|" << std::endl;
-        std::cout << "server[" << i << "].server_name = |" << config.server_name << "|" << std::endl;
-
-        for (std::map<int, std::string>::const_iterator it = config.redirect.begin(); it != config.redirect.end(); ++it)
-        std::cout << "server[" << i << "].redirect[" << it->first << "] = |" << it->second << "|" << std::endl;
-
         std::cout << "server[" << i << "].root = |" << config.root << "|" << std::endl;
 
         std::cout << "server[" << i << "].index = |";
@@ -658,6 +675,11 @@ void                          Config::printServers() const {
         }
         std::cout << "|" << std::endl;
 
+        for (std::map<int, std::string>::const_iterator it = config.redirect.begin(); it != config.redirect.end(); ++it)
+          std::cout << "server[" << i << "].redirect[" << it->first << "] = |" << it->second << "|" << std::endl;
+
+        std::cout << "server[" << i << "].upload_dir = |" << config.upload_dir << "|" << std::endl;
+        std::cout << "server[" << i << "].server_name = |" << config.server_name << "|" << std::endl;
         std::cout << "server[" << i << "].autoindex = |" << (config.autoindex ? "true" : "false") << "|" << std::endl;
         std::cout << "server[" << i << "].client_max_body_size = |" << config.client_max_body_size << "|" << std::endl;
 
@@ -671,9 +693,6 @@ void                          Config::printServers() const {
 
             std::cout << "server[" << i << "].locations[" << path << "].path = |" << lcfg.path << "|" << std::endl;
             std::cout << "server[" << i << "].locations[" << path << "].root = |" << lcfg.root << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].client_max_body_size = |" << lcfg.client_max_body_size << "|" << std::endl;
-
-            std::cout << "server[" << i << "].locations[" << path << "].autoindex = |" << (lcfg.autoindex ? "true" : "false") << "|" << std::endl;
 
             std::cout << "server[" << i << "].locations[" << path << "].index = |";
             for (size_t j = 0; j < lcfg.indexs.size(); ++j) {
@@ -682,17 +701,9 @@ void                          Config::printServers() const {
             }
             std::cout << "|" << std::endl;
 
-            std::cout << "server[" << i << "].locations[" << path << "].upload_dir = |" << lcfg.upload_dir << "|" << std::endl;
-            // TODO redirect has been modified on config.hpp file
-            //std::cout << "server[" << i << "].locations[" << path << "].redirect = |" << lcfg.redirect << "|" << std::endl;
-
-
             for (std::map<int, std::string>::const_iterator ep = lcfg.redirect.begin(); ep != lcfg.redirect.end(); ++ep) {
                 std::cout << "server[" << i << "].locations[" << path << "].redirect[" << ep->first << "] = |" << ep->second << "|" << std::endl;
             }
-            
-            std::cout << "server[" << i << "].locations[" << path << "].cgi_extension = |" << lcfg.cgi_extension << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].cgi_path = |" << lcfg.cgi_path << "|" << std::endl;
 
             std::cout << "server[" << i << "].locations[" << path << "].methods = |";
             for (size_t j = 0; j < lcfg.methods.size(); ++j) {
@@ -700,6 +711,12 @@ void                          Config::printServers() const {
                 if (j + 1 < lcfg.methods.size()) std::cout << ", ";
             }
             std::cout << "|" << std::endl;
+
+            std::cout << "server[" << i << "].locations[" << path << "].autoindex = |" << (lcfg.autoindex ? "true" : "false") << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].upload_dir = |" << lcfg.upload_dir << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].client_max_body_size = |" << lcfg.client_max_body_size << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].cgi_extension = |" << lcfg.cgi_extension << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].cgi_path = |" << lcfg.cgi_path << "|" << std::endl;
 
             for (std::map<int, std::string>::const_iterator ep = lcfg.error_pages.begin(); ep != lcfg.error_pages.end(); ++ep) {
                 std::cout << "server[" << i << "].locations[" << path << "].error_pages[" << ep->first << "] = |" << ep->second << "|" << std::endl;

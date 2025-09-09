@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 17:08:05 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 18:39:35 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -81,6 +81,7 @@ class Config
     bool                      blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos);
     bool                      blockLocationIsValid(const std::string& content, size_t pos);
     void                      setDirectiveToServerConfig(ServerConfig& config);
+    void                      createLocationDefautl(ServerConfig& config);
 
 void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
 
