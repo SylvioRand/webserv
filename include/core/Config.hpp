@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 11:04:16 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/09 14:02:09 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,7 +41,7 @@ struct ServerConfig {
     std::string                           root;                 // Racine par défaut des fichiers
     std::vector<std::string>              indexs;                // Fichier index par défaut    
     std::vector<std::string>              methods;              // Méthodes autorisées (GET, POST, DELETE)
-    ssize_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
+    size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
     
     
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
@@ -69,8 +69,8 @@ class Config
     void                      parseDirectivesIntoConfig(const std::string& block, ServerConfig& config);
     void                      applyDirectiveToServerConfig(const std::string& key, std::vector<std::string>& value, ServerConfig& config);
     std::string               trim(const std::string& str);
-    int                       stringToInt(const std::string& str);
-    size_t                    parseSize(const std::string& str);
+    int                       stringToInt(const std::string& key, const std::string& str);
+    size_t                    parseSize(const std::string& key, const std::string& str);
     void                      printServers(void) const;
     void                      parseLocationBlocks(std::string &block, ServerConfig &config);
     std::string               extractBlockContentLocation(const std::string &block, std::string &path);
