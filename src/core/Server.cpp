@@ -543,12 +543,14 @@ void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg
       best_length = path.size();
     }
   }
+  /*
   if (best_length == 0)
   {
     logger(LOG_DEBUG, "root location will be created and used");
     this->createAndSaveRootLocation_(cfg);
     return ;
   }
+  */
   this->setCurrentLocation(best_match);
   logger(LOG_DEBUG, "matching LocationConfig found [" + best_match.path + "]");
 }
@@ -1837,6 +1839,7 @@ void  Server::setBodyFilePath(const int& fd, const std::string& path)
   this->_clients[fd]->getResponse().setBodyFilePath(path);
 }
 
+/*
 void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
 {
   LocationConfig  rootLocation;
@@ -1860,6 +1863,7 @@ void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
   rootLocation.root = cfg->root;
   this->setCurrentLocation(rootLocation);
 }
+*/
 
 void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
 {

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 17:40:56 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 19:33:12 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -119,7 +119,7 @@ class Server
     bool  isValidHttpStatusCode_(const int& code);
     void  respondNotImplemented_(const int& fd);
     void  setBodyFilePath(const int& fd, const std::string& path);
-    void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
+    //void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
     void  setBodySize(const int& fd, const ssize_t& bodySize);
     void  setPollIn_(const int& fd);
     void  respondPayloadTooLarge(const int& fd);

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 12:57:07 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 19:35:10 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -404,16 +404,19 @@ LocationConfig HttpRequest::getMatchingLocation_(const std::string& uri, const S
       best_length = path.size();
     }
   }
+  /*
   if (best_length == 0)
   {
     // TODO We will not need it after correct parsing of zramahaz
     logger(LOG_DEBUG, "root location will be created and used");
     return (this->createAndReturnRootLocation_(cfg));
   }
+  */
   logger(LOG_DEBUG, "matching LocationConfig found, path [" + best_match.path + "]");
   return (best_match);
 }
 
+/*
 // TODO We will not need it after correct parsing of zramahaz
 LocationConfig  HttpRequest::createAndReturnRootLocation_(const ServerConfigConstIterator& cfg)
 {
@@ -438,6 +441,7 @@ LocationConfig  HttpRequest::createAndReturnRootLocation_(const ServerConfigCons
   rootLocation.root = cfg->root;
   return (rootLocation);
 }
+*/
 
 void  HttpRequest::markRequestComplete(void)
 {

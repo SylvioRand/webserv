@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 08:22:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 19:31:54 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define CONFIG_HPP
 
 #include "../utils/utils.hpp"
+#include <cstddef>
 
 struct LocationConfig {
     std::string                 path;                 // Chemin de la location (ex: "/", "/upload")
@@ -37,9 +38,9 @@ struct ServerConfig {
     std::string                           server_name;          // Nom du serveur (ex: "localhost")
     bool                                  autoindex;            // Si true, liste les répertoires (comme "ls")
     std::string                           upload_dir;           // Dossier pour les uploads (POST)
+    std::map<int, std::string>            redirect;             // URL de redirection (ex: "301 http://example.com")
     std::string                           root;                 // Racine par défaut des fichiers
     std::vector<std::string>              indexs;                // Fichier index par défaut    
-    std::vector<std::string>              methods;              // Méthodes autorisées (GET, POST, DELETE)
     size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
     
     
@@ -66,15 +67,20 @@ class Config
     std::vector<std::string>  extractServerBlocks(const std::string& input);
     std::vector<std::string>  extractLocationBlocks(const std::string& content);
     void                      parseDirectivesIntoConfig(const std::string& block, ServerConfig& config);
-    void                      applyDirectiveToServerConfig(const std::string& key, const std::string& value, ServerConfig& config);
+    void                      applyDirectiveToServerConfig(const std::string& key, std::vector<std::string>& value, ServerConfig& config);
     std::string               trim(const std::string& str);
-    int                       stringToInt(const std::string& str);
-    size_t                    parseSize(const std::string& str);
+    int                       stringToInt(const std::string& key, const std::string& str);
+    size_t                    parseSize(const std::string& key, const std::string& str);
     void                      printServers(void) const;
     void                      parseLocationBlocks(std::string &block, ServerConfig &config);
     std::string               extractBlockContentLocation(const std::string &block, std::string &path);
     std::string               insertSpaceBeforeBrace(const std::string& line);
-    void                      applyDirectiveTolocationConfig(const std::string& key, const std::string& value, LocationConfig& location_config);
+    void                      applyDirectiveTolocationConfig(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config);
+    
+    bool                      blockServerIsValid(const std::string& input, size_t& braceStart, size_t& pos);
+    bool                      blockLocationIsValid(const std::string& content, size_t pos);
+    void                      setDirectiveToServerConfig(ServerConfig& config);
+    void                      createLocationDefautl(ServerConfig& config);
 
 void  appendHeritedDirective(ServerConfig &config, LocationConfig &location_config);
 

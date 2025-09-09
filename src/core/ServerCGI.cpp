@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 18:24:35 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 19:30:09 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -201,8 +201,11 @@ char  **Server::buildEnvpForExecve_(const int& fd)
     envMap["HTTP_ACCEPT"] = headers.at("ACCEPT");
     oss << "        " << "HTTP_ACCEPT = " << envMap["HTTP_ACCEPT"] << std::endl;
   }
-  envMap["UPLOAD_DIR"] = client->getRequest().getLocation().upload_dir;
-  oss << "        " << "UPLOAD_DIR = " << envMap["UPLOAD_DIR"] << std::endl;
+  if (!client->getRequest().getLocation().upload_dir.empty())
+  {
+    envMap["UPLOAD_DIR"] = client->getRequest().getLocation().upload_dir;
+    oss << "        " << "UPLOAD_DIR = " << envMap["UPLOAD_DIR"] << std::endl;
+  }
 
   logger(LOG_DEBUG, "Here are the environment variables passed to the CGI:\n" + oss.str());
   std::vector<std::string>  envVars;

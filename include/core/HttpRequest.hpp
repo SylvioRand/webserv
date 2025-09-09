@@ -92,8 +92,8 @@ class HttpRequest
       getServerConf(void);
     LocationConfig
       getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg);
-    LocationConfig
-      createAndReturnRootLocation_(const ServerConfigConstIterator& cfg);
+    //LocationConfig
+    //  createAndReturnRootLocation_(const ServerConfigConstIterator& cfg);
     void  setIsChunckedValue(void);
     bool  isChunked(void); // a voir si on a vraiment besoin
     void  parseBody(void);
