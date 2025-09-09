@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/08 18:47:46 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 08:04:30 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,28 +45,16 @@ bool  Client::readData(void)
     return (false);
   }
   else if (bytes == 0)
-  {
     return (false);
-  }
+
   if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
-  {
-    /*
-    static int  i = 0;
-    i++;
-    if (i % 100 == 0)
-    {
-      logger(LOG_INFO, "readed bytes -> " + toString(bytes)
-          + "for total [" + toString(this->getRequest().getBody().size()) + "]");
-      logger(LOG_INFO, "capacity -> " + toString(this->getRequest().getBody().capacity()));
-    }
-    */
     this->_request.extractRequestBody(buf, bytes);
-  }
   else if (this->_request.getMethod().empty())
   {
     if (!this->_request._isReadingRequest)
     {
-      logger(LOG_INFO, "[HTTP] Reading request data from socket (recv) from client fd=" + toString(this->_fd) + " ...");
+      logger(LOG_INFO,
+          "[HTTP] Reading request data from socket (recv) from client fd=" + toString(this->_fd) + " ...");
       this->_request._isReadingRequest = true;
       this->_request.setServerConf(this->_cfg);
     }

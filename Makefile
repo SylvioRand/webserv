@@ -1,4 +1,5 @@
 NAME = webserv
+CONFIG_PATH = "./config/default.conf"
 
 SRC = ./src/main.cpp \
 			./src/core/Server.cpp \
@@ -14,6 +15,7 @@ SRC = ./src/main.cpp \
 			./src/utils/toLower.cpp \
 			./src/utils/toUpper.cpp \
 			./src/utils/uniqueFilename.cpp \
+			./src/utils/utils.cpp \
 
 OBJS = ${SRC:.cpp=.o}
 
@@ -37,5 +39,10 @@ fclean: clean
 
 re: fclean all
 
-.PHONY: all clean fclean re
+run: ${NAME}
+	./${NAME} ${CONFIG_PATH}
+
+re_run: re run
+
+.PHONY: all clean fclean re run re_run
 

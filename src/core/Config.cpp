@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/08/15 10:02:28 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 07:28:48 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,8 @@ Config::Config(std::string filepath) : _config_path(filepath)
 }
 
 Config::~Config(void)
-{ }
+{
+}
 
 void Config::skipWhiteSpace_(void)
 {
@@ -54,7 +55,10 @@ void Config::load_(void)
   }
   
   while (std::getline(_config_file, _current_line))
-  { _line_number++; this->skipWhiteSpace_(); if (_current_line.empty() || _current_line[0] == '#')
+  {
+    _line_number++;
+    this->skipWhiteSpace_();
+    if (_current_line.empty() || _current_line[0] == '#')
     {
       continue;
     }

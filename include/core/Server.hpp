@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/08 18:51:48 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 08:01:39 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,8 @@ class Server
 
     void  stop_server(void);
     const Config& getConfig(void);
-private: Server(void); Server(const Server &other); Server& operator=(const Server &other);
+
+  private: Server(void); Server(const Server &other); Server& operator=(const Server &other);
 
     int   createTcpSocket_(void); void  start_server_(void); void  create_all_listeners_(void);
     void  accept_new_client_(int listener_fd);
@@ -59,9 +60,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     const LocationConfig&
           getCurrentLocation(void);
     bool  isHttpMethodValid_(std::string method);
-    bool  isMethodAllowedForLocation(const std::string method);
-    bool  isSupportedHttpMethod(const std::string& method);
-    void  setStatus(int code, int fd);
+    bool  isMethodAllowedForLocation(const std::string method); bool  isSupportedHttpMethod(const std::string& method); void  setStatus(int code, int fd);
     int   getStatus(int code);
     std::string
           getMethod(int fd);
@@ -150,6 +149,7 @@ private: Server(void); Server(const Server &other); Server& operator=(const Serv
     void  handleChildProcess(const int& fd, const std::string& localPath, const CgiPipes& cgiPipes);
     void  handleParentProcess(const int& fd, const CgiPipes& cgiPipes);
     void  sendRequestBodyToCgi(const int&fd, const int& clientFd);
+    bool  checkShutdownRequest(void);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

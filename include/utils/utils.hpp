@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/25 08:19:25 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 06:55:25 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,10 @@
 #define COLOR_ERROR   "\033[1;31m"    // Rouge
 #define COLOR_FATAL   "\033[1;97;41m" // Blanc sur fond rouge
 
+
+  
+
+ 
 #include "../utils/Logger.hpp"
 #include "../utils/contentType.hpp"
 
@@ -48,6 +52,9 @@
 #include <fcntl.h>
 #include <ctime>
 #include <dirent.h>
+#include <csignal>
+
+extern volatile sig_atomic_t g_shouldStop;
 
 template<typename T>
 std::string toString(T value) { std::ostringstream oss;
@@ -55,6 +62,7 @@ std::string toString(T value) { std::ostringstream oss;
     return oss.str();
 }
 
+void        signalHandler(int signal);
 void        throwWithLog(LogLevel level, const std::string &msg);
 std::string intToString(int value);
 bool        caseInsensitiveEqual(const std::string& a,

@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/02 09:32:26 by srandria          #+#    #+#             */
-/*   Updated: 2025/07/21 10:19:55 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/09 07:43:36 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,6 @@ int main(int argc, char **argv)
 
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
-    return (0);
   }
 
   return (0);

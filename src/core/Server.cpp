@@ -12,6 +12,7 @@
 #include "../../include/core/Server.hpp"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <csignal>
 #include <cstddef>
 #include <fcntl.h>
@@ -36,6 +37,8 @@ Server::~Server(void)
 void Server::start_server_(void)
 {
   logger(LOG_INFO, "Server is starting");
+  signal(SIGINT, signalHandler);
+  signal(SIGQUIT, signalHandler);
   this->create_all_listeners_();
 
   while (true)
@@ -47,6 +50,8 @@ void Server::start_server_(void)
       waitingLogged = true;
     }
     int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
+    if (this->checkShutdownRequest())
+      return ;
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
 
@@ -105,7 +110,21 @@ void Server::start_server_(void)
 // TODO
 void  Server::stop_server(void)
 {
+  logger(LOG_INFO, "IN  function stop_server");
+  std::map<int, Client*>::iterator it = this->_clients.begin();
+  for (; it != this->_clients.end(); it++)
+    delete it->second;
+}
 
+bool  Server::checkShutdownRequest(void)
+{
+  if (g_shouldStop == 1)
+  {
+    logger(LOG_WARNING, "[INFO] Signal reçu. Fermeture du serveur demandée.\n");
+    this->stop_server();
+    return (true);
+  }
+  return (false);
 }
 
 void  Server::create_all_listeners_(void)
@@ -256,6 +275,8 @@ void  Server::handle_pollin_(int fd)
       this->setPollOut_(fd);
       return ;
     }
+    if (this->checkShutdownRequest())
+      return ;
     this->_currentLocation = this->_clients[fd]->getRequest().getLocation();
     this->setIsCGIRequest(fd);
     if (this->getCurrentLocation().path.empty())
@@ -283,6 +304,8 @@ void  Server::handle_pollin_(int fd)
       this->DELETEMethod_(fd);
     else
       this->methodNotAllowed_(fd);
+    if (this->checkShutdownRequest())
+      return ;
     if (!this->_clients[fd]->getRequest()._isCgiRequest)
     {
       this->saveHeaderAndBodySize(fd);
