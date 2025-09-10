@@ -270,68 +270,68 @@
     </div>
 
     <script>
-        function showTab(tabName) {
-            // Masquer tous les formulaires
-            document.getElementById('get-form').classList.add('hidden');
-            document.getElementById('post-form').classList.add('hidden');
-            
-            // Désactiver tous les onglets
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => tab.classList.remove('active'));
-            
-            // Afficher le formulaire sélectionné et activer l'onglet
-            document.getElementById(tabName + '-form').classList.remove('hidden');
-            event.currentTarget.classList.add('active');
-        }
+      function showTab(tabName) {
+        // Masquer tous les formulaires
+        document.getElementById('get-form').classList.add('hidden');
+        document.getElementById('post-form').classList.add('hidden');
         
-        function testGet() {
-            const name = document.getElementById('get-name').value;
-            const guess = document.getElementById('get-guess').value;
-            
-            // Construire les paramètres de requête
-            let params = [];
-            if (name) params.push(`name=${encodeURIComponent(name)}`);
-            if (guess) params.push(`guess=${encodeURIComponent(guess)}`);
-            
-            const queryString = params.join('&');
-            const url = `/cgi-bin/script.py${queryString ? '?' + queryString : ''}`;
-            
-            // Effectuer la requête GET
-            fetch(url)
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById('get-response').innerHTML = data;
-                })
-                .catch(error => {
-                    document.getElementById('get-response').textContent = 'Erreur: ' + error;
-                });
-        }
+        // Désactiver tous les onglets
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
         
-        function testPost() {
-            const name = document.getElementById('post-name').value;
-            const email = document.getElementById('post-email').value;
-            const message = document.getElementById('post-message').value;
-            
-            // Effectuer la requête POST
-            fetch('/cgi-bin/script.py', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    name: name || '',
-                    email: email || '',
-                    message: message || ''
-                })
-            })
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById('post-response').innerHTML = data;
-            })
-            .catch(error => {
-                document.getElementById('post-response').textContent = 'Erreur: ' + error;
-            });
-        }
+        // Afficher le formulaire sélectionné et activer l'onglet
+        document.getElementById(tabName + '-form').classList.remove('hidden');
+        event.currentTarget.classList.add('active');
+      }
+      
+      function testGet() {
+        const name = document.getElementById('get-name').value;
+        const guess = document.getElementById('get-guess').value;
+        
+        // Construire les paramètres de requête
+        let params = [];
+        if (name) params.push(`name=${encodeURIComponent(name)}`);
+        if (guess) params.push(`guess=${encodeURIComponent(guess)}`);
+        
+        const queryString = params.join('&');
+        const url = `/cgi-bin/script.py${queryString ? '?' + queryString : ''}`;
+        
+        // Effectuer la requête GET
+        fetch(url)
+          .then(response => response.text())
+          .then(data => {
+              document.getElementById('get-response').innerHTML = data;
+          })
+          .catch(error => {
+              document.getElementById('get-response').textContent = 'Erreur: ' + error;
+          });
+      }
+      
+      function testPost() {
+        const name = document.getElementById('post-name').value;
+        const email = document.getElementById('post-email').value;
+        const message = document.getElementById('post-message').value;
+        
+        // Effectuer la requête POST
+        fetch('/cgi-bin/script.py', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            name: name || '',
+            email: email || '',
+            message: message || ''
+          })
+        })
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('post-response').innerHTML = data;
+        })
+        .catch(error => {
+          document.getElementById('post-response').textContent = 'Erreur: ' + error;
+        });
+      }
     </script>
 </body>
 </html>

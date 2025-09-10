@@ -40,8 +40,8 @@ class Server
 
     int   createTcpSocket_(void); void  start_server_(void); void  create_all_listeners_(void);
     void  accept_new_client_(int listener_fd);
-    void  handle_pollin_(int fd);
-    void  handle_pollout_(int fd);
+    void  handle_pollin_(int fd, bool& isClientClosed);
+    void  handle_pollout_(int fd, bool& isClientClosed);
     void  close_client_(int fd);
     void  close_pipeFd_(const int& fd);
     void  check_timout_(void);
@@ -69,7 +69,7 @@ class Server
     void  saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg);
     const std::map<std::string, std::string>& getHeaders(int fd);
     const std::string&
-          getRequestUri_(int fd);
+          getRequestUri_(const int& fd);
     void  GETMethod_(const int& fd);
     void  POSTMethod_(const int fd);
     void  DELETEMethod_(const int fd);
@@ -80,7 +80,6 @@ class Server
     bool  directoryExists_(const std::string& path);
     void  onDeleteSuccess_(const int fd);
     void  cannotDeleteFile_(const int fd, std::string& path);
-    void  respondDeleteDirConflict_(const int fd);
     void  respondFileNotReadable(const int fd);
     void  respondDirectoryListingForbidden(const int fd);
     void  respondNotFound_(const int fd);

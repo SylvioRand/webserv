@@ -26,7 +26,6 @@ Config::Config(std::string filepath) : _config_path(filepath)
   // TODO Uncoment this line when parsing fixed
   this->load_();
   // Skip this if the config has been parsed earlier
-  this->createServerConfigManually();
   this->isValid_();
 }
 
@@ -88,47 +87,7 @@ void Config::load_(void)
     }
     */
 }
-  
-  
-  // you can use this function to add manually a serverconfig without parsing
-void  Config::createServerConfigManually(void)
-{
-  logger(LOG_INFO, "Creating server config manually");
-  ServerConfig  result;
-  result.server_name = "localhost";
-  result.client_max_body_size = 10485760;
-  result.error_pages[404] = "/404.html";
-  result.host = "127.0.0.1";
-  result.port = 8080;
-  result.root = "./srandria";
-
-  LocationConfig  loc;
-  LocationConfig  loc2;
-  loc.root = "./www/";
-  loc.path = "/";
-  loc.methods.push_back("GET, POST");
-  loc.autoindex = false;
-  loc2.root = "./www/uploads/";
-  loc2.path = "/upload/";
-  loc.error_pages[405] = "/405.html";
-  result.locations["/"] = loc;
-  /*
-  result.locations["/upload"] = loc2;
-  this->_servers.push_back(result);
-  */
-
-  ServerConfig  result2;
-  result2.server_name = "localhost";
-  result2.client_max_body_size = 10485760;
-  result2.error_pages[404] = "/404.html";
-  result2.host = "127.0.0.2";
-  result2.port = 8080;
-  result2.locations["/"] = loc;
-  result2.locations["/"] = loc2;
-  this->_servers.push_back(result2);
-
-}
-
+ 
 const std::vector<ServerConfig>& Config::getServers(void) const
 {
   return (_servers);

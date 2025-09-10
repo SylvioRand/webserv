@@ -15,6 +15,7 @@
 #include <cmath>
 #include <csignal>
 #include <cstddef>
+#include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
 #include <ios>
@@ -40,6 +41,7 @@ void Server::start_server_(void)
   signal(SIGINT, signalHandler);
   signal(SIGQUIT, signalHandler);
   this->create_all_listeners_();
+  static bool isClientClosed;
 
   while (true)
   {
@@ -48,6 +50,7 @@ void Server::start_server_(void)
       return ;
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
+
 
     for (int i = static_cast<int>(_pool_fds.size()) - 1; i >= 0 && ready > 0; --i)
     {
@@ -65,11 +68,12 @@ void Server::start_server_(void)
       }
       else if (_clients.find(fd) != _clients.end())
       {
+        isClientClosed = false;
         if (revents & POLLIN)
-          this->handle_pollin_(fd);
-        if (revents & POLLOUT)
-          this->handle_pollout_(fd);
-        if (revents & (POLLERR | POLLHUP | POLLNVAL))
+          this->handle_pollin_(fd, isClientClosed);
+        if (!isClientClosed && revents & POLLOUT)
+          this->handle_pollout_(fd, isClientClosed);
+        if (!isClientClosed && revents & (POLLERR | POLLHUP | POLLNVAL))
           this->close_client_(fd);
       }
       else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
@@ -95,12 +99,13 @@ void Server::start_server_(void)
   }
 }
 
-
 void  Server::stop_server(void)
 {
   std::map<int, Client*>::iterator it = this->_clients.begin();
   for (; it != this->_clients.end(); it++)
+  {
     delete it->second;
+  }
 }
 
 bool  Server::checkShutdownRequest(void)
@@ -240,13 +245,14 @@ void  Server::setNonBlocking_(int fd)
         throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
 }
 
-void  Server::handle_pollin_(int fd)
+void  Server::handle_pollin_(int fd, bool& isClientClosed)
 {
   Client *client = this->_clients[fd];
   if (!(*client).readData() || (*client).getRequest().hasError())
   {
     logger(LOG_DEBUG, "Cant` read data with readData()");
     close_client_(fd);
+    isClientClosed = true;
     return ;
   }
   if ((*client).isRequestComplete() && !(*client).getRequest().hasError())
@@ -303,7 +309,11 @@ void  Server::handle_pollin_(int fd)
 
 std::string  Server::getUriPath_(const int& fd)
 {
-  std::string uriPath = this->getRequestUri_(fd);
+  std::string uriPath;
+  if (_clients.find(fd) == _clients.end())
+    return "";
+  else
+    uriPath = this->getRequestUri_(fd);
   size_t pos = uriPath.find("?");
   if (pos == std::string::npos)
     return (uriPath);
@@ -331,8 +341,10 @@ std::string  Server::getVersion(int fd)
   return (this->_clients[fd]->getRequest().getVersion());
 }
 
-const std::string& Server::getRequestUri_(int fd)
+const std::string& Server::getRequestUri_(const int& fd)
 {
+  //logger(LOG_INFO, "ETO");
+  //
   return (this->_clients[fd]->getRequest().getPath());
 }
 
@@ -444,7 +456,7 @@ void  Server::setPollIn_(const int& fd)
     "Failed to monitor input events (POLLIN) on fd=" + toString(fd) + " — descriptor not found");
 }
 
-void  Server::handle_pollout_(int fd)
+void  Server::handle_pollout_(int fd, bool& isClientClosed)
 {
   Client *client = this->_clients[fd];
   std::string path = client->getRequest().getLocation().upload_dir;
@@ -489,12 +501,16 @@ void  Server::handle_pollout_(int fd)
       this->setPollIn_(fd);
     }
     else
+    {
       close_client_(fd);
+      isClientClosed = true;
+    }
   }
 }
 
 void Server::close_client_(int fd)
 {
+  logger(LOG_INFO, "trying closing client fd=" + toString(fd));
   this->_clients[fd]->getResponse().closeBodyFileFd(this->getFileName(this->getUriPath_(fd)));
   logger(LOG_INFO, "close client fd=" + toString(fd));
 
@@ -747,28 +763,28 @@ void  Server::respondNoIndexFileFound_(const int fd)
 {
   logger(LOG_DEBUG, "In function respondNoIndexFileFound_");
   /*
-   HTTP/1.1 404 Not Found
+   HTTP/1.1 403 Forbidden.
   Content-Type: text/plain
   Content-Length: 43
 
-  404 Not Found: No index file found in this directory.
+  403 Forbidden: No index file found in this directory.
   */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(404, fd);
-  if (this->hasCustomErrorPage(404, fd))
-    this->saveErrorBodyFilePath(404, fd, contentType, contentLength);
+  this->setStatus(403, fd);
+  if (this->hasCustomErrorPage(403, fd))
+    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
   else
   {
-    body = "404 Not Found: No index file found in this directory.";
+    body = "403 Forbidden: No index file found in this directory.";
     contentLength = toString(body.size());
   }
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 404 Not Found\r\n"
+  headers << this->getVersion(fd) << " 403 Forbidden.\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
     << this->buildConnectionHeader(fd);
@@ -849,7 +865,11 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
 bool  Server::hasIndexDirective_(void)
 {
   if (this->getCurrentLocation().indexs.empty())
+  {
+    logger(LOG_INFO, "Sao");
+    while (1);
     return (false);
+  }
   return (true);
 }
 
@@ -1083,7 +1103,7 @@ void  Server::DELETEMethod_(const int fd)
   else
   {
     logger(LOG_DEBUG, "Cannot delete the resource due to a conflict on the server.");
-    this->respondDeleteDirConflict_(fd);
+    this->respondNotFound_(fd);
   }
 }
 
@@ -1097,22 +1117,22 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
 {
   logger(LOG_DEBUG, "In function cannotDeleteFile_");
   /*
-  HTTP/1.1 409 Conflict
+  HTTP/1.1 403 Conflict
   Content-Type: text/plain
   Content-Length: 65
 
-  Conflict: Unable to delete '/path/to/file' due to current resource state
+  You don't have permission to access '/path/to/file' on this server.
   */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(409, fd);
-  if (this->hasCustomErrorPage(409, fd))
-    this->saveErrorBodyFilePath(409, fd, contentType, contentLength);
+  this->setStatus(403, fd);
+  if (this->hasCustomErrorPage(403, fd))
+    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
   else
   {
-    body = "Conflict: Unable to delete '" + path + "' due to current resource state";
+    body = "You don't have permission to access '" + path + "'on this server.";
     contentLength = toString(body.size());
   }
 
@@ -1234,42 +1254,6 @@ void  Server::respondFileNotReadable(const int fd)
   response.setBody(body);
 }
 
-void  Server::respondDeleteDirConflict_(const int fd)
-{
-  logger(LOG_DEBUG, "In function respondDeleteDirConflict_");
-  /*
-  HTTP/1.1 409 Conflict
-  Content-Type: text/plain
-  Content-Length: XX
-
-  Cannot delete resource due to a conflict with the current state.
-  */
-  std::string body;
-  std::string contentLength;
-  std::string contentType = CT_TEXT;
-
-
-  this->setStatus(409, fd);
-  if (this->hasCustomErrorPage(409, fd))
-    this->saveErrorBodyFilePath(409, fd, contentType, contentLength);
-  else
-  {
-    body = "Cannot delete resource due to a conflict with the current state.";
-    contentLength = toString(body.size());
-  }
-
-  std::ostringstream headers;
-
-  headers << this->getVersion(fd) << " 409 Conflict\r\n"
-    << CT << " " << contentType << "\r\n"
-    << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
-
-  HttpResponse& response = this->_clients[fd]->getResponse();
-  response.setHeader(headers.str());
-  response.setBody(body);
-}
-
 void  Server::buildDirectoryListing_(const int fd)
 {
   /*
@@ -1327,6 +1311,7 @@ const std::string Server::generateAutoIndexHtml(const int& fd)
     body.append(li);
   }
   body.append("</ul>\n</body>\n</html>");
+  closedir(dir_ptr);
   return (body);
 }
 

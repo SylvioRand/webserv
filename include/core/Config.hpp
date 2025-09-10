@@ -59,8 +59,6 @@ class Config
     bool  isValid_(void) const;                     // Vérifie si la configuration est valide
     void  parseServerBlock_(std::string &content);  // parse de zramahaz
     void  skipWhiteSpace_(void);
-    // you can use this function to add manually a serverconfig without parsing
-    void  createServerConfigManually(void);
 
     // zramahaz function
     std::string               extractBlockContentServer(const std::string& block);
