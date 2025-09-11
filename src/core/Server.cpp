@@ -579,6 +579,7 @@ void  Server::GETMethod_(const int& fd)
   std::string     localPath;
   std::string     extractUri;
 
+  logger(LOG_INFO, "root location -> " + this->getCurrentLocation().root);
   if (this->getCurrentLocation().root.empty())
   {
     this->respondNotFound_(fd);
@@ -1281,7 +1282,8 @@ const std::string Server::generateAutoIndexHtml(const int& fd)
   if (uriPath.at(uriPath.size() - 1) == '/')
     uriPath.erase(uriPath.size() - 1);
 
-  const std::string localPath = this->getCurrentLocation().root + uriPath;
+  const std::string localPath = this->getCurrentLocation().root
+    + "/" + uriPath.substr(this->getCurrentLocation().path.size());
   DIR *dir_ptr = opendir(localPath.c_str());
   
   struct dirent *entry;
@@ -1291,6 +1293,7 @@ const std::string Server::generateAutoIndexHtml(const int& fd)
     + uriPath + "</h1>\n<ul>\n";
   while ((entry = readdir(dir_ptr)) != NULL)
   {
+    logger(LOG_INFO, "tonga eto ve");
     const std::string li = "<li><a href=" + uriPath + "/" + entry->d_name
       + ">" + entry->d_name + "</a></li>";
     body.append(li);

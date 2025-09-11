@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/11 10:45:42 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/11 18:24:35 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,7 +62,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   int count = 0;
   for (std::string world; issReq >> world;)
   {
-    logger(LOG_INFO, "world -> " + world);
     this->_version = world;
     count++;
   }
