@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 18:11:02 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/11 13:20:44 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@ void HttpResponse::initializeState(void)
   this->_bodyBytesSent = 0;
   this->_keepAlive = true;
   this->_cgiBytesSent = 0;
+  this->_cgiResponse.clear();
   this->_streamOffset = 0;
   this->_isSending = false;
   this->_isFullySent = false;
@@ -243,7 +244,6 @@ void  HttpResponse::appendCgiResponse(const std::string& buff, const ssize_t& si
 {
   this->_cgiResponse.append(buff.c_str(), size);
 }
-
 
 void  HttpResponse::addConnectionHeader(const std::string& connectionHeader)
 {

@@ -74,6 +74,7 @@ class HttpRequest
     bool  _isCgiRequest;
     bool  _allFilesSaved;
     bool  _isReadingRequest;
+    bool  _isBadRequest;
 
     void  parse(const std::string &raw_request);
     bool  isValid(void) const;

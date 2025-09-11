@@ -259,11 +259,15 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
   {
     this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
     std::string method = this->getMethod(fd);
-    if (!this->isHttpMethodValid_(method))
+    logger(LOG_INFO, "method = " + this->getMethod(fd));
+    if (this->_clients[fd]->getRequest()._isBadRequest)
     {
       this->badRequest_(fd);
-      this->saveHeaderAndBodySize(fd);
-      this->setPollOut_(fd);
+      return ;
+    }
+    if (!this->isHttpMethodValid_(method))
+    {
+      this->respondNotImplemented_(fd);
       return ;
     }
     if (this->checkShutdownRequest())
@@ -275,7 +279,7 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
     else if (!this->getCurrentLocation().redirect.empty())
       this->handleRedirect_(fd);
     else if (!isSupportedHttpMethod(method))
-      this->methodNotSupported_(fd);
+      this->methodNotAllowed_(fd);
     else if (getCurrentLocation().methods.empty())
       this->methodNotAllowed_(fd);
     else if (this->_clients[fd]->getRequest()._isCgiRequest)
@@ -304,7 +308,7 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
     }
   }
   else if (this->_clients[fd]->getRequest().hasError())
-    logger(LOG_DEBUG, "on a detecte un erreur");
+    logger(LOG_DEBUG, "Error has been detected");
 }
 
 std::string  Server::getUriPath_(const int& fd)
@@ -381,41 +385,6 @@ bool  Server::isHttpMethodValid_(std::string method)
   return (method == "GET" || method == "POST" || method == "DELETE" || method == "PUT"
       || method == "HEAD" || method == "CONNECT" || method == "OPTIONS" || method == "TRACE"
       || method == "PATCH");
-}
-
-void  Server::methodNotSupported_(const int fd)
-{
-  logger(LOG_DEBUG, "In function methodNotSupported_");
-  /*
-  HTTP/1.1 501 Not Implemented
-  Content-Type: text/plain
-  Content-Length: 56
-
-  The HTTP method PUT is recognized but not supported by this server.
-  */
-  std::string body;
-  std::string contentLength;
-  std::string contentType = CT_TEXT;
-
-  this->setStatus(501, fd);
-  if (this->hasCustomErrorPage(501, fd))
-    this->saveErrorBodyFilePath(501, fd, contentType, contentLength);
-  else
-  {
-    body = "The HTTP method PUT is recognized but not supported by this server.";
-    contentLength = toString(body.size());
-  }
-
-  std::ostringstream headers;
-
-  headers << this->getVersion(fd) << " 501 Not Implemented\r\n"
-    << CT << " " << contentType << "\r\n"
-    << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
-
-  HttpResponse& response = this->_clients[fd]->getResponse();
-  response.setHeader(headers.str());
-  response.setBody(body);
 }
 
 void  Server::setPollOut_(int fd)
@@ -610,6 +579,11 @@ void  Server::GETMethod_(const int& fd)
   std::string     localPath;
   std::string     extractUri;
 
+  if (this->getCurrentLocation().root.empty())
+  {
+    this->respondNotFound_(fd);
+    return ;
+  }
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
   logger(LOG_DEBUG, "localPath [" + localPath + "]");
@@ -1080,13 +1054,22 @@ void  Server::respondMissingUploadDir(const int fd)
 
 void  Server::DELETEMethod_(const int fd)
 {
-  std::cout << "On delete method" << std::endl;
   LocationConfig  location = this->getCurrentLocation();
   std::string     localPath;
   std::string     extractUri;
+  if (this->getCurrentLocation().root.empty())
+  {
+    this->respondNotFound_(fd);
+    return;
+  }
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
+  if (this->getMethod(fd) != "GET" && this->getMethod(fd) != "POST")
+  {
+    this->methodNotAllowed_(fd);
+    return ;
+  }
   if (isFile_(localPath))
   {
     if (remove(localPath.c_str()) == 0)
@@ -1181,6 +1164,8 @@ void  Server::respondNotFound_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 
@@ -1448,6 +1433,8 @@ void  Server::badRequest_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::handleNoMatchingLocation_(const int fd)
@@ -1711,6 +1698,7 @@ void  Server::handleRedirect_(const int& fd)
     else
       this->respondRedirect_(fd, it);
   }
+  // TODO ne devrait pas rentrer ici apres le parsing de zramahaz
   else if (this->isValidHttpStatusCode_(it->first))
     this->respondNotImplemented_(fd);
 }
@@ -1735,7 +1723,7 @@ void  Server::respondNotImplemented_(const int& fd)
     this->saveErrorBodyFilePath(501, fd, contentType, contentLength);
   else
   {
-    body = "501 Not Implemented: Unsupported return code";
+    body = "501 Not Implemented";
     contentLength = toString(body.size());
   }
 
@@ -1749,11 +1737,14 @@ void  Server::respondNotImplemented_(const int& fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 bool  Server::isRedirectCode_(int statusCode)
 {
-    return (statusCode >= 300 && statusCode < 400);
+    return ((statusCode >= 301 && statusCode <= 303)
+        || statusCode == 307 || statusCode == 308);
 }
 
 void  Server::respondRedirect_(const int& fd,
@@ -1766,15 +1757,44 @@ void  Server::respondRedirect_(const int& fd,
   Content-Length: 0
   Connection: close
   */
-  std::ostringstream headers;
+  std::ostringstream  headers;
+  std::string         status_text;
+  std::string         body;
 
-  headers << this->getVersion(fd) << " " << it->first << " Moved Permanently\r\n"
+  switch (it->first)
+  {
+    case 301:
+      status_text = " Moved Permanently";
+      body = "301 Moved Permanently";
+      break;
+    case 302:
+      status_text = " Found";
+      body = "302 Found";
+      break;
+    case 303:
+      status_text = " See Other";
+      body = "303 See Other";
+      break;
+    case 307:
+      status_text = " Temporary Redirect";
+      body = "307 Temporary Redirect";
+      break;
+    case 308:
+      status_text = " Permanent Redirect";
+      body = "308 Permanent Redirect";
+      break;
+    default:
+      status_text = "";
+      break;
+  }
+  headers << this->getVersion(fd) << " " << it->first << status_text << "\r\n"
     << "Location: " << it->second << "\r\n"
-    << CL << " " << "0" << "\r\n"
+    << CL << " " << body.size() << "\r\n"
     << this->buildConnectionHeader(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
+  response.setBody(body);
 
   this->setStatus(it->first, fd);
 }

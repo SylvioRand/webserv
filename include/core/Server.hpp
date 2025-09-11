@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 19:33:12 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/11 11:02:52 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,7 +60,9 @@ class Server
     const LocationConfig&
           getCurrentLocation(void);
     bool  isHttpMethodValid_(std::string method);
-    bool  isMethodAllowedForLocation(const std::string method); bool  isSupportedHttpMethod(const std::string& method); void  setStatus(int code, int fd);
+    bool  isMethodAllowedForLocation(const std::string method);
+    bool  isSupportedHttpMethod(const std::string& method);
+    void  setStatus(int code, int fd);
     int   getStatus(int code);
     std::string
           getMethod(int fd);
@@ -85,7 +87,6 @@ class Server
     void  respondNotFound_(const int fd);
     void  badRequest_(const int fd);
     void  methodNotAllowed_(const int fd);
-    void  methodNotSupported_(const int fd);
     bool  hasIndexDirective_(void);
     std::string
           getAccessibleIndexPath_(const std::string& path);

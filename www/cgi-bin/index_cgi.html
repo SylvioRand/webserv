@@ -215,7 +215,7 @@
     <div class="container">
         <header>
             <h1>CGI Request Tester</h1>
-            <p class="description">Testez les requêtes GET et POST avec votre serveur Webserv</p>
+            <p class="description">Test the GET and POST requests with your Webserv server.</p>
         </header>
         
         <div class="tabs">
@@ -237,35 +237,35 @@
                 <input type="number" id="get-guess" name="guess" min="1" max="10" placeholder="Enter a number between 1 and 10">
             </div>
 
-            <div id="get-response" class="response">La réponse du serveur apparaîtra ici...</div>
+            <div id="get-response" class="response">The server’s response will appear here ...</div>
 
             <button type="button" onclick="testGet()">Test GET</button>
         </div>
         <div id="post-form" class="form-container hidden">
             <h2 class="form-title">POST Request Test</h2>
-            <p>Les paramètres seront passés dans le corps de la requête</p>
+            <p>The parameters will be sent in the request body.</p>
             
             <div class="form-group">
                 <label for="post-name">Nom:</label>
-                <input type="text" id="post-name" name="name" placeholder="Votre nom">
+                <input type="text" id="post-name" name="name" placeholder="your name">
             </div>
             
             <div class="form-group">
                 <label for="post-email">Email:</label>
-                <input type="text" id="post-email" name="email" placeholder="votre@email.com">
+                <input type="text" id="post-email" name="email" placeholder="your@email.com">
             </div>
             
             <div class="form-group">
                 <label for="post-message">Message:</label>
-                <textarea id="post-message" name="message" placeholder="Votre message ici..."></textarea>
+                <textarea id="post-message" name="message" placeholder="your message here ..."></textarea>
             </div>
 
-            <div id="post-response" class="response">La réponse du serveur apparaîtra ici...</div>
+            <div id="post-response" class="response">The server’s response will appear here ...</div>
 
-            <button type="button" onclick="testPost()">Test GET</button>
+            <button type="button" onclick="testPost()">Test POST</button>
         </div>
         <footer>
-            <p>Testeur CGI pour Webserv</p>
+            <p>CGI tester for Webserv</p>
         </footer>
     </div>
 
@@ -312,7 +312,7 @@
         const email = document.getElementById('post-email').value;
         const message = document.getElementById('post-message').value;
         
-        // Effectuer la requête POST
+        // Effectuer la requête POST
         fetch('/cgi-bin/script.py', {
           method: 'POST',
           headers: {

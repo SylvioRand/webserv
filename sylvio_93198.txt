@@ -1,3 +1,0 @@
-Name: Sylvio
-Email: mick.com
-Message: Content file

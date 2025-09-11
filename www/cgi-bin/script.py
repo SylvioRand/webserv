@@ -42,7 +42,7 @@ def main():
     }
 
     if method == 'GET':
-        EMOJIS = ["🙈", "🔥", "💥"]
+        EMOJIS = ["🙈", "🔥", "🎯"]
         query_string = os.environ.get("QUERY_STRING", "")
         params = parse_qs(query_string)
         name = params.get("name", [""])[0]
@@ -64,7 +64,7 @@ def main():
 
         # Générer le message
         if not guess or (isinstance(guess, str) and not guess.strip()):
-            message = "🎯 You need to enter a guess to play the game."
+            message = f"{EMOJIS[2]} You need to enter a guess to play the game."
         elif guess is None:
             message = "No guess yet! Try a number between 1 and 10."
         elif guess < secret_number:

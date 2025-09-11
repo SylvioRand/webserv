@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 19:35:10 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/11 10:45:42 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,8 @@
 HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0),
   _contentLength(0), _isChunked(false), _hasError(false), _cgiOffset(0),
   _hasContentLength(false), _hasBoundary(false), _isBodySizeAllowed(true),
-  _isCgiRequest(false), _allFilesSaved(false), _isReadingRequest(false)
+  _isCgiRequest(false), _allFilesSaved(false), _isReadingRequest(false),
+  _isBadRequest(false)
 {
 }
 
@@ -53,6 +54,25 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
 {
   logger(LOG_DEBUG, "Parsing of header begins.");
   std::string headerPart = raw_request.substr(0, endOfHeader);
+  std::string request_line = headerPart.substr(0, headerPart.find('\n'));;
+
+  logger(LOG_INFO, "request_line -> " + request_line);
+  std::istringstream issReq(request_line);
+  std::string world;
+  int count = 0;
+  for (std::string world; issReq >> world;)
+  {
+    logger(LOG_INFO, "world -> " + world);
+    this->_version = world;
+    count++;
+  }
+  if (count > 3)
+  {
+    logger(LOG_INFO, "Bad request here");
+    this->_isBadRequest = true;
+    this->markRequestComplete();
+    return ;
+  }
   std::istringstream iss(headerPart);
   iss >> this->_method;
   iss >> this->_path;
@@ -387,6 +407,7 @@ void HttpRequest::shiftBufferAfterRequest()
   this->_multiPart.clear();
   this->_allFilesSaved = false;
   this->_isReadingRequest = false;
+  this->_isBadRequest = false;
 }
 
 LocationConfig HttpRequest::getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg)
