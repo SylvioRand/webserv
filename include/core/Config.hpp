@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/12 15:22:51 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 16:17:25 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,8 +17,8 @@
 #include <cstddef>
 #include <string>
 
-struct DirectiveStatus { // this is to manage duplicates
-    bool  listen;
+struct DirectiveStatusLocation { // this is to manage duplicates
+    bool  path;
     bool  redirect;
     bool  indexs;
 };
@@ -35,8 +35,15 @@ struct LocationConfig {
     std::vector<std::string>    methods;              // Méthodes autorisées (GET, POST, DELETE)
     std::map<int, std::string>  error_pages;
     size_t                      client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
+    DirectiveStatusLocation     hasValue;
 
     LocationConfig() : autoindex(false) {}
+};
+
+struct DirectiveStatusServer { // this is to manage duplicates
+    bool  listen;
+    bool  redirect;
+    bool  indexs;
 };
 
 struct ServerConfig {
@@ -50,7 +57,7 @@ struct ServerConfig {
     std::vector<std::string>              indexs;               // Fichier index par défaut    
     size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB) 
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
-    DirectiveStatus                       hasValue;
+    DirectiveStatusServer                       hasValue;
     std::map<std::string, LocationConfig> locations;            // Configs par location
 };
 
@@ -77,22 +84,21 @@ class Config
     void                      parseDirectivesInServerBlock_(const std::string& serverContentWithoutLoc, ServerConfig& config) const;
     void                      initServerData_(ServerConfig& config) const;
     void                      parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
-    void                      assignValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
-    void                      concatenateValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
-    void                      checkDuplicationAndAssignValue(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      assignValueInServer_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      concatenateValueInServer_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      checkDuplicationAndAssignValueInSrv(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
     void                      parseDirectivesInLocationBlock_(std::string &locationBlock, ServerConfig &config) const;
     std::string               insertSpaceBeforeBrace_(const std::string& locationBlock) const;
     std::string               extractLocationBlockContent_(const std::string& locationBlock, std::string& path) const;
     void                      inheritServerDirectives_(LocationConfig& location_config, const ServerConfig& config) const;
-    void                      parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config, bool& has_index_value) const;
+    void                      parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
+    void                      assignValueInLocation(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
+    void                      concatenateValueInLocation(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
+    void                      checkDuplicationAndAssignValueInLoc(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
     void                      makeDefaultLocation_(ServerConfig& config) const;
-
 
     void                      printServers(void) const;
     
-    void                      appendHeritedDirective(ServerConfig &config, LocationConfig &location_config) const;
-
-
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
     const std::string         _config_path; // chemin pour le fichier de configuration
     std::ifstream             _config_file; // fd pour le fichier

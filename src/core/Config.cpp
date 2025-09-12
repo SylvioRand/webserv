@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 15:32:31 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 16:26:41 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -299,17 +299,17 @@ void  Config::parseServerDirective_(const std::string& key, const std::vector<st
 { 
   if (key == "server_name" || key == "root" || key == "upload_dir" || key == "autoindex" || \
       key == "client_max_body_size") // function from directives affectation
-    assignValue_(key, value, config);
+    assignValueInServer_(key, value, config);
   else if (key == "index" || key == "error_page") // function from  directives concatenation
-    concatenateValue_(key, value, config);
+    concatenateValueInServer_(key, value, config);
   else if (key == "listen" || key == "return")
-    checkDuplicationAndAssignValue(key, value, config);
+    checkDuplicationAndAssignValueInSrv(key, value, config);
   else
     throwWithLog(LOG_ERROR, "Unknown directive '" + key + \
                               "' in server block or there is a duplication");
 }
 
-void  Config::assignValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+void  Config::assignValueInServer_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
 {
   if (key == "server_name") {
     if (value.size() == 0 || value.size() > 1)
@@ -341,7 +341,7 @@ void  Config::assignValue_(const std::string& key, const std::vector<std::string
   }
 }
 
-void  Config::concatenateValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+void  Config::concatenateValueInServer_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
 {
   if (key == "index")
   {
@@ -362,7 +362,7 @@ void  Config::concatenateValue_(const std::string& key, const std::vector<std::s
   }
 }
 
-void  Config::checkDuplicationAndAssignValue(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+void  Config::checkDuplicationAndAssignValueInSrv(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
 {
   if (key == "listen")
   {
@@ -407,7 +407,6 @@ void  Config::checkDuplicationAndAssignValue(const std::string& key, const std::
 
 void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, ServerConfig &config) const
 {
-  bool            index_has_value = false;
   LocationConfig  location_config;
 
   locationBlock = insertSpaceBeforeBrace_(locationBlock);
@@ -434,7 +433,7 @@ void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, Server
       value.push_back(token);
 
 
-    parseLocationDirective_(key, value, location_config, index_has_value);
+    parseLocationDirective_(key, value, location_config);
   }
 
   // location must always have a value in his variable path
@@ -483,21 +482,32 @@ void  Config::inheritServerDirectives_(LocationConfig& location_config, const Se
   location_config.root = config.root;
   location_config.error_pages = config.error_pages;
   location_config.client_max_body_size = config.client_max_body_size;
+  location_config.hasValue.path = false;
+  location_config.hasValue.redirect = false;
+  location_config.hasValue.indexs = false;
 }
 
-void  Config::parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config, bool& has_index_value) const
+void  Config::parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const
 {
-  if (key == "path") {
-    if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    location_config.path = value[0];
-  }
-  else if (key == "root") {
+  if (key == "root" || key == "client_max_body_size" || key == "upload_dir" \
+      || key == "cgi_extension" || key == "cgi_path" || key == "autoindex" || key == "methods")
+    assignValueInLocation(key, value, location_config);
+  else if (key == "index" || key == "error_page")
+    concatenateValueInLocation(key, value, location_config);
+  else if (key == "path" || key == "return")
+    checkDuplicationAndAssignValueInLoc(key, value, location_config);
+  else
+    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in location block");
+}
+
+
+void  Config::assignValueInLocation(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const
+{
+  if (key == "root") {
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     location_config.root = value[0];
   }
-  // TODO : client_max_body_size n'est pas repetable
   else if (key == "client_max_body_size") {
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
@@ -511,7 +521,6 @@ void  Config::parseLocationDirective_(const std::string& key, const std::vector<
   else if (key == "cgi_extension") {
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
-
     location_config.cgi_extension = value[0];
   }
   else if (key == "cgi_path") {
@@ -519,17 +528,6 @@ void  Config::parseLocationDirective_(const std::string& key, const std::vector<
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     location_config.cgi_path = value[0];
   }
-  else if (key == "return") {
-    if (value.size() == 0 || value.size() > 2)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    int code = stringToInt(key, value[0]);
-    if (value.size() == 1)
-      location_config.redirect[code] = "";
-    else
-      // TODO : verifier si la valeur de value[1] = "..." ou /... ou http(s)://
-      location_config.redirect[code] = value[1];
-  }
-  // TODO : autoindex n'est pas repetable
   else if (key == "autoindex") {
     if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
@@ -538,35 +536,61 @@ void  Config::parseLocationDirective_(const std::string& key, const std::vector<
     else
       location_config.autoindex = false;
   }
-  else if (key == "index") {
-    if (value.size() == 0)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    if (has_index_value == false){
-      has_index_value = true;
-      location_config.indexs.clear();
-    }
-    location_config.indexs.insert(location_config.indexs.end(), value.begin(), value.end());
-
-  }
   else if (key == "methods") {
     if (value.size() == 0)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     location_config.methods = value;
   }
-  else if (key == "error_page") {
+
+}
+
+void  Config::concatenateValueInLocation(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const
+{
+  if (key == "index")
+  {
+    if (value.size() == 0)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (location_config.hasValue.indexs == false) {
+      location_config.indexs.clear();
+      location_config.hasValue.indexs = true;
+    }
+    location_config.indexs.insert(location_config.indexs.end(), value.begin(), value.end());
+  }
+
+  else if (key == "error_page")
+  {
     if (value.size() != 2)
         throwWithLog(LOG_ERROR, key + ": argument is invalid");
     int code = stringToInt(key, value[0]);
     location_config.error_pages[code] = value[1];
   }
-  else
-    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in location block");
 }
 
-void  Config::appendHeritedDirective(ServerConfig &config, LocationConfig &location_config) const
+void  Config::checkDuplicationAndAssignValueInLoc(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const
 {
-  if (location_config.root.empty()) location_config.root = config.root;
-  if (location_config.indexs.size() == 0) location_config.indexs = config.indexs;
+  if (key == "path")
+  {
+    if (location_config.hasValue.path == true)
+      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    location_config.path = value[0];
+    location_config.hasValue.path = true;
+  } 
+  else if (key == "return")
+  {
+    if (location_config.hasValue.redirect == true)
+      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+    if (value.size() == 0 || value.size() > 2)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    int code = stringToInt(key, value[0]);
+    if (value.size() == 1)
+      location_config.redirect[code] = "";
+    else
+      // TODO : verifier si la valeur de value[1] = "..." ou /... ou http(s)://
+      location_config.redirect[code] = value[1];
+    location_config.hasValue.redirect = true;
+  }
 }
 
 void  Config::makeDefaultLocation_(ServerConfig& config) const
