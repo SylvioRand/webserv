@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 17:19:47 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 17:33:26 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -122,7 +122,8 @@ const std::vector<std::string>  Config::extractServerBlocks_(const std::string& 
     blocks.push_back(buffer.substr(pos, i - pos));
     pos = i; // Continuer après ce blockServerIsValid
   }
-
+  if (!buffer.substr(i).empty())
+    throwWithLog(LOG_ERROR, "Unknown directive at position " + toString(__LINE__));
   return blocks;
 }
 
@@ -673,30 +674,6 @@ bool Config::isValid_(void) const
   }
   return true;
 }
-
-
-
-
-/* Zramahaz’s implementation starts here.     */
-
-// STATIC FUNCTION
-
-
-// TODO : This function serves as the entry point for the configuration file parser.
-// Don`t forget comment is allowed too on the server bloc of the file configuration
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // TODO : move trim in utils.cpp
 std::string trim(const std::string& str)

@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/12 16:17:25 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 17:24:38 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,7 +96,6 @@ class Config
     void                      concatenateValueInLocation(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
     void                      checkDuplicationAndAssignValueInLoc(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
     void                      makeDefaultLocation_(ServerConfig& config) const;
-
     void                      printServers(void) const;
     
     std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
