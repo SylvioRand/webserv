@@ -83,7 +83,6 @@ def main():
 </html>"""
 
         # Envoi headers HTTP
-        sys.stdout.write("HTTP/1.0 200 OK\r\n")
         sys.stdout.write("Content-Type: text/html\r\n")
         sys.stdout.write(f"Content-Length: {len(html_content)}\r\n\r\n")
         sys.stdout.write(html_content)

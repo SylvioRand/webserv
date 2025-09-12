@@ -83,7 +83,8 @@ class HttpResponse
     void  sendCgiResponse(const int&fd);
     bool  isCgiResponseFullySent(void);
 
-    void  addConnectionHeader(const std::string& connectionHeader);
+    void  addExtraHeader(const std::string& connectionHeader,
+        const std::string& version);
 
     bool  _isSending;
     bool  _isFullySent;

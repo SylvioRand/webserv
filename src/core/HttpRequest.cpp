@@ -641,7 +641,7 @@ void  HttpRequest::fillHeadersMap(std::istringstream& iss)
       this->_boundary = boundary;
       this->_endBoundary = boundary + "--\r\n";
     }
-    this->_headers[toUpper(key)] = toUpper(value);
+    this->_headers[toUpper(key)] = value;
   }
 }
 

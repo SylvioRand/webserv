@@ -12,9 +12,11 @@
 
 #include "../../include/core/HttpResponse.hpp"
 #include <cmath>
+#include <sstream>
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <vector>
 
 HttpResponse::HttpResponse(void)
     : _status_code(200), _headersSize(0), _headersOffset(0),
@@ -245,15 +247,44 @@ void  HttpResponse::appendCgiResponse(const std::string& buff, const ssize_t& si
   this->_cgiResponse.append(buff.c_str(), size);
 }
 
-void  HttpResponse::addConnectionHeader(const std::string& connectionHeader)
+void  HttpResponse::addExtraHeader(const std::string& connectionHeader,
+    const std::string& version)
 {
   size_t  pos = this->_cgiResponse.find("\r\n\r\n");
-
   if (pos == std::string::npos)
     logger(LOG_WARNING, "Unable to add the connection header");
-  else
+  std::string headerPart = this->_cgiResponse.substr(0, pos);
+  std::vector<std::string> headersVec;
+  std::istringstream iss(headerPart);
+  std::string line;
+  while (std::getline(iss, line))
   {
-    this->_cgiResponse.insert(pos + 2, connectionHeader.substr(0, connectionHeader.size() - 2));
-    logger(LOG_DEBUG, "cgi response:\n" + this->_cgiResponse + "\n");
+    std::istringstream keyVal(line);
+    std::string key;
+    keyVal >> key;
+    headersVec.push_back(toUpper(key));
   }
+  std::string extraHeader;
+  bool  needHttpVersion = false;
+  std::vector<std::string>::iterator it = headersVec.begin();
+  for (; it != headersVec.end(); it++)
+  {
+    if (it->find("HTTP/") != std::string::npos)
+      break;
+  }
+  if (it == headersVec.end())
+  {
+    extraHeader += version + " 200 OK\r\n";
+    needHttpVersion = true;
+  }
+  if (std::find(headersVec.begin(), headersVec.end(), "CONTENT-LENGTH") == headersVec.end())
+    extraHeader += "Content-Length: " + toString(this->_cgiResponse.size() - pos - 4) + "\r\n";
+  if (std::find(headersVec.begin(), headersVec.end(), "CONNECTION") == headersVec.end())
+    extraHeader += connectionHeader.substr(0, connectionHeader.size() - 2);
+
+  if (needHttpVersion)
+    this->_cgiResponse.insert(0, extraHeader);
+  else
+    this->_cgiResponse.insert(pos + 2, extraHeader);
+  logger(LOG_DEBUG, "cgi response:\n" + this->_cgiResponse + "\n");
 }

@@ -28,10 +28,8 @@ void  Server::prepareAndLaunchCGI(const int& fd)
 {
   LocationConfig  location = this->getCurrentLocation();
   std::string     localPath;
-  logger(LOG_FATAL, "getUriPath_ -> " + getUriPath_(fd));
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   std::string cgiPath = location.cgi_path;
-  logger(LOG_FATAL, "localPath -> " + localPath);
   if (!this->isFile_(localPath))
     this->respondNotFound_(fd);
   else if (this->isExecutable_(localPath))
@@ -252,6 +250,11 @@ char  **Server::buildEnvpForExecve_(const int& fd)
     envMap["UPLOAD_DIR"] = client->getRequest().getLocation().upload_dir;
     oss << "        " << "UPLOAD_DIR = " << envMap["UPLOAD_DIR"] << std::endl;
   }
+  if (headers.find("COOKIE") != headers.end())
+  {
+    envMap["HTTP_COOKIE"] = headers.at("COOKIE");
+    oss << "        " << "HTTP_COOKIE = " << envMap["HTTP_COOKIE"] << std::endl;
+  }
 
   logger(LOG_DEBUG, "Here are the environment variables passed to the CGI:\n" + oss.str());
   std::vector<std::string>  envVars;
@@ -300,7 +303,8 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
     logger(LOG_INFO,
       "Parent received CGI response, ready to send to client fd=" + toString(clientFd));
     client->_isReadingCgiResponse = false;
-    client->getResponse().addConnectionHeader(this->buildConnectionHeader(clientFd));
+    client->getResponse().addExtraHeader(this->buildConnectionHeader(clientFd),
+        this->getVersion(clientFd));
     client->getResponse().saveCgiRespondSize(clientFd);
     this->unregisterCgiFd(pipeFd);
     this->setPollOut_(clientFd);
