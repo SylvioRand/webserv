@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 16:26:41 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 17:00:19 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,7 +58,7 @@ void  Config::load_(void)
   _config_file.open(_config_path.c_str());
   if (!_config_file.is_open())
     throwWithLog(LOG_ERROR, "Failed to open config file: " + _config_path + \
-        "at position " + toString(59)); 
+        "at position " + toString(__LINE__)); 
 
   while (std::getline(_config_file, _current_line))
   {
@@ -99,9 +99,9 @@ const std::vector<std::string>  Config::extractServerBlocks_(const std::string& 
     size_t braceStart = buffer.find("{", pos);
 
     if (braceStart == std::string::npos)
-      throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + toString(101));
+      throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + toString(__LINE__));
     if (pos != i || !this->blockServerIsValid_(buffer, braceStart, pos))
-      throwWithLog(LOG_ERROR, "Unknown directive at position " + toString(103));
+      throwWithLog(LOG_ERROR, "Unknown directive at position " + toString(__LINE__));
 
     // Trouver la fin du bloc avec gestion des accolades imbriquéesint
     int depth = 1;
@@ -439,7 +439,10 @@ void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, Server
   // location must always have a value in his variable path
   if (location_config.path.empty())
     throwWithLog(LOG_ERROR, "path of location is empty");
-  config.locations[location_config.path] = location_config;
+  if (config.locations.find(location_config.path) == config.locations.end())
+    config.locations[location_config.path] = location_config;
+  else
+    throwWithLog(LOG_ERROR, "");
 }
 
 std::string Config::insertSpaceBeforeBrace_(const std::string& locationBlock) const
