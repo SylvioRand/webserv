@@ -287,6 +287,7 @@
       function testGet() {
         const name = document.getElementById('get-name').value;
         const guess = document.getElementById('get-guess').value;
+        const baseUrl = window.location.pathname;
         
         // Construire les paramètres de requête
         let params = [];
@@ -294,7 +295,7 @@
         if (guess) params.push(`guess=${encodeURIComponent(guess)}`);
         
         const queryString = params.join('&');
-        const url = `/cgi-bin/script.py${queryString ? '?' + queryString : ''}`;
+        const url = `${baseUrl}/script.py${queryString ? '?' + queryString : ''}`;
         
         // Effectuer la requête GET
         fetch(url)
@@ -311,9 +312,11 @@
         const name = document.getElementById('post-name').value;
         const email = document.getElementById('post-email').value;
         const message = document.getElementById('post-message').value;
+        const baseUrl = window.location.pathname;
+        const url = `${baseUrl}/script.py`;
         
         // Effectuer la requête POST
-        fetch('/cgi-bin/script.py', {
+        fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

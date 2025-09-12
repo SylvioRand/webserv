@@ -664,7 +664,7 @@ bool Server::isExecutable_(const std::string& path)
 
 void  Server::respondNotExecutable(const int& fd)
 {
-  logger(LOG_DEBUG, "in function responsNotExecutable");
+  logger(LOG_DEBUG, "in function respondNotExecutable");
 
   /*
   HTTP/1.1 500 Internal Server Error

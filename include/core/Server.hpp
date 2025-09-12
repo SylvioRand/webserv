@@ -149,6 +149,7 @@ class Server
     void  handleParentProcess(const int& fd, const CgiPipes& cgiPipes);
     void  sendRequestBodyToCgi(const int&fd, const int& clientFd);
     bool  checkShutdownRequest(void);
+    void  respondForbidden_(const int& fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;
