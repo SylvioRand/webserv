@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 19:33:12 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/10 12:30:01 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,8 +27,8 @@ struct CgiPipes
 class Server
 {
   public:
-    typedef typename std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
-    typedef typename std::map<std::string, LocationConfig>::const_iterator  LocationConfigConstIterator;
+    typedef std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
+    typedef std::map<std::string, LocationConfig>::const_iterator  LocationConfigConstIterator;
 
     Server(const Config& config);
     ~Server(void);

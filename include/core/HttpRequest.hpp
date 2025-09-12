@@ -31,7 +31,7 @@ struct MultipartPart {
 
 class HttpRequest
 {
-  typedef typename std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
+  typedef std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
   private:
     HttpRequest(const HttpRequest& other);
     HttpRequest& operator=(const HttpRequest &other);

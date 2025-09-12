@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:18:58 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 09:32:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/10 12:28:52 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,7 +21,7 @@
 class Client
 {
   public:
-    typedef typename std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
+    typedef std::vector<ServerConfig>::const_iterator  ServerConfigConstIterator;
 
     Client(int fd, ServerConfigConstIterator cfg_ite);
     ~Client(void);
