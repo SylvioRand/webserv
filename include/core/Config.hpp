@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/12 09:05:53 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 11:41:19 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,12 +70,12 @@ class Config
     bool                      LocationBlockIsValid_(const std::string& serverContent, const size_t& pos) const;
     void                      parseDirectivesInServerBlock_(const std::string& serverContentWithoutLoc, ServerConfig& config) const;
     void                      initServerData_(ServerConfig& config) const;
-    void                      parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config, bool& has_index_value) const;
     void                      parseDirectivesInLocationBlock_(std::string &locationBlock, ServerConfig &config) const;
     std::string               insertSpaceBeforeBrace_(const std::string& locationBlock) const;
     std::string               extractLocationBlockContent_(const std::string& locationBlock, std::string& path) const;
     void                      inheritServerDirectives_(LocationConfig& location_config, const ServerConfig& config) const;
-    void                      parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const;
+    void                      parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config, bool& has_index_value) const;
     void                      makeDefaultLocation_(ServerConfig& config) const;
 
 

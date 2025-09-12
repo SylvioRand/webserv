@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 09:16:28 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 11:40:48 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <strings.h>
 
 std::string cleanBlock(const std::string& raw);
 
@@ -249,9 +250,10 @@ bool  Config::LocationBlockIsValid_(const std::string& serverContent, const size
 void  Config::parseDirectivesInServerBlock_(const std::string& serverContentWithoutLoc, ServerConfig& config) const
 {
   std::istringstream iss(serverContentWithoutLoc);
-  std::string directive;
+  std::string        directive;
+  bool               index_has_value = false;
 
-  // TODO : create a function that inilializes the server data
+  // create a function that inilializes the server data
   initServerData_(config);
 
   while (std::getline(iss, directive, ';'))
@@ -271,7 +273,7 @@ void  Config::parseDirectivesInServerBlock_(const std::string& serverContentWith
     while (lineStream >> token)
       value.push_back(token);
     
-    parseServerDirective_(key, value, config);
+    parseServerDirective_(key, value, config, index_has_value);
   }
 
   // the server must have a <host> value
@@ -291,7 +293,7 @@ void  Config::initServerData_(ServerConfig& config) const
   config.indexs.push_back("index.html");
 }
 
-void  Config::parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+void  Config::parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config, bool& has_index_value) const
 {
   if (key == "listen") {
     if (value.size() == 0 || value.size() > 1)
@@ -312,29 +314,31 @@ void  Config::parseServerDirective_(const std::string& key, const std::vector<st
       throwWithLog(LOG_ERROR, key + " Invalid listen format: " + value[0]);
     config.port = stringToInt("port", portStr); // C++98-compatible stoi
   }
-  else if (key == "server_name") {
+  else if (key == "server_name") { // concatenation
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.server_name = value[0];
   }
-  else if (key == "root") {
+  else if (key == "root") { // OK : derniere ecrase
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.root = value[0];
   }
-  else if (key == "index") {
+  else if (key == "index") { // OK : concatenation
     if (value.size() == 0)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (has_index_value == false){
+      config.indexs.clear();
+      has_index_value = true;
+    }
     config.indexs.insert(config.indexs.end(), value.begin(), value.end());
   }
-  else if (key == "upload_dir") {
+  else if (key == "upload_dir") { // OK : derniere ecrase
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.upload_dir = value[0];
   }
-
-  // TODO : autoindex n'est pas repetable
-  else if (key == "autoindex") {
+  else if (key == "autoindex") { // OK : derniere ecrase
     if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     if (value[0] == "on")
@@ -342,19 +346,18 @@ void  Config::parseServerDirective_(const std::string& key, const std::vector<st
     else
       config.autoindex = false;
   }
-  else if (key == "error_page") {
+  else if (key == "error_page") { // OK : concatenation
     if (value.size() != 2)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     int code = stringToInt(key, value[0]);
     config.error_pages[code] = value[1];
   }
-  // TODO : client_max_body_size n'est pas repetable
-  else if (key == "client_max_body_size") {
+  else if (key == "client_max_body_size") { // OK : derniere ecrase
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     config.client_max_body_size = parseSize(key, value[0]); // gère les suffixes M, K
   }
-  else if (key == "return" && config.redirect.size() == 0) {
+  else if (key == "return" && config.redirect.size() == 0) { // error en cas de duplication
     if (value.size() == 0 || value.size() > 2)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
     int code = stringToInt(key, value[0]);
@@ -371,6 +374,7 @@ void  Config::parseServerDirective_(const std::string& key, const std::vector<st
 
 void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, ServerConfig &config) const
 {
+  bool            index_has_value = false;
   LocationConfig  location_config;
 
   locationBlock = insertSpaceBeforeBrace_(locationBlock);
@@ -397,7 +401,7 @@ void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, Server
       value.push_back(token);
 
 
-    parseLocationDirective_(key, value, location_config);
+    parseLocationDirective_(key, value, location_config, index_has_value);
   }
 
   // location must always have a value in his variable path
@@ -448,7 +452,7 @@ void  Config::inheritServerDirectives_(LocationConfig& location_config, const Se
   location_config.client_max_body_size = config.client_max_body_size;
 }
 
-void  Config::parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const
+void  Config::parseLocationDirective_(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config, bool& has_index_value) const
 {
   if (key == "path") {
     if (value.size() == 0 || value.size() > 1)
@@ -504,6 +508,10 @@ void  Config::parseLocationDirective_(const std::string& key, const std::vector<
   else if (key == "index") {
     if (value.size() == 0)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (has_index_value == false){
+      has_index_value = true;
+      location_config.indexs.clear();
+    }
     location_config.indexs.insert(location_config.indexs.end(), value.begin(), value.end());
 
   }
