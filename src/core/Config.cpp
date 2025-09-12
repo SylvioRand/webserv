@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 17:00:19 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 17:19:47 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ Config::Config(std::string filepath) : _config_path(filepath)
   // TODO Uncoment this line when parsing fixed
   this->load_();
   // Skip this if the config has been parsed earlier
-  this->createServerConfigManually();
+  // this->createServerConfigManually();
   this->isValid_();
 }
 
@@ -117,8 +117,7 @@ const std::vector<std::string>  Config::extractServerBlocks_(const std::string& 
     }
 
     if (depth != 0)
-      throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " \
-          + toString(119));
+      throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + toString(__LINE__));
 
     blocks.push_back(buffer.substr(pos, i - pos));
     pos = i; // Continuer après ce blockServerIsValid
@@ -151,8 +150,6 @@ ServerConfig  Config::parseServerBlock_(const std::string& serverBlock) const
   ServerConfig config;
   std::string  serverContent = extractServerBlockContent_(serverBlock);
   
-  std::cout << "serverContent = |" + serverContent + "|" << std::endl;
-
   // extract the location bloc
   std::vector<std::string> locationBlocks = extractLocationBlocks_(serverContent);
 
@@ -185,7 +182,7 @@ std::string Config::extractServerBlockContent_(const std::string& serverBlock) c
   size_t end = serverBlock.rfind('}');
 
   if (start == std::string::npos || end == std::string::npos || end <= start)
-      throwWithLog(LOG_ERROR, "Invalid server block format at position " + toString(187));
+      throwWithLog(LOG_ERROR, "Invalid server block format at position " + toString(__LINE__));
 
   return (serverBlock.substr(start + 1, end - start - 1));
 }
@@ -200,9 +197,9 @@ std::vector<std::string>  Config::extractLocationBlocks_(const std::string& serv
     // Vérifie que "location" est suivi d'une accolade
     size_t braceStart = serverContent.find("{", pos);
     if (braceStart == std::string::npos)
-      throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + toString(202));
+      throwWithLog(LOG_ERROR, "Expected '{' after 'server' at position " + toString(__LINE__));
     if (!this->LocationBlockIsValid_(serverContent, pos))
-      throwWithLog(LOG_ERROR, "Unknown directive or argument invalid at position " + toString(204));
+      throwWithLog(LOG_ERROR, "Unknown directive or argument invalid at position " + toString(__LINE__));
 
     int depth = 1;
     size_t i = braceStart + 1;
@@ -215,9 +212,8 @@ std::vector<std::string>  Config::extractLocationBlocks_(const std::string& serv
       ++i;
     }
 
-    if (depth != 0) {
-      throwWithLog(LOG_ERROR, "Unmatched braces in location block");
-    }
+    if (depth != 0)
+      throwWithLog(LOG_ERROR, "Unmatched braces in location block at position " + toString(__LINE__));
 
     locations.push_back(serverContent.substr(pos, i - pos));
     pos = i;
@@ -277,7 +273,7 @@ void  Config::parseDirectivesInServerBlock_(const std::string& serverContentWith
 
   // the server must have a <host> value
   if (config.host.empty())
-    throwWithLog(LOG_FATAL, "The server must have a host value at position " + toString(279));
+    throwWithLog(LOG_FATAL, "The server must have a host value at position " + toString(__LINE__));
 }
 
 void  Config::initServerData_(ServerConfig& config) const
@@ -306,29 +302,29 @@ void  Config::parseServerDirective_(const std::string& key, const std::vector<st
     checkDuplicationAndAssignValueInSrv(key, value, config);
   else
     throwWithLog(LOG_ERROR, "Unknown directive '" + key + \
-                              "' in server block or there is a duplication");
+                              "' in server block at position " + toString(__LINE__));
 }
 
 void  Config::assignValueInServer_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
 {
   if (key == "server_name") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": Invalid argument count");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     config.server_name = value[0];
   }
   else if (key == "root") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": Invalid argument count");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     config.root = value[0];
   }
   else if (key == "upload_dir") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     config.upload_dir = value[0];
   }
   else if (key == "autoindex") {
     if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     if (value[0] == "on")
       config.autoindex = true;
     else
@@ -336,7 +332,7 @@ void  Config::assignValueInServer_(const std::string& key, const std::vector<std
   }
   else if (key == "client_max_body_size") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     config.client_max_body_size = parseSize(key, value[0]); // gère les suffixes M, K
   }
 }
@@ -346,7 +342,7 @@ void  Config::concatenateValueInServer_(const std::string& key, const std::vecto
   if (key == "index")
   {
     if (value.size() == 0)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     if (config.hasValue.indexs == false) {
       config.indexs.clear();
       config.hasValue.indexs = true;
@@ -356,7 +352,7 @@ void  Config::concatenateValueInServer_(const std::string& key, const std::vecto
   else if (key == "error_page")
   {
     if (value.size() != 2)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     int code = stringToInt(key, value[0]);
     config.error_pages[code] = value[1];
   }
@@ -367,16 +363,16 @@ void  Config::checkDuplicationAndAssignValueInSrv(const std::string& key, const 
   if (key == "listen")
   {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     if (config.hasValue.listen == true)
-      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+      throwWithLog(LOG_ERROR, key + ": there is a duplication at poistion " + toString(__LINE__));
 
     size_t colon = value[0].find(":");
     std::string portStr;
     if (colon == std::string::npos)
     {
       if (value[0].find(".") != std::string::npos)
-        throwWithLog(LOG_ERROR, key + " Invalid port format: " + value[0]);
+        throwWithLog(LOG_ERROR, key + " Invalid port format: " + value[0] + " at position " + toString(__LINE__));
       config.host = "0.0.0.0";
       portStr = value[0];
     }
@@ -385,16 +381,16 @@ void  Config::checkDuplicationAndAssignValueInSrv(const std::string& key, const 
       portStr = value[0].substr(colon + 1);
     }
     if (portStr.empty())
-      throwWithLog(LOG_ERROR, key + " Invalid listen format: " + value[0]);
+      throwWithLog(LOG_ERROR, key + " Invalid listen format: " + value[0] + " at position " + toString(__LINE__));
     config.port = stringToInt("port", portStr); // C++98-compatible stoi
     config.hasValue.listen = true;
   }
   else if (key == "return")
   {
     if (value.size() == 0 || value.size() > 2)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count at position " + toString(__LINE__));
     if (config.hasValue.redirect == true)
-      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+      throwWithLog(LOG_ERROR, key + ": there is a duplication at poistion " + toString(__LINE__));
     int code = stringToInt(key, value[0]);
     if (value.size() == 1)
       config.redirect[code] = "";
@@ -438,7 +434,7 @@ void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, Server
 
   // location must always have a value in his variable path
   if (location_config.path.empty())
-    throwWithLog(LOG_ERROR, "path of location is empty");
+    throwWithLog(LOG_ERROR, "path of location is empty at position " + toString(__LINE__));
   if (config.locations.find(location_config.path) == config.locations.end())
     config.locations[location_config.path] = location_config;
   else
@@ -467,7 +463,7 @@ std::string Config::extractLocationBlockContent_(const std::string& locationBloc
   size_t start = locationBlock.find('{');
   size_t end = locationBlock.rfind('}');
   if (start == std::string::npos || end == std::string::npos || end <= start)
-        throwWithLog(LOG_ERROR, "Invalid server block format");
+        throwWithLog(LOG_ERROR, "Invalid server block format at poistion " + toString(__LINE__));
   if (start != std::string::npos)
   {
     std::string loc = locationBlock.substr(0, start);
@@ -500,7 +496,7 @@ void  Config::parseLocationDirective_(const std::string& key, const std::vector<
   else if (key == "path" || key == "return")
     checkDuplicationAndAssignValueInLoc(key, value, location_config);
   else
-    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in location block");
+    throwWithLog(LOG_ERROR, "Unknown directive '" + key + "' in location block at position" + toString(__LINE__));
 }
 
 
@@ -508,32 +504,32 @@ void  Config::assignValueInLocation(const std::string& key, const std::vector<st
 {
   if (key == "root") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.root = value[0];
   }
   else if (key == "client_max_body_size") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.client_max_body_size = parseSize(key, value[0]);
   }
   else if (key == "upload_dir") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.upload_dir = value[0];
   }
   else if (key == "cgi_extension") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.cgi_extension = value[0];
   }
   else if (key == "cgi_path") {
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.cgi_path = value[0];
   }
   else if (key == "autoindex") {
     if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     if (value[0] == "on")
       location_config.autoindex = true;
     else
@@ -541,7 +537,7 @@ void  Config::assignValueInLocation(const std::string& key, const std::vector<st
   }
   else if (key == "methods") {
     if (value.size() == 0)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.methods = value;
   }
 
@@ -552,7 +548,7 @@ void  Config::concatenateValueInLocation(const std::string& key, const std::vect
   if (key == "index")
   {
     if (value.size() == 0)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     if (location_config.hasValue.indexs == false) {
       location_config.indexs.clear();
       location_config.hasValue.indexs = true;
@@ -563,7 +559,7 @@ void  Config::concatenateValueInLocation(const std::string& key, const std::vect
   else if (key == "error_page")
   {
     if (value.size() != 2)
-        throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     int code = stringToInt(key, value[0]);
     location_config.error_pages[code] = value[1];
   }
@@ -574,18 +570,18 @@ void  Config::checkDuplicationAndAssignValueInLoc(const std::string& key, const 
   if (key == "path")
   {
     if (location_config.hasValue.path == true)
-      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+      throwWithLog(LOG_ERROR, key + ": there is a duplication at position " + toString(__LINE__));
     if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     location_config.path = value[0];
     location_config.hasValue.path = true;
   } 
   else if (key == "return")
   {
     if (location_config.hasValue.redirect == true)
-      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+      throwWithLog(LOG_ERROR, key + ": there is a duplication at position " + toString(__LINE__));
     if (value.size() == 0 || value.size() > 2)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+      throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
     int code = stringToInt(key, value[0]);
     if (value.size() == 1)
       location_config.redirect[code] = "";
