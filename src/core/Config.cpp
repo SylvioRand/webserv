@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 11:40:48 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 15:32:31 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -251,7 +251,6 @@ void  Config::parseDirectivesInServerBlock_(const std::string& serverContentWith
 {
   std::istringstream iss(serverContentWithoutLoc);
   std::string        directive;
-  bool               index_has_value = false;
 
   // create a function that inilializes the server data
   initServerData_(config);
@@ -273,7 +272,7 @@ void  Config::parseDirectivesInServerBlock_(const std::string& serverContentWith
     while (lineStream >> token)
       value.push_back(token);
     
-    parseServerDirective_(key, value, config, index_has_value);
+    parseServerDirective_(key, value, config);
   }
 
   // the server must have a <host> value
@@ -291,16 +290,91 @@ void  Config::initServerData_(ServerConfig& config) const
   config.server_name = "";
   config.upload_dir = "";
   config.indexs.push_back("index.html");
+  config.hasValue.indexs = false;
+  config.hasValue.listen = false;
+  config.hasValue.redirect = false;
 }
 
-void  Config::parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config, bool& has_index_value) const
+void  Config::parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+{ 
+  if (key == "server_name" || key == "root" || key == "upload_dir" || key == "autoindex" || \
+      key == "client_max_body_size") // function from directives affectation
+    assignValue_(key, value, config);
+  else if (key == "index" || key == "error_page") // function from  directives concatenation
+    concatenateValue_(key, value, config);
+  else if (key == "listen" || key == "return")
+    checkDuplicationAndAssignValue(key, value, config);
+  else
+    throwWithLog(LOG_ERROR, "Unknown directive '" + key + \
+                              "' in server block or there is a duplication");
+}
+
+void  Config::assignValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
 {
-  if (key == "listen") {
+  if (key == "server_name") {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count");
+    config.server_name = value[0];
+  }
+  else if (key == "root") {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": Invalid argument count");
+    config.root = value[0];
+  }
+  else if (key == "upload_dir") {
     if (value.size() == 0 || value.size() > 1)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.upload_dir = value[0];
+  }
+  else if (key == "autoindex") {
+    if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (value[0] == "on")
+      config.autoindex = true;
+    else
+      config.autoindex = false;
+  }
+  else if (key == "client_max_body_size") {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    config.client_max_body_size = parseSize(key, value[0]); // gère les suffixes M, K
+  }
+}
+
+void  Config::concatenateValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+{
+  if (key == "index")
+  {
+    if (value.size() == 0)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (config.hasValue.indexs == false) {
+      config.indexs.clear();
+      config.hasValue.indexs = true;
+    }
+    config.indexs.insert(config.indexs.end(), value.begin(), value.end());
+  }
+  else if (key == "error_page")
+  {
+    if (value.size() != 2)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    int code = stringToInt(key, value[0]);
+    config.error_pages[code] = value[1];
+  }
+}
+
+void  Config::checkDuplicationAndAssignValue(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const
+{
+  if (key == "listen")
+  {
+    if (value.size() == 0 || value.size() > 1)
+      throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (config.hasValue.listen == true)
+      throwWithLog(LOG_ERROR, key + ": there is a duplication");
+
     size_t colon = value[0].find(":");
     std::string portStr;
-    if (colon == std::string::npos){
+    if (colon == std::string::npos)
+    {
       if (value[0].find(".") != std::string::npos)
         throwWithLog(LOG_ERROR, key + " Invalid port format: " + value[0]);
       config.host = "0.0.0.0";
@@ -313,63 +387,22 @@ void  Config::parseServerDirective_(const std::string& key, const std::vector<st
     if (portStr.empty())
       throwWithLog(LOG_ERROR, key + " Invalid listen format: " + value[0]);
     config.port = stringToInt("port", portStr); // C++98-compatible stoi
+    config.hasValue.listen = true;
   }
-  else if (key == "server_name") { // concatenation
-    if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    config.server_name = value[0];
-  }
-  else if (key == "root") { // OK : derniere ecrase
-    if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    config.root = value[0];
-  }
-  else if (key == "index") { // OK : concatenation
-    if (value.size() == 0)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    if (has_index_value == false){
-      config.indexs.clear();
-      has_index_value = true;
-    }
-    config.indexs.insert(config.indexs.end(), value.begin(), value.end());
-  }
-  else if (key == "upload_dir") { // OK : derniere ecrase
-    if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    config.upload_dir = value[0];
-  }
-  else if (key == "autoindex") { // OK : derniere ecrase
-    if (value.size() == 0 || value.size() > 1 || (value[0] != "on" && value[0] != "off"))
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    if (value[0] == "on")
-      config.autoindex = true;
-    else
-      config.autoindex = false;
-  }
-  else if (key == "error_page") { // OK : concatenation
-    if (value.size() != 2)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    int code = stringToInt(key, value[0]);
-    config.error_pages[code] = value[1];
-  }
-  else if (key == "client_max_body_size") { // OK : derniere ecrase
-    if (value.size() == 0 || value.size() > 1)
-      throwWithLog(LOG_ERROR, key + ": argument is invalid");
-    config.client_max_body_size = parseSize(key, value[0]); // gère les suffixes M, K
-  }
-  else if (key == "return" && config.redirect.size() == 0) { // error en cas de duplication
+  else if (key == "return")
+  {
     if (value.size() == 0 || value.size() > 2)
       throwWithLog(LOG_ERROR, key + ": argument is invalid");
+    if (config.hasValue.redirect == true)
+      throwWithLog(LOG_ERROR, key + ": there is a duplication");
     int code = stringToInt(key, value[0]);
     if (value.size() == 1)
       config.redirect[code] = "";
     else
       // TODO : verifier si la valeur de value[1] = "..." ou /... ou http(s)://
       config.redirect[code] = value[1];
+    config.hasValue.redirect = true;
   }
-  else
-    throwWithLog(LOG_ERROR, "Unknown directive '" + key + \
-                              "' in server block or there is a duplication");
 }
 
 void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, ServerConfig &config) const

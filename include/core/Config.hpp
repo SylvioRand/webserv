@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/12 11:41:19 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/12 15:22:51 by zramahaz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,13 @@
 
 #include "../utils/utils.hpp"
 #include <cstddef>
+#include <string>
+
+struct DirectiveStatus { // this is to manage duplicates
+    bool  listen;
+    bool  redirect;
+    bool  indexs;
+};
 
 struct LocationConfig {
     std::string                 path;                 // Chemin de la location (ex: "/", "/upload")
@@ -40,11 +47,10 @@ struct ServerConfig {
     std::string                           upload_dir;           // Dossier pour les uploads (POST)
     std::map<int, std::string>            redirect;             // URL de redirection (ex: "301 http://example.com")
     std::string                           root;                 // Racine par défaut des fichiers
-    std::vector<std::string>              indexs;                // Fichier index par défaut    
-    size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
-    
-    
+    std::vector<std::string>              indexs;               // Fichier index par défaut    
+    size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB) 
     std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
+    DirectiveStatus                       hasValue;
     std::map<std::string, LocationConfig> locations;            // Configs par location
 };
 
@@ -70,7 +76,10 @@ class Config
     bool                      LocationBlockIsValid_(const std::string& serverContent, const size_t& pos) const;
     void                      parseDirectivesInServerBlock_(const std::string& serverContentWithoutLoc, ServerConfig& config) const;
     void                      initServerData_(ServerConfig& config) const;
-    void                      parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config, bool& has_index_value) const;
+    void                      parseServerDirective_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      assignValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      concatenateValue_(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
+    void                      checkDuplicationAndAssignValue(const std::string& key, const std::vector<std::string>& value, ServerConfig& config) const;
     void                      parseDirectivesInLocationBlock_(std::string &locationBlock, ServerConfig &config) const;
     std::string               insertSpaceBeforeBrace_(const std::string& locationBlock) const;
     std::string               extractLocationBlockContent_(const std::string& locationBlock, std::string& path) const;
