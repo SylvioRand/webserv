@@ -15,6 +15,7 @@
 #include "../utils/utils.hpp"
 #include "../../include/core/Config.hpp"
 #include <cstddef>
+#include <ctime>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -58,7 +59,6 @@ class HttpRequest
     bool                                _isBodySizeAllowed;
     LocationConfig                      _location;
 
-
     void  parseHeader_(const std::string &raw_request, const size_t sizeOfHeader);
     void  handleMultipartFormData(const std::string& bodyPart);
     void  handleMultipartFormData(const char *bodyPart, const size_t len);
@@ -71,10 +71,10 @@ class HttpRequest
     HttpRequest(void);
     ~HttpRequest(void);
 
-    bool  _isCgiRequest;
-    bool  _allFilesSaved;
-    bool  _isReadingRequest;
-    bool  _isBadRequest;
+    bool          _isCgiRequest;
+    bool          _allFilesSaved;
+    bool          _isReadingRequest;
+    bool          _isBadRequest;
 
     void  parse(const std::string &raw_request);
     bool  isValid(void) const;
@@ -111,8 +111,6 @@ class HttpRequest
     void  setClientMaxBodySize(const size_t& size);
     LocationConfig
           getLocation(void);
-
-
 
 
     // new function for handluing body request 

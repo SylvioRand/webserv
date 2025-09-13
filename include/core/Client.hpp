@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:18:58 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/12 09:32:17 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 15:35:59 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,8 @@
 #include "../core/HttpRequest.hpp"
 #include "../core/HttpResponse.hpp"
 #include "Config.hpp"
+#include <ctime>
+#include <sched.h>
 #include <string>
 
 class Client
@@ -28,17 +30,24 @@ class Client
 
     bool  _isReadingCgiResponse;
 
-    bool  readData(void);
-    void  sendData(void);
-    void  sendCgiData(void);
-    bool  isRequestComplete(void) const;
-    HttpRequest& getRequest(void);
-    HttpResponse& getResponse(void);
+    bool    readData(void);
+    void    sendData(void);
+    void    sendCgiData(void);
+    bool    isRequestComplete(void) const;
+    HttpRequest&
+            getRequest(void);
+    HttpResponse&
+            getResponse(void);
     ServerConfigConstIterator getServerConfig(void) const;
-    void  clearBuffer(void);
-    void  setPath(const std::string);
-    const std::string& getPath(void);
-    void  setCurrentLocation(LocationConfig& location);
+    void    clearBuffer(void);
+    void    setPath(const std::string);
+    const   std::string& getPath(void);
+    void    setCurrentLocation(LocationConfig& location);
+    std::clock_t&
+            getLastActivity(void);
+    void    setChildPid(const pid_t& childPid);
+    pid_t&  getChildPid(void);
+    void    setLastActivity(void);
 
   private:
     Client(void);
@@ -53,9 +62,9 @@ class Client
     time_t                    _lastActivity; // Pour timeout
     ServerConfigConstIterator _cfg;
     std::string               _path;
-    LocationConfig            _currentLocation;
-    
 
+    LocationConfig            _currentLocation;
+    pid_t                     _childPid;
 };
 
 #endif

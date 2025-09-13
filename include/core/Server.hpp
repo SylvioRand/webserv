@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/11 11:02:52 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 13:40:13 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,16 @@ struct CgiPipes
   int in_pipe[2];
   int out_pipe[2];
 };
+
+namespace timeout {
+    const int CLIENT_HEADER_TIMEOUT = 5;  // secondes
+    const int CLIENT_BODY_TIMEOUT   = 10;
+    const int SEND_TIMEOUT          = 10;
+    const int KEEPALIVE_TIMEOUT     = 15;
+    const int PROXY_CONNECT_TIMEOUT = 3;
+    const int PROXY_READ_TIMEOUT    = 15;
+    const int PROXY_SEND_TIMEOUT    = 15;
+}
 
 class Server
 {
@@ -150,6 +160,13 @@ class Server
     void  sendRequestBodyToCgi(const int&fd, const int& clientFd);
     bool  checkShutdownRequest(void);
     void  respondForbidden_(const int& fd);
+    void  handleServerTimeout(void);
+    void  handleClientHeaderTimeout(const int& fd);
+    void  respond408RequestTimeout(const int& fd);
+    void  handleClientBodyTimeout(const int& fd);
+    void  handleKeepAliveTimeout(const int& fd);
+    void  handleSendTimeout(const int& fd);
+    void  handleFinishedChildren(void);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/09 19:30:09 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 16:35:16 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,7 +102,7 @@ void  Server::respondInternalServerError(const int&fd)
     this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
   else
   {
-    body = "CGI script not available or not executable.";
+    body = "CGI binary not found or not executable: " + this->getCurrentLocation().cgi_path;
     contentLength = toString(body.size());
   }
 
@@ -143,7 +143,10 @@ void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
   else if (pid == 0)
     this->handleChildProcess(fd, localPath, cgiPipes);
   else
+  {
+    this->_clients[fd]->setChildPid(pid);
     this->handleParentProcess(fd, cgiPipes);
+  }
 }
 
 void  Server::handleChildProcess(const int&fd, const std::string& localPath,
@@ -214,7 +217,6 @@ char  **Server::buildEnvpForExecve_(const int& fd)
   if (headers.find("CONTENT-TYPE") != headers.end())
     envMap["CONTENT_TYPE"] = headers.at("CONTENT-TYPE");
   envMap["GATEWAY_INTERFACE"] = "CGI/1.1";
-  envMap["GATEWAY_INTERFACE"] = "CGI/1.1";
   size_t pos = this->getRequestUri_(fd).rfind("?");
   if (pos != std::string::npos)
   {
@@ -280,6 +282,8 @@ char  **Server::buildEnvpForExecve_(const int& fd)
 
 void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
 {
+  if (this->_clients.find(clientFd) == this->_clients.end())
+    return ;
   Client* client = this->_clients[clientFd];
   if (client->_isReadingCgiResponse == false)
   {

@@ -49,9 +49,11 @@
   <div id="result">Clique pour voir combien de fois tu as visité.</div>
 
   <script>
+    const baseUrl = window.location.pathname;
+    const url = `${baseUrl}/script.rb`;
     document.getElementById("check").addEventListener("click", async () => {
       try {
-        let response = await fetch("/cgi-bonus/script.rb", {
+        let response = await fetch(url, {
           method: "GET",
           credentials: "include"  // <-- important pour garder le cookie
         });

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <csignal>
 #include <cstddef>
+#include <ctime>
 #include <dirent.h>
 #include <fcntl.h>
 #include <fstream>
@@ -45,7 +46,9 @@ void Server::start_server_(void)
 
   while (true)
   {
-    int ready = poll(&_pool_fds[0], _pool_fds.size(), -1);
+    int ready = poll(&_pool_fds[0], _pool_fds.size(), 20);
+    this->handleServerTimeout();
+    this->handleFinishedChildren();
     if (this->checkShutdownRequest())
       return ;
     if (ready == -1)
@@ -95,8 +98,155 @@ void Server::start_server_(void)
       else
         this->close_client_(fd);
     }
-    check_timout_();
   }
+}
+
+void  Server::handleServerTimeout(void)
+{
+  for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
+  {
+    if (this->_clients.find(it->fd) != this->_clients.end())
+    {
+      Client *client = this->_clients[it->fd];
+      if (it->events == POLLIN)
+      {
+        if (client->getRequest().getMethod().empty() && client->getRequest()._isReadingRequest)
+          this->handleClientHeaderTimeout(it->fd);
+        else if (!client->getRequest()._isReadingRequest)
+          this->handleKeepAliveTimeout(it->fd);
+        else
+          this->handleClientBodyTimeout(it->fd);
+      }
+      else if (it->events == POLLOUT)
+        this->handleSendTimeout(it->fd);
+    }
+    if (this->_clients.size() == 0)
+      return ;
+  }
+}
+
+void  Server::handleClientHeaderTimeout(const int& fd)
+{
+  time_t now = time(NULL);
+  double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
+  if (elapsed_seconds  >= timeouts::CLIENT_HEADER_TIMEOUT)
+  {
+    logger(LOG_INFO, "Header timeout: closing client " + toString(fd));
+    this->respond408RequestTimeout(fd);
+  }
+}
+
+void  Server::handleClientBodyTimeout(const int& fd)
+{
+  time_t now = time(NULL);
+  double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
+  if (elapsed_seconds >= timeouts::CLIENT_BODY_TIMEOUT)
+  {
+    logger(LOG_INFO, "Body timeout: closing client " + toString(fd));
+    this->respond408RequestTimeout(fd);
+  }
+}
+
+void  Server::handleKeepAliveTimeout(const int& fd)
+{
+  time_t now = time(NULL);
+  double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
+  if (elapsed_seconds >= timeouts::KEEPALIVE_TIMEOUT)
+  {
+    logger(LOG_INFO, "Keep-alive timeout: closing client " + toString(fd));
+    close_client_(fd);
+  }
+}
+
+void Server::handleSendTimeout(const int& fd)
+{
+  time_t now = time(NULL);
+  double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
+  if (elapsed_seconds >= timeouts::SEND_TIMEOUT)
+  {
+    pid_t childPid = this->_clients[fd]->getChildPid();
+
+    if (childPid > 0)
+    {
+      logger(LOG_WARNING, "Send timeout: closing client " + toString(fd) +
+          " after " + toString(elapsed_seconds) + "s (limit: " +
+          toString(timeouts::SEND_TIMEOUT) + "s)");
+
+      kill(childPid, SIGKILL);
+    }
+
+    if (!this->_clients[fd]->getRequest()._isCgiRequest)
+    {
+      logger(LOG_WARNING, "Send timeout: killing child process " + toString(childPid));
+      close_client_(fd);
+    }
+    // sinon, le cleanup du childPid sera fait dans handleFinishedChildren()
+  }
+}
+
+void  Server::handleFinishedChildren(void)
+{
+    int status;
+    pid_t finished;
+
+    while ((finished = waitpid(-1, &status, WNOHANG)) > 0)
+    {
+        for (std::map<int, Client*>::iterator it = this->_clients.begin();
+             it != this->_clients.end(); ++it)
+        {
+            if (it->second->getChildPid() == finished)
+            {
+                if (WIFEXITED(status))
+                {
+                    logger(LOG_INFO, "Child " + toString(finished) +
+                                     " exited with code " + toString(WEXITSTATUS(status)));
+                    it->second->setChildPid(0);
+                } else if (WIFSIGNALED(status)) {
+                    logger(LOG_INFO, "Child " + toString(finished) +
+                                     " killed by signal " + toString(WTERMSIG(status)));
+                    close_client_(it->first);
+                }
+                break;
+            }
+        }
+    }
+}
+
+void  Server::respond408RequestTimeout(const int& fd)
+{
+  logger(LOG_DEBUG, "In function respond408RequestTimeout");
+  /*
+  HTTP/1.1 502 Bad Gateway
+  Content-Type: text/html
+  Content-Length: 102
+
+  Failed to retrieve response from CGI.
+  */
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(408, fd);
+  if (this->hasCustomErrorPage(408, fd))
+    this->saveErrorBodyFilePath(408, fd, contentType, contentLength);
+  else
+  {
+    body = "408 Request Timeout";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 408 Request Timeout\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::stop_server(void)
@@ -407,6 +557,7 @@ void  Server::setPollOut_(int fd)
 
 void  Server::setPollIn_(const int& fd)
 {
+  this->_clients[fd]->setLastActivity();
   this->_clients[fd]->getResponse().initializeState();
   this->_clients[fd]->getRequest().shiftBufferAfterRequest();
   this->_clients[fd]->clearBuffer();
@@ -427,6 +578,8 @@ void  Server::setPollIn_(const int& fd)
 
 void  Server::handle_pollout_(int fd, bool& isClientClosed)
 {
+  if (this->_clients.find(fd) == this->_clients.end())
+    return ;
   Client *client = this->_clients[fd];
   std::string path = client->getRequest().getLocation().upload_dir;
 
@@ -463,8 +616,7 @@ void  Server::handle_pollout_(int fd, bool& isClientClosed)
     logger(LOG_INFO, "📤 Response fully sent to client fd="
         + toString(fd) + " | Status code: "
         + toString(client->getResponse().getStatus()));
-    this->_clients[fd]->getResponse().closeBodyFileFd(
-        this->getFileName(getUriPath_(fd)));
+    this->_clients[fd]->getResponse().closeBodyFileStream(fd);
     if (client->getResponse().isKeepAlive())
     {
       this->setPollIn_(fd);
@@ -480,7 +632,7 @@ void  Server::handle_pollout_(int fd, bool& isClientClosed)
 void Server::close_client_(int fd)
 {
   logger(LOG_INFO, "trying closing client fd=" + toString(fd));
-  this->_clients[fd]->getResponse().closeBodyFileFd(this->getFileName(this->getUriPath_(fd)));
+  this->_clients[fd]->getResponse().closeBodyFileStream(fd);
   logger(LOG_INFO, "close client fd=" + toString(fd));
 
   std::map<int, Client*>::iterator it = _clients.find(fd);
@@ -840,11 +992,7 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
 bool  Server::hasIndexDirective_(void)
 {
   if (this->getCurrentLocation().indexs.empty())
-  {
-    logger(LOG_INFO, "Sao");
-    while (1);
     return (false);
-  }
   return (true);
 }
 

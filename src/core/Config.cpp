@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/12 17:33:26 by zramahaz         ###   ########.fr       */
+/*   Updated: 2025/09/13 10:09:22 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -539,9 +539,22 @@ void  Config::assignValueInLocation(const std::string& key, const std::vector<st
   else if (key == "methods") {
     if (value.size() == 0)
       throwWithLog(LOG_ERROR, key + ": argument is invalid at position " + toString(__LINE__));
+    if (!areHttpMethod(value))
+      throwWithLog(LOG_ERROR, "argument is invelid at position " + toString(__LINE__));
     location_config.methods = value;
   }
+}
 
+bool  Config::areHttpMethod(const std::vector<std::string>& methods) const
+{
+  for (std::vector<std::string>::const_iterator it = methods.begin(); it != methods.end(); it++)
+  {
+    if (*it != "GET" && *it != "POST" && *it != "DELETE" && *it != "PUT"
+      && *it != "HEAD" && *it != "CONNECT" && *it != "OPTIONS" && *it != "TRACE"
+      && *it != "PATCH")
+      return (false);
+  }
+  return (true);
 }
 
 void  Config::concatenateValueInLocation(const std::string& key, const std::vector<std::string>& value, LocationConfig& location_config) const

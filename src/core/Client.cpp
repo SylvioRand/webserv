@@ -6,21 +6,23 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 13:20:12 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 16:54:33 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Client.hpp"
 #include <cstddef>
 #include <cstdio>
+#include <ctime>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 
 Client::Client(int fd, ServerConfigConstIterator cfg) : _isReadingCgiResponse(false),
-  _fd(fd), _lastActivity(time(NULL)), _cfg(cfg)
+  _fd(fd), _lastActivity(time(NULL)), _cfg(cfg), _path(""), _childPid(0)
 {
+  this->_buffer.clear();
 }
 
 
@@ -30,6 +32,26 @@ Client::~Client(void)
   {
     close(_fd);
   }
+}
+
+pid_t&  Client::getChildPid(void)
+{
+  return (this->_childPid);
+}
+
+void  Client::setLastActivity(void)
+{
+  this->_lastActivity = time(NULL);
+}
+
+void  Client::setChildPid(const pid_t& childPid)
+{
+  this->_childPid = childPid;
+}
+
+time_t&  Client::getLastActivity(void)
+{
+  return (this->_lastActivity);
 }
 
 bool  Client::readData(void)
@@ -45,6 +67,7 @@ bool  Client::readData(void)
   else if (bytes == 0)
     return (false);
 
+  this->setLastActivity();
   if (this->_request.getMethod() == "POST" && !this->_request.isComplete())
   {
     this->_request.extractRequestBody(buf, bytes);

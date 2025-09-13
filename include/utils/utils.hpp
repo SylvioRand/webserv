@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 12:15:28 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 13:30:05 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@
  
 #include "../utils/Logger.hpp"
 #include "../utils/contentType.hpp"
+#include "../utils/timeouts.hpp"
 
 #include <iostream>
 #include <string.h>
@@ -52,6 +53,7 @@
 #include <ctime>
 #include <dirent.h>
 #include <csignal>
+#include <sys/wait.h>
 
 extern volatile sig_atomic_t g_shouldStop;
 

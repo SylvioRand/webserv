@@ -6,13 +6,14 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:07:55 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/09 17:49:03 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 16:17:35 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTPRESPONSE_HPP
 #define HTTPRESPONSE_HPP
 
+#include <ctime>
 #include <fstream>
 #include <iosfwd>
 #define READ_CHUNK_SIZE 64000
@@ -70,7 +71,7 @@ class HttpResponse
     void  initializeState(void);
     void  setKeepAliveStatus(bool value);
     bool  isKeepAlive(void);
-    void  closeBodyFileFd(const std::string path);
+    void  closeBodyFileStream(const int&fd);
     void  openAndSaveBodyFileStream(const std::string& path);
 
     // for cgi
@@ -86,8 +87,8 @@ class HttpResponse
     void  addExtraHeader(const std::string& connectionHeader,
         const std::string& version);
 
-    bool  _isSending;
-    bool  _isFullySent;
+    bool        _isSending;
+    bool        _isFullySent;
 };
 
 #endif

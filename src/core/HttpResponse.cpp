@@ -6,12 +6,13 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/11 13:20:44 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/13 16:19:33 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/HttpResponse.hpp"
 #include <cmath>
+#include <ctime>
 #include <sstream>
 #include <string>
 #include <sys/socket.h>
@@ -22,7 +23,8 @@ HttpResponse::HttpResponse(void)
     : _status_code(200), _headersSize(0), _headersOffset(0),
       _bodySize(0), _bufferSize(0), _bufferOffset(0), _bodyBytesSent(0),
       _keepAlive(true), _cgiBytesSent(0), _streamOffset(0), _isSending(false),
-      _isFullySent(false) {}
+      _isFullySent(false)
+{}
 
 void HttpResponse::initializeState(void)
 {
@@ -57,13 +59,12 @@ void  HttpResponse::openAndSaveBodyFileStream(const std::string& path)
       + path);
 }
 
-void  HttpResponse::closeBodyFileFd(const std::string path)
+void  HttpResponse::closeBodyFileStream(const int& fd)
 {
   if (this->_bodyFileStream.is_open())
   {
     logger(LOG_INFO,
-      "Closed filestream for response body: (previously associated with '"
-      + path  + "') fd=");
+      "Closed response body filestream for client fd=" + toString(fd));
     this->_bodyFileStream.close();
   }
 }
@@ -277,9 +278,9 @@ void  HttpResponse::addExtraHeader(const std::string& connectionHeader,
     extraHeader += version + " 200 OK\r\n";
     needHttpVersion = true;
   }
-  if (std::find(headersVec.begin(), headersVec.end(), "CONTENT-LENGTH") == headersVec.end())
+  if (std::find(headersVec.begin(), headersVec.end(), "CONTENT-LENGTH:") == headersVec.end())
     extraHeader += "Content-Length: " + toString(this->_cgiResponse.size() - pos - 4) + "\r\n";
-  if (std::find(headersVec.begin(), headersVec.end(), "CONNECTION") == headersVec.end())
+  if (std::find(headersVec.begin(), headersVec.end(), "CONNECTION:") == headersVec.end())
     extraHeader += connectionHeader.substr(0, connectionHeader.size() - 2);
 
   if (needHttpVersion)
