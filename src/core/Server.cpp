@@ -10,21 +10,6 @@
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
-#include <algorithm>
-#include <cctype>
-#include <cmath>
-#include <csignal>
-#include <cstddef>
-#include <ctime>
-#include <dirent.h>
-#include <fcntl.h>
-#include <fstream>
-#include <ios>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <sys/socket.h>
-#include <unistd.h>
 
 Server::Server(const Config& config) : _config(config)
 {

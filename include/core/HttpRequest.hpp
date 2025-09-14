@@ -4,8 +4,9 @@
 /*   HttpRequest.hpp                                    :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */ /*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
-/*   Updated: 2025/08/28 11:16:36 by srandria         ###   ########.fr       */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/16 12:54:14 by srandria          #+#    #+#             */
+/*   Updated: 2025/09/14 14:19:45 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,19 +15,13 @@
 
 #include "../utils/utils.hpp"
 #include "../../include/core/Config.hpp"
-#include <cstddef>
-#include <ctime>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <sys/types.h>
 
 struct MultipartPart {
     bool          fullySaved;
-    std::string   name;       // ex: "username"
-    std::string   filename;   // ex: "photo.png" (vide si pas de fichier)
-    std::string   contentType;// ex: "image/png" (optionnel)
-    std::string   data;       // le contenu (texte ou binaire brut)
+    std::string   name;
+    std::string   filename;
+    std::string   contentType;
+    std::string   data;
     size_t        offset;
 };
 
@@ -37,13 +32,13 @@ class HttpRequest
     HttpRequest(const HttpRequest& other);
     HttpRequest& operator=(const HttpRequest &other);
 
-    std::string                         _method;        // GET / POST / DELETE
-    std::string                         _path;          // chemin se trouvant juste a cote de la methode dans la requete
-    std::map<std::string, std::string>  _headers;       // entete de la requete http
-    std::string                         _body;          // corps de la requet http
-    std::string                         _version;       // HTTP/1.0, HTTP/1.1 etc...
-    bool                                _isComplete;    // indique si la requete est completement recu
-    size_t                              _bodyBytesRead; // nombre de bytes lu dans le body de la requete http
+    std::string                         _method;
+    std::string                         _path;
+    std::map<std::string, std::string>  _headers;
+    std::string                         _body;
+    std::string                         _version;
+    bool                                _isComplete;
+    size_t                              _bodyBytesRead;
     size_t                              _contentLength;
     ServerConfigConstIterator           _serverConf;
     bool                                _isChunked;
@@ -90,14 +85,11 @@ class HttpRequest
     void  markRequestComplete(void);
     void  setServerConf(ServerConfigConstIterator serverConf);
     ServerConfigConstIterator
-      getServerConf(void);
+          getServerConf(void);
     LocationConfig
-      getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg);
-    //LocationConfig
-    //  createAndReturnRootLocation_(const ServerConfigConstIterator& cfg);
+          getMatchingLocation_(const std::string& uri, const ServerConfigConstIterator& cfg);
     void  setIsChunckedValue(void);
-    bool  isChunked(void); // a voir si on a vraiment besoin
-    void  parseBody(void);
+    bool  isChunked(void);
     void  extractBodyFromResponse(const std::string& bodyPart);
     bool  isNextChunkReady(size_t& contentSize);
     void  setError(void);
@@ -107,13 +99,11 @@ class HttpRequest
     void  sendRequestBodyToCgi(const int&pipeFd, const int& clientFd);
     void  addToMultipartStruct(size_t& start, size_t& end);
     bool  hasBoundary_(void);
-    std::vector<MultipartPart>&  getMultipart(void);
+    std::vector<MultipartPart>&
+          getMultipart(void);
     void  setClientMaxBodySize(const size_t& size);
     LocationConfig
           getLocation(void);
-
-
-    // new function for handluing body request 
     void  extractRequestBody(std::string& bodyPart);
     void  extractRequestBody(const char *data, size_t len);
     void  setHasContentLength(void);
@@ -121,7 +111,6 @@ class HttpRequest
     bool  hasContentLength(void);
     void  fillHeadersMap(std::istringstream& iss);
     void  parseMultipartBody();
-
 };
 
 #endif

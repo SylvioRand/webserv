@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:39:05 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 16:19:33 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:04:46 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,9 +120,8 @@ void HttpResponse::sendBody(const int &fd)
     if (bytesSent > 0)
       this->_bodyBytesSent += bytesSent;
   }
-  else if (!this->_bodyFileStream) {
-    // TODO we need to close the client here
-  }
+  else if (!this->_bodyFileStream)
+    return ;
   else
   {
     if (this->_bufferOffset == this->_bufferSize)
@@ -191,24 +190,10 @@ void HttpResponse::setBodyFilePath(const std::string path)
   this->_bodyFilePath = path;
 }
 
-/*
-void HttpResponse::setBodyFileFd(const int &fd)
-{
-  this->_bodyFileFd = fd;
-}
-*/
-
 std::string &HttpResponse::getBodyFilePath(void)
 {
   return (this->_bodyFilePath);
 }
-
-/*
-int &HttpResponse::getBodyFileFd(void)
-{
-  return (this->_bodyFileFd);
-}
-*/
 
 void HttpResponse::setBodySize(const ssize_t &bodySize)
 {

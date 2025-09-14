@@ -6,23 +6,11 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/13 16:35:16 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:29:04 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
-#include <cstddef>
-#include <cstdlib>
-#include <exception>
-#include <iomanip>
-#include <iostream>
-#include <iterator>
-#include <map>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <unistd.h>
-#include <cstring> // pour strdup
 
 void  Server::prepareAndLaunchCGI(const int& fd)
 {
@@ -50,13 +38,6 @@ void  Server::prepareAndLaunchCGI(const int& fd)
 void  Server::respondForbidden_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondForbidden_");
-  /*
-  HTTP/1.1 403 Forbidden
-  Content-Type: text/plain
-  Content-Length: 24
-
-  Access denied: Forbidden.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -86,13 +67,6 @@ void  Server::respondForbidden_(const int& fd)
 void  Server::respondInternalServerError(const int&fd)
 {
   logger(LOG_DEBUG, "in function respondInternalServerError");
-  /*
-  HTTP/1.1 500 Internal Server Error
-  Content-Type: text/html
-  Content-Length: 64
-
-  CGI script not available or not executable.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -136,7 +110,6 @@ void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
   int pid = fork();
   if (pid < 0)
   {
-    // TODO Need to do something here for HTTP response
     logger(LOG_FATAL, "fork failed");
     return ;
   }

@@ -6,18 +6,11 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:24:24 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 16:54:33 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:27:21 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Client.hpp"
-#include <cstddef>
-#include <cstdio>
-#include <ctime>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
 
 Client::Client(int fd, ServerConfigConstIterator cfg) : _isReadingCgiResponse(false),
   _fd(fd), _lastActivity(time(NULL)), _cfg(cfg), _path(""), _childPid(0)
@@ -25,13 +18,10 @@ Client::Client(int fd, ServerConfigConstIterator cfg) : _isReadingCgiResponse(fa
   this->_buffer.clear();
 }
 
-
 Client::~Client(void)
 {
   if (_fd != -1)
-  {
     close(_fd);
-  }
 }
 
 pid_t&  Client::getChildPid(void)
@@ -118,7 +108,6 @@ void  HttpResponse::sendCgiResponse(const int&fd)
     this->_cgiBytesSent += bytesSent;
 }
 
-
 bool  Client::isRequestComplete(void) const
 {
   return (_request.isComplete());
@@ -158,4 +147,3 @@ void  Client::setCurrentLocation(LocationConfig& location)
 {
   this->_currentLocation = location;
 }
-

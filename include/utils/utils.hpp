@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/14 13:06:07 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:26:35 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,41 +14,26 @@
 #define UTILS_HPP
  
 #define COLOR_RESET   "\033[0m"
-#define COLOR_INFO    "\033[1;34m"    // Bleu clair
-#define COLOR_DEBUG   "\033[1;33m"    // jaune
-#define COLOR_WARN    "\033[1;38;5;208m"    // Jaune
-#define COLOR_ERROR   "\033[1;31m"    // Rouge
-#define COLOR_FATAL   "\033[1;97;41m" // Blanc sur fond rouge
+#define COLOR_INFO    "\033[1;34m"
+#define COLOR_DEBUG   "\033[1;33m"
+#define COLOR_WARN    "\033[1;38;5;208m"
+#define COLOR_ERROR   "\033[1;31m"
+#define COLOR_FATAL   "\033[1;97;41m"
 
-
-  
-
- 
 #include "../utils/Logger.hpp"
 #include "../utils/contentType.hpp"
 #include "../utils/timeouts.hpp"
-
 #include <iostream>
-#include <string.h>
-#include <stdexcept>
 #include <fstream>
 #include <vector>
 #include <map>
 #include <sstream>
 #include <algorithm>
-#include <utility>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <cstring>
 #include <sys/socket.h>
-#include "cstdio"
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netinet/in.h>
 #include <poll.h>
-#include <netdb.h>
 #include <fcntl.h>
 #include <ctime>
 #include <dirent.h>

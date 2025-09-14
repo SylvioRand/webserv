@@ -6,22 +6,16 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:07:55 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 16:17:35 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:12:45 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef HTTPRESPONSE_HPP
 #define HTTPRESPONSE_HPP
 
-#include <ctime>
-#include <fstream>
-#include <iosfwd>
 #define READ_CHUNK_SIZE 64000
-//#define READ_CHUNK_SIZE 1600000
 
 #include "../utils/utils.hpp"
-#include <string>
-#include <sys/types.h>
 
 class HttpResponse
 {
@@ -57,16 +51,14 @@ class HttpResponse
     int   getStatus(void) const;
     void  saveHeadersAndBodySize(void);
     std::string
-          build(void) const;  // Retourne la réponse HTTP complète
+          build(void) const;
     void  sendHeaders(const int& fd);
     void  sendBody(const int& fd);
     bool  areHeadersFullySent();
     bool  isBodyFullySent();
     void  setBodyFilePath(const std::string path);
-    //void  setBodyFileFd(const int& fd);
     std::string&
           getBodyFilePath(void);
-    //int&  getBodyFileFd(void);
     void  setBodySize(const ssize_t& bodySize);
     void  initializeState(void);
     void  setKeepAliveStatus(bool value);
@@ -83,9 +75,8 @@ class HttpResponse
     void  appendCgiResponse(const std::string& buff, const ssize_t& size);
     void  sendCgiResponse(const int&fd);
     bool  isCgiResponseFullySent(void);
-
     void  addExtraHeader(const std::string& connectionHeader,
-        const std::string& version);
+          const std::string& version);
 
     bool        _isSending;
     bool        _isFullySent;

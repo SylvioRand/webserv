@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 12:18:58 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 15:35:59 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:15:34 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,10 +15,6 @@
 
 #include "../core/HttpRequest.hpp"
 #include "../core/HttpResponse.hpp"
-#include "Config.hpp"
-#include <ctime>
-#include <sched.h>
-#include <string>
 
 class Client
 {
@@ -54,15 +50,13 @@ class Client
     Client(const Client &other);
     Client& operator=(const Client& other);
 
-
     int                       _fd;
     HttpRequest               _request;
     HttpResponse              _response;
     std::string               _buffer;
-    time_t                    _lastActivity; // Pour timeout
+    time_t                    _lastActivity;
     ServerConfigConstIterator _cfg;
     std::string               _path;
-
     LocationConfig            _currentLocation;
     pid_t                     _childPid;
 };

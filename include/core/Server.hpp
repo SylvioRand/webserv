@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/14 13:35:46 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:16:31 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,6 @@
 #include "../utils/utils.hpp"
 #include "../core/Config.hpp"
 #include "../core/Client.hpp"
-#include <string>
-
 
 struct CgiPipes
 {

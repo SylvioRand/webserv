@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beautiful Example</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --accent:#7c5cff;
+      --muted:#97a0b6;
+      --glass: rgba(255,255,255,0.06);
+      --radius:14px;
+      --gap:18px;
+      color-scheme: dark;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      background: radial-gradient(1000px 400px at 10% 10%, rgba(124,92,255,0.12), transparent),
+                  linear-gradient(180deg,#071127 0%, #071827 50%, #07101b 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:32px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .container{
+      width:min(1150px,94%);
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:20px;
+      padding:28px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .header{
+      display:flex;
+      gap:16px;
+      align-items:center;
+      margin-bottom:18px;
+    }
+    .badge{
+      width:56px;
+      height:56px;
+      border-radius:12px;
+      background:linear-gradient(135deg,var(--accent), #3dbdff 120%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      font-size:20px;
+      color:white;
+      box-shadow: 0 8px 30px rgba(124,92,255,0.18);
+    }
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    h1{margin:0;font-size:20px}
+    p.lead{margin:0;color:var(--muted);font-size:14px}
+
+    .hero{
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:20px;
+      align-items:start;
+      margin-top:22px;
+    }
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), var(--glass));
+      padding:18px;
+      border-radius:var(--radius);
+      box-shadow: 0 6px 22px rgba(2,6,23,0.45);
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .hero-left h2{margin:0 0 10px 0;font-size:18px}
+    .hero-left p{color:var(--muted);margin:0 0 16px 0}
+    .actions{display:flex;gap:10px}
+    .btn{
+      padding:10px 14px;
+      border-radius:10px;
+      border:0;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .btn-primary{
+      background:linear-gradient(90deg,var(--accent), #46d0ff);
+      color:#051128;
+      box-shadow: 0 6px 18px rgba(124,92,255,0.14);
+    }
+    .btn-ghost{
+      background:transparent;
+      color:var(--muted);
+      border:1px solid rgba(255,255,255,0.04);
+    }
+
+    .stats{
+      display:flex;
+      gap:12px;
+      margin-top:16px;
+    }
+    .stat{
+      background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+      padding:10px;
+      border-radius:10px;
+      min-width:100px;
+      text-align:center;
+    }
+    .stat .num{font-weight:700;font-size:18px}
+    .stat .lab{color:var(--muted);font-size:12px}
+
+    .hero-right .preview{
+      height:220px;
+      border-radius:12px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="480"><rect width="100%" height="100%" fill="%230b1220"/><text x="50%" y="50%" fill="%237c5cff" font-size="28" font-family="Arial" text-anchor="middle" dominant-baseline="middle">Beautiful Preview</text></svg>') center/cover no-repeat;
+      display:flex;
+      align-items:flex-end;
+      justify-content:flex-start;
+      padding:14px;
+      color:#fff;
+      box-shadow: inset 0 -30px 80px rgba(0,0,0,0.4);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:var(--gap);
+      margin-top:18px;
+    }
+
+    .card h3{margin:0 0 8px 0;font-size:16px}
+    .card p{margin:0;color:var(--muted);font-size:13px}
+
+    footer{
+      margin-top:20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    @media (max-width:900px){
+      .hero{grid-template-columns: 1fr; }
+      .hero-right{order: -1}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">BW</div>
+      <div class="title">
+        <h1>Beautiful Webserv Demo</h1>
+        <p class="lead">A small elegant HTML example for your server — responsive and lightweight.</p>
+      </div>
+    </div>
+
+    <div class="hero">
+      <div class="hero-left">
+        <div class="card">
+          <h2>Fast, Clean, Minimal</h2>
+          <p>Serve static assets efficiently and present a neat UI while keeping backend logic simple. Ideal for demos or small projects.</p>
+
+          <div class="actions" style="margin-top:14px">
+            <button class="btn btn-primary">Get started</button>
+            <button class="btn btn-ghost">Documentation</button>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="num">8 KB</div>
+              <div class="lab">Chunk size</div>
+            </div>
+            <div class="stat">
+              <div class="num">Keep-Alive</div>
+              <div class="lab">HTTP connections</div>
+            </div>
+            <div class="stat">
+              <div class="num">x1,000</div>
+              <div class="lab">Requests/sec (est.)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:16px">
+          <div class="card">
+            <h3>Secure by design</h3>
+            <p>Basic headers and safe defaults are included. Extend with CORS, CSP and proper TLS in production.</p>
+          </div>
+          <div class="card">
+            <h3>Small footprint</h3>
+            <p>Minimal assets, low memory usage when streaming files. Great for embedded or low-resource hosts.</p>
+          </div>
+          <div class="card">
+            <h3>Readable logs</h3>
+            <p>Keep logs concise and informative for easier debugging and monitoring of client activity.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="card preview">
+          <div>
+            <strong>Live Preview</strong>
+            <div style="color:var(--muted);font-size:13px;margin-top:6px">What your users will see — crisp and simple.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>© <strong>Webserv</strong> — demo</div>
+      <div>Made with 💜 • <span style="color:var(--muted)">Light & fast</span></div>
+    </footer>
+  </div>
+</body>
+</html>
+

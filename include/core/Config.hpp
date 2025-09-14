@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 09:57:50 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:20:46 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,51 +14,53 @@
 #define CONFIG_HPP
 
 #include "../utils/utils.hpp"
-#include <cstddef>
-#include <string>
 
-struct DirectiveStatusLocation { // this is to manage duplicates
+struct DirectiveStatusLocation
+{
     bool  path;
     bool  redirect;
     bool  indexs;
 };
 
-struct LocationConfig {
-    std::string                 path;                 // Chemin de la location (ex: "/", "/upload")
-    std::string                 root;                 // Racine des fichiers pour cette location
-    bool                        autoindex;            // Si true, liste les répertoires (comme "ls")
-    std::vector<std::string>    indexs;               // Fichier par défaut (ex: "index.html")
-    std::string                 upload_dir;           // Dossier pour les uploads (POST)
-    std::map<int, std::string>  redirect;             // URL de redirection (ex: "301 http://example.com")
-    std::string                 cgi_extension;        // Extension pour CGI (ex: ".py")
-    std::string                 cgi_path;             // Chemin de l'interpréteur (ex: "/usr/bin/python3")
-    std::vector<std::string>    methods;              // Méthodes autorisées (GET, POST, DELETE)
+struct LocationConfig
+{
+    std::string                 path;
+    std::string                 root;
+    bool                        autoindex;
+    std::vector<std::string>    indexs;
+    std::string                 upload_dir;
+    std::map<int, std::string>  redirect;
+    std::string                 cgi_extension;
+    std::string                 cgi_path;
+    std::vector<std::string>    methods;
     std::map<int, std::string>  error_pages;
-    size_t                      client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB)
+    size_t                      client_max_body_size;
     DirectiveStatusLocation     hasValue;
 
     LocationConfig() : autoindex(false) {}
 };
 
-struct DirectiveStatusServer { // this is to manage duplicates
+struct DirectiveStatusServer
+{
     bool  listen;
     bool  redirect;
     bool  indexs;
 };
 
-struct ServerConfig {
-    std::string                           host;                 // Adresse d'écoute (ex: "127.0.0.1")
-    int                                   port;                 // Port d'écoute (ex: 8080)
-    std::string                           server_name;          // Nom du serveur (ex: "localhost")
-    bool                                  autoindex;            // Si true, liste les répertoires (comme "ls")
-    std::string                           upload_dir;           // Dossier pour les uploads (POST)
-    std::map<int, std::string>            redirect;             // URL de redirection (ex: "301 http://example.com")
-    std::string                           root;                 // Racine par défaut des fichiers
-    std::vector<std::string>              indexs;               // Fichier index par défaut    
-    size_t                                client_max_body_size; // Taille max du body (ex: 1048576 pour 1MB) 
-    std::map<int, std::string>            error_pages;          // Pages d'erreur (ex: 404 -> "/404.html")
-    DirectiveStatusServer                       hasValue;
-    std::map<std::string, LocationConfig> locations;            // Configs par location
+struct ServerConfig
+{
+    std::string                           host;
+    int                                   port;
+    std::string                           server_name;
+    bool                                  autoindex;
+    std::string                           upload_dir;
+    std::map<int, std::string>            redirect;
+    std::string                           root;
+    std::vector<std::string>              indexs;
+    size_t                                client_max_body_size;
+    std::map<int, std::string>            error_pages;
+    DirectiveStatusServer                 hasValue;
+    std::map<std::string, LocationConfig> locations;
 };
 
 class Config
@@ -68,13 +70,11 @@ class Config
     Config(const Config& other);
     Config& operator=(const Config& other);
 
-    void  load_(void);                              // Charge et parse le fichier de configuration
-    bool  isValid_(void) const;                     // Vérifie si la configuration est valide
+    void  load_(void);
+    bool  isValid_(void) const;
     void  skipWhiteSpace_(void);
-    // you can use this function to add manually a serverconfig without parsing
     void  createServerConfigManually(void);
 
-    // zramahaz function
     const std::vector<std::string>  extractServerBlocks_(const std::string& buffer) const;
     bool                      blockServerIsValid_(const std::string& buffer, const size_t& braceStart, const size_t& pos) const;
     ServerConfig              parseServerBlock_(const std::string& serverBlock) const;
@@ -99,18 +99,16 @@ class Config
     void                      printServers(void) const;
     bool                      areHttpMethod(const std::vector<std::string>& methods) const;
     
-    std::vector<ServerConfig> _servers;     // Tous les serveurs configurés
-    const std::string         _config_path; // chemin pour le fichier de configuration
-    std::ifstream             _config_file; // fd pour le fichier
-    std::string               _current_line; // ligne actuelle dans le fichier
-    size_t                    _line_number; // nombre de ligne dans le fichier
-    
-    
-    public:
+    std::vector<ServerConfig> _servers;
+    const std::string         _config_path;
+    std::ifstream             _config_file;
+    std::string               _current_line;
+    size_t                    _line_number;
+
+  public:
     Config(std::string argv1);
     ~Config(void);
     
-    // Getter pour accéder à la configuration parsée
     const std::vector<ServerConfig>& getServers() const;
   };
 

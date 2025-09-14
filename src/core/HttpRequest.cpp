@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/14 10:55:29 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 14:11:04 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,6 @@ HttpRequest::HttpRequest(void) : _isComplete(false),  _bodyBytesRead(0),
 
 HttpRequest::~HttpRequest(void)
 {
-
 }
 
 void  HttpRequest::parse(const std::string &raw_request)
@@ -250,7 +249,6 @@ void  HttpRequest::handleFixedLengthBody(const char *bodyPart, const size_t len)
     this->markRequestComplete();
 }
 
-
 void  HttpRequest::parseMultipartBody()
 {
   std::string boundary = this->_boundary.substr(0, this->_boundary.size() - 2);
@@ -276,7 +274,6 @@ void   HttpRequest::addToMultipartStruct(size_t& start, size_t& end)
 {
   MultipartPart part; 
 
-  // TODO NEDD TO CREATE FUNCTION FOR FILLING name/filename/contentType from header inside boundary
   size_t headerEnd = this->_body.find("\r\n\r\n");
   std::string headerPart = this->_body.substr(start, headerEnd - start);
   std::istringstream iss(headerPart);
@@ -360,10 +357,7 @@ void  HttpRequest::appendToBody(std::string& str)
       this->_bodyBytesRead += str.size();
     this->_body.append(str.c_str(), str.size());
     if (this->_bodyBytesRead == this->_contentLength)
-    {
       this->markRequestComplete();
-      this->parseBody();
-    }
   }
 }
 
@@ -424,44 +418,9 @@ LocationConfig HttpRequest::getMatchingLocation_(const std::string& uri, const S
       best_length = path.size();
     }
   }
-  /*
-  if (best_length == 0)
-  {
-    // TODO We will not need it after correct parsing of zramahaz
-    logger(LOG_DEBUG, "root location will be created and used");
-    return (this->createAndReturnRootLocation_(cfg));
-  }
-  */
-  logger(LOG_DEBUG, "matching LocationConfig found, path [" + best_match.path + "]");
+   logger(LOG_DEBUG, "matching LocationConfig found, path [" + best_match.path + "]");
   return (best_match);
 }
-
-/*
-// TODO We will not need it after correct parsing of zramahaz
-LocationConfig  HttpRequest::createAndReturnRootLocation_(const ServerConfigConstIterator& cfg)
-{
-  LocationConfig  rootLocation;
-
-  for (std::vector<std::string>::const_iterator it = cfg->indexs.begin();
-      it != cfg->indexs.end(); it++)
-    rootLocation.indexs.push_back((*it));
-
-  for (std::vector<std::string>::const_iterator it = cfg->methods.begin();
-      it != cfg->methods.end(); it++)
-    rootLocation.methods.push_back((*it));
-
-  for (std::map<int, std::string>::const_iterator it = cfg->error_pages.begin();
-      it != cfg->error_pages.end(); it++)
-    rootLocation.error_pages[it->first] = it->second;
-
-  rootLocation.autoindex = cfg->autoindex;
-  rootLocation.client_max_body_size = cfg->client_max_body_size;
-  rootLocation.upload_dir = cfg->upload_dir;
-  rootLocation.path = "root";
-  rootLocation.root = cfg->root;
-  return (rootLocation);
-}
-*/
 
 void  HttpRequest::markRequestComplete(void)
 {
@@ -477,11 +436,6 @@ void  HttpRequest::setServerConf(ServerConfigConstIterator serverConf)
 HttpRequest::ServerConfigConstIterator  HttpRequest::getServerConf(void)
 {
   return (this->_serverConf);
-}
-
-void  HttpRequest::parseBody()
-{
-
 }
 
 void HttpRequest::extractBodyFromResponse(const std::string& bodyPart)
@@ -644,7 +598,6 @@ void  HttpRequest::fillHeadersMap(std::istringstream& iss)
     this->_headers[toUpper(key)] = value;
   }
 }
-
 
 bool  HttpRequest::hasBoundary_(void)
 {
