@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/14 14:29:57 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 15:29:14 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,7 +25,7 @@ std::string cleanBlock(const std::string& raw);
 Config::Config(std::string filepath) : _config_path(filepath)
 {
   this->load_();
-  this->isValid_();
+  this->checkIfValid_();
 }
 
 Config::~Config(void)
@@ -412,7 +412,7 @@ void  Config::parseDirectivesInLocationBlock_(std::string &locationBlock, Server
   if (config.locations.find(location_config.path) == config.locations.end())
     config.locations[location_config.path] = location_config;
   else
-    throwWithLog(LOG_ERROR, "");
+    throwWithLog(LOG_ERROR, "Invalid configuration file");
 }
 
 std::string Config::insertSpaceBeforeBrace_(const std::string& locationBlock) const
@@ -630,16 +630,16 @@ const std::vector<ServerConfig>& Config::getServers(void) const
   return (_servers);
 }
 
-bool Config::isValid_(void) const
+void  Config::checkIfValid_(void) const
 {
   for (size_t i = 0; i < _servers.size(); ++i) {
     const ServerConfig& s = _servers[i];
     
     if (s.port < 1 || s.port > 65535)
+      throwWithLog(LOG_ERROR, "Port " + toString(s.port) + " is invalid. Port must be in the range 1–65535.");
     if (s.locations.find("/") == s.locations.end())
-      return false;
+      throwWithLog(LOG_ERROR, "");
   }
-  return true;
 }
 
 std::string trim(const std::string& str)
@@ -656,7 +656,8 @@ int stringToInt(const std::string& key, const std::string& str)
     char *endptr = NULL;
     long value = std::strtol(str.c_str(), &endptr, 10);
 
-    if (*endptr == '\0' && value >= 0) {
+    if (*endptr == '\0' && value >= 0)
+    {
       std::istringstream iss(str);
       int result = 0;
       iss >> result;

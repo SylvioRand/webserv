@@ -271,15 +271,12 @@
 
     <script>
       function showTab(tabName) {
-        // Masquer tous les formulaires
         document.getElementById('get-form').classList.add('hidden');
         document.getElementById('post-form').classList.add('hidden');
         
-        // Désactiver tous les onglets
         const tabs = document.querySelectorAll('.tab');
         tabs.forEach(tab => tab.classList.remove('active'));
         
-        // Afficher le formulaire sélectionné et activer l'onglet
         document.getElementById(tabName + '-form').classList.remove('hidden');
         event.currentTarget.classList.add('active');
       }
@@ -289,7 +286,6 @@
         const guess = document.getElementById('get-guess').value;
         const baseUrl = window.location.pathname;
         
-        // Construire les paramètres de requête
         let params = [];
         if (name) params.push(`name=${encodeURIComponent(name)}`);
         if (guess) params.push(`guess=${encodeURIComponent(guess)}`);
@@ -297,7 +293,6 @@
         const queryString = params.join('&');
         const url = `${baseUrl}/script.py${queryString ? '?' + queryString : ''}`;
         
-        // Effectuer la requête GET
         fetch(url)
           .then(response => response.text())
           .then(data => {
@@ -315,7 +310,6 @@
         const baseUrl = window.location.pathname;
         const url = `${baseUrl}/script.py`;
         
-        // Effectuer la requête POST
         fetch(url, {
           method: 'POST',
           headers: {

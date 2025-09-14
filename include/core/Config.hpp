@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:06:02 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/14 14:20:46 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 15:24:08 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define CONFIG_HPP
 
 #include "../utils/utils.hpp"
+#include <sys/types.h>
 
 struct DirectiveStatusLocation
 {
@@ -50,7 +51,7 @@ struct DirectiveStatusServer
 struct ServerConfig
 {
     std::string                           host;
-    int                                   port;
+    ssize_t                               port;
     std::string                           server_name;
     bool                                  autoindex;
     std::string                           upload_dir;
@@ -71,7 +72,7 @@ class Config
     Config& operator=(const Config& other);
 
     void  load_(void);
-    bool  isValid_(void) const;
+    void  checkIfValid_(void) const;
     void  skipWhiteSpace_(void);
     void  createServerConfigManually(void);
 

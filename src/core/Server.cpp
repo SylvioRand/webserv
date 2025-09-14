@@ -881,6 +881,37 @@ void  Server::respondWithUploadError(const int fd)
   this->setPollOut_(fd);
 }
 
+void  Server::respondInternalServerError(const int& fd)
+{
+  logger(LOG_DEBUG, "In function respondWithUploadError");
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus(500, fd);
+  if (this->hasCustomErrorPage(500, fd))
+    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  else
+  {
+    body = "500 Internal Server Error";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
+}
+
+
 
 
 void  Server::serveIndexContent_(const std::string path, const int fd)
@@ -1694,6 +1725,8 @@ void  Server::handleRedirect_(const int& fd)
   }
   else if (this->isValidHttpStatusCode_(it->first))
     this->respondNotImplemented_(fd);
+  else
+    this->respondInternalServerError(fd);
 }
 
 void  Server::respondNotImplemented_(const int& fd)

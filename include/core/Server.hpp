@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/14 14:16:31 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 15:48:41 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -164,6 +164,7 @@ class Server
     void  handleKeepAliveTimeout(const int& fd);
     void  handleSendTimeout(const int& fd);
     void  handleFinishedChildren(void);
+    void  respondBinaryNotFound(const int&fd);
 
     const Config&                             _config;
     LocationConfig                            _currentLocation;

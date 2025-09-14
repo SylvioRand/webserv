@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/14 14:29:04 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 15:51:21 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,7 +23,7 @@ void  Server::prepareAndLaunchCGI(const int& fd)
   else if (this->isExecutable_(localPath))
   {
     if (!this->isFile_(cgiPath) || !this->isExecutable_(cgiPath))
-      this->respondInternalServerError(fd);
+      this->respondBinaryNotFound(fd);
     else
     {
       this->launchCgiProcess(fd, localPath);
@@ -63,10 +63,9 @@ void  Server::respondForbidden_(const int& fd)
   response.setBody(body);
 }
 
-
-void  Server::respondInternalServerError(const int&fd)
+void  Server::respondBinaryNotFound(const int&fd)
 {
-  logger(LOG_DEBUG, "in function respondInternalServerError");
+  logger(LOG_DEBUG, "in function respondBinaryNotFound");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
