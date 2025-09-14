@@ -5,7 +5,9 @@ import os
 import sys
 import json
 import random
+import time
 from urllib.parse import parse_qs
+
 
 def read_stdin_content(length):
     """Lit le contenu de stdin de manière sécurisée"""
@@ -84,6 +86,7 @@ def main():
 
         # Envoi headers HTTP
         sys.stdout.write("Content-Type: text/html\r\n")
+        time.sleep(30)
         sys.stdout.write(f"Content-Length: {len(html_content)}\r\n\r\n")
         sys.stdout.write(html_content)
         sys.stdout.flush()

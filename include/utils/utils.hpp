@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 09:45:19 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 13:30:05 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 13:06:07 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,9 +58,12 @@
 extern volatile sig_atomic_t g_shouldStop;
 
 template<typename T>
-std::string toString(T value) { std::ostringstream oss;
-    oss << value;
-    return oss.str();
+std::string toString(T value)
+{
+  std::ostringstream oss;
+  
+  oss << value;
+  return oss.str();
 }
 
 void        signalHandler(int signal);

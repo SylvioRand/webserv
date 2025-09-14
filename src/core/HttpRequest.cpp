@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/16 13:30:00 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 12:39:26 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 10:55:29 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,7 +56,6 @@ void  HttpRequest::parseHeader_(const std::string &raw_request,
   std::string headerPart = raw_request.substr(0, endOfHeader);
   std::string request_line = headerPart.substr(0, headerPart.find('\n'));;
 
-  logger(LOG_INFO, "request_line -> " + request_line);
   std::istringstream issReq(request_line);
   std::string world;
   int count = 0;
@@ -174,6 +173,7 @@ void  HttpRequest::handleMultipartFormData(const char* bodyPart, const size_t le
 
 void  HttpRequest::handleChunkedEncoding(const std::string& bodyPart)
 {
+  logger(LOG_FATAL, "in function handleChunkedEncoding");
   size_t contentSize = 0;
 
   this->_bodyBuffChunked.append(bodyPart.c_str(), bodyPart.size());
@@ -572,7 +572,7 @@ void  HttpRequest::setIsChunckedValue(void)
     this->getHeaders().find("TRANSFER-ENCODING");
   if (it != this->getHeaders().end())
   {
-    if (it->second == "CHUNKED")
+    if (it->second.find("chunked") != std::string::npos)
     {
       this->_isChunked = true;
       logger(LOG_DEBUG, "Chunked request detected");
@@ -599,7 +599,7 @@ void  HttpRequest::setHasBoundary(void)
     this->_headers.find("CONTENT-TYPE");
   if (it != this->_headers.end())
   {
-    size_t pos = it->second.find("BOUNDARY");
+    size_t pos = it->second.find("boundary=");
 
     if (pos != std::string::npos)
       this->_hasBoundary = true;

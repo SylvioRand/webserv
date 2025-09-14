@@ -6,7 +6,7 @@
 /*   By: srandria <srandria@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/07 10:25:59 by srandria          #+#    #+#             */
-/*   Updated: 2025/09/13 13:40:13 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 13:35:46 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,8 +24,9 @@ struct CgiPipes
   int out_pipe[2];
 };
 
+// timeout in sec
 namespace timeout {
-    const int CLIENT_HEADER_TIMEOUT = 5;  // secondes
+    const int CLIENT_HEADER_TIMEOUT = 5;
     const int CLIENT_BODY_TIMEOUT   = 10;
     const int SEND_TIMEOUT          = 10;
     const int KEEPALIVE_TIMEOUT     = 15;
@@ -54,7 +55,6 @@ class Server
     void  handle_pollout_(int fd, bool& isClientClosed);
     void  close_client_(int fd);
     void  close_pipeFd_(const int& fd);
-    void  check_timout_(void);
     void  addFdToPoll_(int fd);
     void  startListener_(int fd, ServerConfigConstIterator );
     void  bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& addr);
@@ -129,7 +129,6 @@ class Server
     bool  isValidHttpStatusCode_(const int& code);
     void  respondNotImplemented_(const int& fd);
     void  setBodyFilePath(const int& fd, const std::string& path);
-    //void  createAndSaveRootLocation_(ServerConfigConstIterator& cfg);
     void  setBodySize(const int& fd, const ssize_t& bodySize);
     void  setPollIn_(const int& fd);
     void  respondPayloadTooLarge(const int& fd);

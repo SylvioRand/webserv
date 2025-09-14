@@ -6,7 +6,7 @@
 /*   By: zramahaz <zramahaz@student.42antanana>     +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/26 14:43:58 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/13 10:09:22 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/14 10:52:38 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,6 +69,8 @@ void  Config::load_(void)
     pos = _current_line.find("#");
     if (pos != std::string::npos)
       _current_line = _current_line.substr(0, pos);
+    if (!_config_file.eof())
+      _current_line.append("\n");
     buffer += _current_line;
   }
   
@@ -120,6 +122,9 @@ const std::vector<std::string>  Config::extractServerBlocks_(const std::string& 
       throwWithLog(LOG_ERROR, "Unmatched braces in server block starting at position " + toString(__LINE__));
 
     blocks.push_back(buffer.substr(pos, i - pos));
+    // TODO addede
+    while (i < buffer.size() && buffer.at(i) == '\n')
+      i++;
     pos = i; // Continuer après ce blockServerIsValid
   }
   if (!buffer.substr(i).empty())
@@ -739,7 +744,8 @@ size_t  parseSize(const std::string& key, const std::string& str)
 
 
 void                          Config::printServers() const {
-    for (size_t i = 0; i < this->_servers.size(); ++i) {
+    for (size_t i = 0; i < this->_servers.size(); ++i)
+    {
         std::cout << std::endl << std::endl;
         const ServerConfig& config = this->_servers[i];
 
@@ -748,7 +754,8 @@ void                          Config::printServers() const {
         std::cout << "server[" << i << "].root = |" << config.root << "|" << std::endl;
 
         std::cout << "server[" << i << "].index = |";
-        for (size_t j = 0; j < config.indexs.size(); ++j) {
+        for (size_t j = 0; j < config.indexs.size(); ++j)
+        {
             std::cout << config.indexs[j];
             if (j + 1 < config.indexs.size()) std::cout << ", ";
         }
@@ -762,11 +769,11 @@ void                          Config::printServers() const {
         std::cout << "server[" << i << "].autoindex = |" << (config.autoindex ? "true" : "false") << "|" << std::endl;
         std::cout << "server[" << i << "].client_max_body_size = |" << config.client_max_body_size << "|" << std::endl;
 
-        for (std::map<int, std::string>::const_iterator ep = config.error_pages.begin(); ep != config.error_pages.end(); ++ep) {
+        for (std::map<int, std::string>::const_iterator ep = config.error_pages.begin(); ep != config.error_pages.end(); ++ep)
             std::cout << "server[" << i << "].error_pages[" << ep->first << "] = |" << ep->second << "|" << std::endl;
-        }
 
-        for (std::map<std::string, LocationConfig>::const_iterator loc = config.locations.begin(); loc != config.locations.end(); ++loc) {
+        for (std::map<std::string, LocationConfig>::const_iterator loc = config.locations.begin(); loc != config.locations.end(); ++loc)
+        {
             const LocationConfig& lcfg = loc->second;
             std::string path = loc->first;
 
@@ -774,30 +781,34 @@ void                          Config::printServers() const {
             std::cout << "server[" << i << "].locations[" << path << "].root = |" << lcfg.root << "|" << std::endl;
 
             std::cout << "server[" << i << "].locations[" << path << "].index = |";
-            for (size_t j = 0; j < lcfg.indexs.size(); ++j) {
+            for (size_t j = 0; j < lcfg.indexs.size(); ++j)
+            {
                 std::cout << lcfg.indexs[j];
                 if (j + 1 < lcfg.indexs.size()) std::cout << ", ";
             }
             std::cout << "|" << std::endl;
 
-            for (std::map<int, std::string>::const_iterator ep = lcfg.redirect.begin(); ep != lcfg.redirect.end(); ++ep) {
+            for (std::map<int, std::string>::const_iterator ep = lcfg.redirect.begin(); ep != lcfg.redirect.end(); ++ep)
+            {
                 std::cout << "server[" << i << "].locations[" << path << "].redirect[" << ep->first << "] = |" << ep->second << "|" << std::endl;
             }
 
             std::cout << "server[" << i << "].locations[" << path << "].methods = |";
-            for (size_t j = 0; j < lcfg.methods.size(); ++j) {
+            for (size_t j = 0; j < lcfg.methods.size(); ++j)
+            {
                 std::cout << lcfg.methods[j];
                 if (j + 1 < lcfg.methods.size()) std::cout << ", ";
             }
             std::cout << "|" << std::endl;
 
-            std::cout << "server[" << i << "].locations[" << path << "].autoindex = |" << (lcfg.autoindex ? "true" : "false") << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].upload_dir = |" << lcfg.upload_dir << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].client_max_body_size = |" << lcfg.client_max_body_size << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].cgi_extension = |" << lcfg.cgi_extension << "|" << std::endl;
-            std::cout << "server[" << i << "].locations[" << path << "].cgi_path = |" << lcfg.cgi_path << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].autoindex = |" << (loc->second.autoindex ? "true" : "false") << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].upload_dir = |" << loc->second.upload_dir << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].client_max_body_size = |" << loc->second.client_max_body_size << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].cgi_extension = |" << loc->second.cgi_extension << "|" << std::endl;
+            std::cout << "server[" << i << "].locations[" << path << "].cgi_path = |" << loc->second.cgi_path << "|" << std::endl;
 
-            for (std::map<int, std::string>::const_iterator ep = lcfg.error_pages.begin(); ep != lcfg.error_pages.end(); ++ep) {
+            for (std::map<int, std::string>::const_iterator ep = lcfg.error_pages.begin(); ep != lcfg.error_pages.end(); ++ep)
+            {
                 std::cout << "server[" << i << "].locations[" << path << "].error_pages[" << ep->first << "] = |" << ep->second << "|" << std::endl;
             }
         }

@@ -81,11 +81,6 @@ void Server::start_server_(void)
       }
       else if (std::find(_pipeFd.begin(), _pipeFd.end(), fd) != _pipeFd.end())
       {
-        // TODO
-        if (revents & (POLLERR))
-        {
-          //this->readCgiResponse(fd, this->_pipeFdClient[fd]);
-        }
         if (revents & (POLLIN | POLLHUP))
         {
           this->readCgiResponse(fd, this->_pipeFdClient[fd]);
@@ -107,7 +102,7 @@ void  Server::handleServerTimeout(void)
   {
     if (this->_clients.find(it->fd) != this->_clients.end())
     {
-      Client *client = this->_clients[it->fd];
+      Client *client = this->_clients.at(it->fd);
       if (it->events == POLLIN)
       {
         if (client->getRequest().getMethod().empty() && client->getRequest()._isReadingRequest)
@@ -180,7 +175,6 @@ void Server::handleSendTimeout(const int& fd)
       logger(LOG_WARNING, "Send timeout: killing child process " + toString(childPid));
       close_client_(fd);
     }
-    // sinon, le cleanup du childPid sera fait dans handleFinishedChildren()
   }
 }
 
@@ -215,14 +209,7 @@ void  Server::handleFinishedChildren(void)
 void  Server::respond408RequestTimeout(const int& fd)
 {
   logger(LOG_DEBUG, "In function respond408RequestTimeout");
-  /*
-  HTTP/1.1 502 Bad Gateway
-  Content-Type: text/html
-  Content-Length: 102
-
-  Failed to retrieve response from CGI.
-  */
-  std::string body;
+    std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
@@ -251,6 +238,7 @@ void  Server::respond408RequestTimeout(const int& fd)
 
 void  Server::stop_server(void)
 {
+  logger(LOG_INFO, "Server shutting down... (Made with 💜 • Light & fast @ 42-Antananarivo)");
   std::map<int, Client*>::iterator it = this->_clients.begin();
   for (; it != this->_clients.end(); it++)
   {
@@ -262,7 +250,6 @@ bool  Server::checkShutdownRequest(void)
 {
   if (g_shouldStop == 1)
   {
-    logger(LOG_INFO, "Shutting down server...\n");
     this->stop_server();
     return (true);
   }
@@ -409,7 +396,7 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
   {
     this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
     std::string method = this->getMethod(fd);
-    logger(LOG_INFO, "method = " + this->getMethod(fd));
+    logger(LOG_DEBUG, "method = " + this->getMethod(fd));
     if (this->_clients[fd]->getRequest()._isBadRequest)
     {
       this->badRequest_(fd);
@@ -451,11 +438,6 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
       this->methodNotAllowed_(fd);
     if (this->checkShutdownRequest())
       return ;
-    if (!this->_clients[fd]->getRequest()._isCgiRequest)
-    {
-      this->saveHeaderAndBodySize(fd);
-      this->setPollOut_(fd);
-    }
   }
   else if (this->_clients[fd]->getRequest().hasError())
     logger(LOG_DEBUG, "Error has been detected");
@@ -497,8 +479,6 @@ std::string  Server::getVersion(int fd)
 
 const std::string& Server::getRequestUri_(const int& fd)
 {
-  //logger(LOG_INFO, "ETO");
-  //
   return (this->_clients[fd]->getRequest().getPath());
 }
 
@@ -631,9 +611,8 @@ void  Server::handle_pollout_(int fd, bool& isClientClosed)
 
 void Server::close_client_(int fd)
 {
-  logger(LOG_INFO, "trying closing client fd=" + toString(fd));
   this->_clients[fd]->getResponse().closeBodyFileStream(fd);
-  logger(LOG_INFO, "close client fd=" + toString(fd));
+  logger(LOG_INFO, "Closing client connection (fd=" + toString(fd) + ")");
 
   std::map<int, Client*>::iterator it = _clients.find(fd);
   if (it != _clients.end())
@@ -680,22 +659,8 @@ void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg
       best_length = path.size();
     }
   }
-  /*
-  if (best_length == 0)
-  {
-    logger(LOG_DEBUG, "root location will be created and used");
-    this->createAndSaveRootLocation_(cfg);
-    return ;
-  }
-  */
   this->setCurrentLocation(best_match);
   logger(LOG_DEBUG, "matching LocationConfig found [" + best_match.path + "]");
-}
-
-// TODO
-void  Server::check_timout_(void)
-{
-
 }
 
 const Config& Server::getConfig(void)
@@ -731,7 +696,7 @@ void  Server::GETMethod_(const int& fd)
   std::string     localPath;
   std::string     extractUri;
 
-  logger(LOG_INFO, "root location -> " + this->getCurrentLocation().root);
+  logger(LOG_DEBUG, "root location -> " + this->getCurrentLocation().root);
   if (this->getCurrentLocation().root.empty())
   {
     this->respondNotFound_(fd);
@@ -803,10 +768,8 @@ bool Server::isExecutable_(const std::string& path)
   struct stat st;
   if (stat(path.c_str(), &st) == 0)
   {
-    // Vérifie si c'est un fichier régulier
     if (S_ISREG(st.st_mode))
     {
-      // Vérifie s'il est exécutable par quelqu’un (propriétaire, groupe ou autres)
       if (st.st_mode & S_IXUSR || st.st_mode & S_IXGRP || st.st_mode & S_IXOTH)
         return true;
     }
@@ -817,14 +780,6 @@ bool Server::isExecutable_(const std::string& path)
 void  Server::respondNotExecutable(const int& fd)
 {
   logger(LOG_DEBUG, "in function respondNotExecutable");
-
-  /*
-  HTTP/1.1 500 Internal Server Error
-  Content-Type: text/html
-  Content-Length: 129
-
-  CGI script is not executable.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -854,13 +809,6 @@ void  Server::respondNotExecutable(const int& fd)
 void  Server::respondIndexFilesUnreadable_(const int fd)
 {
   logger(LOG_DEBUG, "In function respondIndexFilesUnreadable_");
-  /*
-   HTTP/1.1 403 Forbidden
-  Content-Type: text/plain
-  Content-Length: 53
-
-  403 Forbidden: No readable index file found in this directory.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -884,18 +832,13 @@ void  Server::respondIndexFilesUnreadable_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::respondNoIndexFileFound_(const int fd)
 {
   logger(LOG_DEBUG, "In function respondNoIndexFileFound_");
-  /*
-   HTTP/1.1 403 Forbidden.
-  Content-Type: text/plain
-  Content-Length: 43
-
-  403 Forbidden: No index file found in this directory.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -919,18 +862,13 @@ void  Server::respondNoIndexFileFound_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::respondWithUploadError(const int fd)
 {
   logger(LOG_DEBUG, "In function respondWithUploadError");
-  /*
-   HTTP/1.1 500 Internal Server Error
-  Content-Type: text/plain
-  Content-Length: 49
-
-  Server misconfiguration: upload_dir not specified.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -954,6 +892,8 @@ void  Server::respondWithUploadError(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 
@@ -961,14 +901,6 @@ void  Server::respondWithUploadError(const int fd)
 void  Server::serveIndexContent_(const std::string path, const int fd)
 {
   logger(LOG_DEBUG, "In function serveIndexContent_");
-  /*
-  HTTP/1.1 200 OK
-  Content-Type: [type MIME]
-  Content-Length: [taille du fichier]
-  ...
-
-  [corps du fichier]
-  */
   std::string contentType = this->getContentTypeByFileExtension(path);
 
   std::string contentLength = toString(getFileSize(path));
@@ -987,6 +919,8 @@ void  Server::serveIndexContent_(const std::string path, const int fd)
   this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
   this->setBodySize(fd, getFileSize(path));
   this->setBodyFilePath(fd, path);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 bool  Server::hasIndexDirective_(void)
@@ -1065,12 +999,6 @@ bool  Server::isBodySizeAllowed(const int& fd)
 
     return (false);
   }
-  /*
-  logger(LOG_INFO, 
-    "✅ Client body size (" + toString(contentLength) + 
-    " bytes) is within allowed limit (" + 
-    toString(location.client_max_body_size) + " bytes).");
-    */
   return (true);
 }
 
@@ -1082,13 +1010,16 @@ void  Server::saveMultipartFiles(const int& fd)
   {
     if (!it->fullySaved)
     {
-      std::string localPath = location.upload_dir + "/" + it->filename;
+      std::string localPath;
+      if (it->filename.empty())
+        localPath = location.upload_dir + "/" + unique_filename("upload.bin");
+      else
+        localPath = location.upload_dir + "/" + it->filename;
       std::ofstream file(localPath.c_str(), std::ios::app);
       if (!file.is_open())
       {
-        // TODO need to do somethin  in this case
-        std::cerr << "Impossible de créer le fichier : " << it->filename << std::endl;
-        logger(LOG_INFO,"Probleme detected -> " + localPath);
+        logger(LOG_WARNING,"something wrong: it seems like file previously opened is not accessible"
+            + localPath);
         return;
       }
 
@@ -1125,28 +1056,18 @@ void Server::saveBodyToBinary(const int& fd)
   std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);
   if (!out)
   {
-      // Gestion d'erreur si impossible de créer le fichier
-      std::cerr << "Impossible de créer le fichier : " << filename << std::endl;
+      std::cerr << "Unable to create the file : " << filename << std::endl;
       return;
   }
   const std::string& body = this->_clients[fd]->getRequest().getBody();
   out.write(body.c_str(), body.size());
   out.close();
   this->_clients[fd]->getRequest()._allFilesSaved = true;
-  // TODO ajouter cette ligne quand tout a ete save
-  //this->saveUploadedFile_(fd);
 }
 
 void  Server::saveUploadedFile_(const int fd)
 {
   logger(LOG_DEBUG, "In function saveUploadedFile_");
-  /*
-  HTTP/1.1 201 Created
-  Content-Type: text/plain
-  Content-Length: 29
-
-  File uploaded successfully.
-  */
   std::string body;
 
   this->setStatus(201, fd);
@@ -1163,18 +1084,13 @@ void  Server::saveUploadedFile_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::respondMissingUploadDir(const int fd)
 {
   logger(LOG_DEBUG, "In function respondMissingUploadDir");
-  /*
-   HTTP/1.1 500 Internal Server Error
-  Content-Type: text/plain
-  Content-Length: 49
-
-  Server misconfiguration: upload_dir not specified.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1198,6 +1114,8 @@ void  Server::respondMissingUploadDir(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 
@@ -1214,21 +1132,16 @@ void  Server::DELETEMethod_(const int fd)
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   this->_localPath = localPath;
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
-  if (this->getMethod(fd) != "GET" && this->getMethod(fd) != "POST")
-  {
-    this->methodNotAllowed_(fd);
-    return ;
-  }
   if (isFile_(localPath))
   {
     if (remove(localPath.c_str()) == 0)
     {
-      logger(LOG_DEBUG, "successfully detele file");
+      logger(LOG_INFO, "successfully detele file");
       this->onDeleteSuccess_(fd);
     }
     else
     {
-      logger(LOG_DEBUG, "cannot delete file");
+      logger(LOG_INFO, "cannot delete file");
       this->cannotDeleteFile_(fd, localPath);
     }
   }
@@ -1248,13 +1161,6 @@ bool Server::directoryExists_(const std::string& path)
 void  Server::cannotDeleteFile_(const int fd, std::string& path)
 {
   logger(LOG_DEBUG, "In function cannotDeleteFile_");
-  /*
-  HTTP/1.1 403 Conflict
-  Content-Type: text/plain
-  Content-Length: 65
-
-  You don't have permission to access '/path/to/file' on this server.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1278,18 +1184,13 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::respondNotFound_(const int fd)
 {
   logger(LOG_DEBUG, "In function respondNotFound_");
-  /*
-  HTTP/1.1 404 Not Found
-  Content-Type: text/plain
-  Content-Length: 23
-
-  404 Not Found: Invalid path.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1321,13 +1222,6 @@ void  Server::respondNotFound_(const int fd)
 void  Server::respondDirectoryListingForbidden(const int fd)
 {
   logger(LOG_DEBUG, "In function respondDirectoryListingForbidden");
-  /*
-  HTTP/1.1 403 Forbidden
-  Content-Type: text/plain
-  Content-Length: 35
-
-  403 Forbidden: Directory listing denied.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1351,18 +1245,13 @@ void  Server::respondDirectoryListingForbidden(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::respondFileNotReadable(const int fd)
 {
   logger(LOG_DEBUG, "In function respondFileNotReadable");
-  /*
-  HTTP/1.1 403 Forbidden
-  Content-Type: text/plain
-  Content-Length: 48
-
-  You do not have permission to read the requested file.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1386,26 +1275,12 @@ void  Server::respondFileNotReadable(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::buildDirectoryListing_(const int fd)
 {
-  /*
-  HTTP/1.1 200 OK
-  Content-Type: text/html
-  Content-Length: [longueur]
-
-  <html>
-  <head><title>Index of /images</title></head>
-  <body>
-  <h1>Index of /images</h1>
-  <ul>
-    <li><a href="photo1.jpg">photo1.jpg</a></li>
-    <li><a href="photo2.jpg">photo2.jpg</a></li>
-  </ul>
-  </body>
-  </html>
-  */
   const std::string body = this->generateAutoIndexHtml(fd);
   std::string contentLength = toString(body.size());
   std::string contentType = CT_HTML;
@@ -1422,6 +1297,8 @@ void  Server::buildDirectoryListing_(const int fd)
   response.setHeader(headers.str());
   response.setBody(body);
   logger(LOG_INFO, "Autoindex response created for directory: " + this->getUriPath_(fd));
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 const std::string Server::generateAutoIndexHtml(const int& fd)
@@ -1471,15 +1348,13 @@ void  Server::processReadableFile_(const int fd, const std::string& path)
   this->setStatus(200, fd);
   this->setBodyFilePath(fd, path);
   this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::onDeleteSuccess_(const int fd)
 {
   logger(LOG_DEBUG, "In function onDeleteSuccess_");
-  /*
-  HTTP/1.1 204 No Content
-  Content-Length: 0
-  */
 
   this->setStatus(204, fd);
 
@@ -1492,19 +1367,13 @@ void  Server::onDeleteSuccess_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody("");
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::methodNotAllowed_(const int fd)
 {
   logger(LOG_DEBUG, "In function methodNotAllowed_");
-  /*
-  HTTP/1.1 405 Method Not Allowed
-  Allow: 
-  Content-Type: text/plain
-  Content-Length: 46
-  Connection: 
-  The method GET is not allowed on /restricted.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1529,6 +1398,8 @@ void  Server::methodNotAllowed_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 
@@ -1554,13 +1425,6 @@ std::string Server::getAllowedMethodsForLocation(void)
 void  Server::badRequest_(const int fd)
 {
   logger(LOG_DEBUG, "In function badRequest_");
-  /*
-  HTTP/1.1 400 Bad Request
-  Content-Type: text/plain
-  Content-Length: 42
-
-  400 Bad Request: Invalid HTTP request syntax.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1592,14 +1456,6 @@ void  Server::handleNoMatchingLocation_(const int fd)
 {
 
   logger(LOG_DEBUG, "In function handleNoMatchingLocation_");
-  /*
-   HTTP/1.1 404 Not Found
-  Content-Type: text/plain
-  Content-Length: 48
-  Connection: close
-
-  404 Not Found: The requested resource does not exist.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1623,6 +1479,8 @@ void  Server::handleNoMatchingLocation_(const int fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void Server::saveErrorBodyFilePath(const int code, const int& fd,
@@ -1849,7 +1707,6 @@ void  Server::handleRedirect_(const int& fd)
     else
       this->respondRedirect_(fd, it);
   }
-  // TODO ne devrait pas rentrer ici apres le parsing de zramahaz
   else if (this->isValidHttpStatusCode_(it->first))
     this->respondNotImplemented_(fd);
 }
@@ -1857,14 +1714,6 @@ void  Server::handleRedirect_(const int& fd)
 void  Server::respondNotImplemented_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondNotImplemented_");
-  /*
-  HTTP/1.1 501 Not Implemented
-  Content-Type: text/plain
-  Content-Length: 35
-  Connection: close
-
-  501 Not Implemented: Unsupported return code
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1902,12 +1751,6 @@ void  Server::respondRedirect_(const int& fd,
     const std::map<int, std::string>::const_iterator it)
 {
   logger(LOG_DEBUG, "In function respondRedirect_");
-  /*
-  HTTP/1.1 [Code] Moved Permanently
-  Location: http://example.com/new-path
-  Content-Length: 0
-  Connection: close
-  */
   std::ostringstream  headers;
   std::string         status_text;
   std::string         body;
@@ -1946,20 +1789,14 @@ void  Server::respondRedirect_(const int& fd,
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-
   this->setStatus(it->first, fd);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 void  Server::handleReturnWithoutUrl_(const int& fd)
 {
   logger(LOG_DEBUG, "In function handleReturnWithoutUrl");
-  /*
-  HTTP/1.1 403 Forbidden
-  Content-Type: text/plain
-  Content-Length: 24
-
-  Access denied: Forbidden.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -1983,6 +1820,8 @@ void  Server::handleReturnWithoutUrl_(const int& fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 bool  Server::isValidHttpStatusCode_(const int& code)
@@ -1995,32 +1834,6 @@ void  Server::setBodyFilePath(const int& fd, const std::string& path)
   this->_clients[fd]->getResponse().setBodyFilePath(path);
 }
 
-/*
-void  Server::createAndSaveRootLocation_(ServerConfigConstIterator& cfg)
-{
-  LocationConfig  rootLocation;
-
-  for (std::vector<std::string>::const_iterator it = cfg->indexs.begin();
-      it != cfg->indexs.end(); it++)
-    rootLocation.indexs.push_back((*it));
-
-  for (std::vector<std::string>::const_iterator it = cfg->methods.begin();
-      it != cfg->methods.end(); it++)
-    rootLocation.methods.push_back((*it));
-
-  for (std::map<int, std::string>::const_iterator it = cfg->error_pages.begin();
-      it != cfg->error_pages.end(); it++)
-    rootLocation.error_pages[it->first] = it->second;
-
-  rootLocation.autoindex = cfg->autoindex;
-  rootLocation.client_max_body_size = cfg->client_max_body_size;
-  rootLocation.upload_dir = cfg->upload_dir;
-  rootLocation.path = "root";
-  rootLocation.root = cfg->root;
-  this->setCurrentLocation(rootLocation);
-}
-*/
-
 void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
 {
   this->_clients[fd]->getResponse().setBodySize(bodySize);
@@ -2029,13 +1842,6 @@ void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
 void  Server::respondPayloadTooLarge(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondPayloadTooLarge");
-  /*
-  HTTP/1.1 413 Request Entity Too Large
-  Content-Type: text/plain
-  Content-Length: 42
-
-  413 Request Entity Too Large
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
@@ -2059,19 +1865,14 @@ void  Server::respondPayloadTooLarge(const int& fd)
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
+  this->saveHeaderAndBodySize(fd);
+  this->setPollOut_(fd);
 }
 
 // TODO 
 void  Server::respondFallbackError(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondFallbackError");
-  /*
-  HTTP/1.1 502 Bad Gateway
-  Content-Type: text/html
-  Content-Length: 102
-
-  Failed to retrieve response from CGI.
-  */
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
