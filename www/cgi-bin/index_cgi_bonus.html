@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cookie Counter Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #74ebd5, #9face6);
+      color: #333;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #4a90e2;
+      color: white;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #357ab8;
+    }
+    #result {
+      margin-top: 2rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      width: 80%;
+      max-width: 600px;
+      min-height: 100px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      word-break: break-word;
+      font-size: 22px;
+      color: #A9A9A9;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cookie Counter Test 🍪</h1>
+  <button id="check">Check My Counter</button>
+  <div id="result">Click to see how many times you have visited.</div>
+
+  <script>
+    const baseUrl = window.location.pathname;
+    const url = `${baseUrl}/script.rb`;
+
+    document.getElementById("check").addEventListener("click", async () => {
+      try {
+        let response = await fetch(url, {
+          method: "GET",
+          credentials: "include"
+        });
+        let text = await response.text();
+        document.getElementById("result").innerHTML = text;
+      } catch (err) {
+        document.getElementById("result").innerText = "Error: " + err;
+      }
+    });
+  </script>
+</body>
+</html>
+

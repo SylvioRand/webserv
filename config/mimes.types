@@ -1,0 +1,23 @@
+# mime.types - basic MIME type mappings
+
+text/html               html htm
+text/plain              txt
+text/css                css
+text/javascript         js
+application/javascript  js
+application/json        json
+application/xml         xml
+application/pdf         pdf
+application/zip         zip
+application/x-tar       tar
+application/x-rar-compressed rar
+image/jpeg              jpeg jpg
+image/png               png
+image/gif               gif
+image/webp              webp
+image/svg+xml           svg
+video/mp4               mp4
+video/x-msvideo         avi
+audio/mpeg              mp3
+audio/ogg               ogg
+application/octet-stream bin exe

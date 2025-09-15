@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testeur CGI - Webserv</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --border: #dee2e6;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: #f5f7ff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .description {
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .tabs {
+            display: flex;
+            background: var(--light);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab:hover {
+            background: rgba(67, 97, 238, 0.05);
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            background: white;
+        }
+        
+        .form-container {
+            padding: 25px;
+        }
+        
+        .form-title { font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border 0.2s ease;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            margin: 12px 0;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        button:hover {
+            background: var(--secondary);
+        }
+        
+        .response-container {
+            margin: 12px 0px;
+            padding: 12px 0px;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .response-title {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: var(--dark);
+        }
+        
+        .response {
+            background: var(--light);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            min-height: 50px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            line-height: 1.5;
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .script-info {
+            margin-top: 25px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .script-title {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--gray);
+            margin-top: 30px;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 600px) {
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .tab {
+                border-bottom: 1px solid var(--border);
+                border-left: 3px solid transparent;
+            }
+            
+            .tab.active {
+                border-bottom: 1px solid var(--border);
+                border-left: 3px solid var(--primary);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CGI Request Tester</h1>
+            <p class="description">Test the GET and POST requests with your Webserv server.</p>
+        </header>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('get')">GET</div>
+            <div class="tab" onclick="showTab('post')">POST</div>
+        </div>
+        
+        <div id="get-form" class="form-container">
+            <h2 class="form-title">GET Request Test</h2>
+            <p>🎯 Number Guessing Game 🎯</p>
+            
+            <div class="form-group">
+                <label for="get-name">Name :</label>
+                <input type="text" id="get-name" name="name" placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+                <label for="get-age">Guess :</label>
+                <input type="number" id="get-guess" name="guess" min="1" max="10" placeholder="Enter a number between 1 and 10">
+            </div>
+
+            <div id="get-response" class="response">The server’s response will appear here ...</div>
+
+            <button type="button" onclick="testGet()">Test GET</button>
+        </div>
+        <div id="post-form" class="form-container hidden">
+            <h2 class="form-title">POST Request Test</h2>
+            <p>The parameters will be sent in the request body.</p>
+            
+            <div class="form-group">
+                <label for="post-name">Nom:</label>
+                <input type="text" id="post-name" name="name" placeholder="your name">
+            </div>
+            
+            <div class="form-group">
+                <label for="post-email">Email:</label>
+                <input type="text" id="post-email" name="email" placeholder="your@email.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="post-message">Message:</label>
+                <textarea id="post-message" name="message" placeholder="your message here ..."></textarea>
+            </div>
+
+            <div id="post-response" class="response">The server’s response will appear here ...</div>
+
+            <button type="button" onclick="testPost()">Test POST</button>
+        </div>
+        <footer>
+            <p>CGI tester for Webserv</p>
+        </footer>
+    </div>
+
+    <script>
+      function showTab(tabName) {
+        document.getElementById('get-form').classList.add('hidden');
+        document.getElementById('post-form').classList.add('hidden');
+        
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        
+        document.getElementById(tabName + '-form').classList.remove('hidden');
+        event.currentTarget.classList.add('active');
+      }
+      
+      function testGet() {
+        const name = document.getElementById('get-name').value;
+        const guess = document.getElementById('get-guess').value;
+        const baseUrl = window.location.pathname;
+        
+        let params = [];
+        if (name) params.push(`name=${encodeURIComponent(name)}`);
+        if (guess) params.push(`guess=${encodeURIComponent(guess)}`);
+        
+        const queryString = params.join('&');
+        const url = `${baseUrl}/script.py${queryString ? '?' + queryString : ''}`;
+        
+        fetch(url)
+          .then(response => response.text())
+          .then(data => {
+              document.getElementById('get-response').innerHTML = data;
+          })
+          .catch(error => {
+              document.getElementById('get-response').textContent = 'Erreur: ' + error;
+          });
+      }
+      
+      function testPost() {
+        const name = document.getElementById('post-name').value;
+        const email = document.getElementById('post-email').value;
+        const message = document.getElementById('post-message').value;
+        const baseUrl = window.location.pathname;
+        const url = `${baseUrl}/script.py`;
+        
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            name: name || '',
+            email: email || '',
+            message: message || ''
+          })
+        })
+        .then(response => response.text())
+        .then(data => {
+          document.getElementById('post-response').innerHTML = data;
+        })
+        .catch(error => {
+          document.getElementById('post-response').textContent = 'Erreur: ' + error;
+        });
+      }
+    </script>
+</body>
+</html>

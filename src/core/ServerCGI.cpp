@@ -1,0 +1,325 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ServerCGI.cpp                                      :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
+/*   Updated: 2025/09/15 14:44:10 by srandria         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "../../include/core/Server.hpp"
+
+void  Server::prepareAndLaunchCGI_(const int& fd)
+{
+  LocationConfig  location = this->getCurrentLocation_();
+  std::string     localPath;
+  localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
+  std::string cgiPath = location.cgi_path;
+  if (!this->isFile_(localPath))
+    this->respondNotFound_(fd);
+  else if (this->isExecutable_(localPath))
+  {
+    if (!this->isFile_(cgiPath) || !this->isExecutable_(cgiPath))
+      this->respondBinaryNotFound_(fd);
+    else
+    {
+      this->launchCgiProcess_(fd, localPath);
+      return ;
+    }
+  }
+  else
+    this->respondNotExecutable_(fd);
+  this->_clients[fd]->getRequest()._isCgiRequest = false;
+}
+
+void  Server::respondForbidden_(const int& fd)
+{
+  logger(LOG_DEBUG, "In function respondForbidden_");
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
+  else
+  {
+    body = "Access denied: Forbidden.";
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion_(fd) << " 403 Forbidden\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader_(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+}
+
+void  Server::respondBinaryNotFound_(const int&fd)
+{
+  logger(LOG_DEBUG, "in function respondBinaryNotFound");
+  std::string body;
+  std::string contentLength;
+  std::string contentType = CT_TEXT;
+
+  this->setStatus_(500, fd);
+  if (this->hasCustomErrorPage_(500, fd))
+    this->saveErrorBodyFilePath_(500, fd, contentType, contentLength);
+  else
+  {
+    body = "CGI binary not found or not executable: " + this->getCurrentLocation_().cgi_path;
+    contentLength = toString(body.size());
+  }
+
+  std::ostringstream headers;
+
+  headers << this->getVersion_(fd) << " 500 Internal Server Error\r\n"
+    << CT << " " << contentType << "\r\n"
+    << CL << " " << contentLength << "\r\n"
+    << this->buildConnectionHeader_(fd);
+
+  HttpResponse& response = this->_clients[fd]->getResponse();
+  response.setHeader(headers.str());
+  response.setBody(body);
+  this->saveHeaderAndBodySize_(fd);
+  this->setPollOut_(fd);
+}
+
+void  Server::launchCgiProcess_(const int& fd, const std::string& localPath)
+{
+  CgiPipes cgiPipes;
+  const std::string method = this->getMethod_(fd);
+
+  if (pipe(cgiPipes.out_pipe) == -1 || (method == "POST" && pipe(cgiPipes.in_pipe)))
+  {
+    logger(LOG_ERROR, "Error with function pipe()");
+    return ;
+  }
+  this->_clients[fd]->getRequest()._isCgiRequest = true;
+  logger(LOG_DEBUG,
+      "🚀 Executing CGI handler [" + this->getFileName_(this->getUriPath_(fd)) + "] ...");
+  int pid = fork();
+  if (pid < 0)
+  {
+    logger(LOG_FATAL, "fork failed");
+    return ;
+  }
+  else if (pid == 0)
+    this->handleChildProcess_(fd, localPath, cgiPipes);
+  else
+  {
+    this->_clients[fd]->setChildPid(pid);
+    this->handleParentProcess_(fd, cgiPipes);
+  }
+}
+
+void  Server::handleChildProcess_(const int&fd, const std::string& localPath,
+    const CgiPipes& cgiPipes)
+{
+  char **envp = this->buildEnvpForExecve_(fd);
+
+  char *argv[] = {
+      (char*)this->getCurrentLocation_().cgi_path.c_str(),
+      (char*)localPath.c_str(),
+      NULL
+  };
+  dup2(cgiPipes.out_pipe[1], STDOUT_FILENO);
+  close(cgiPipes.out_pipe[0]);
+  close(cgiPipes.out_pipe[1]);
+  if (this->getMethod_(fd) == "POST")
+  {
+    dup2(cgiPipes.in_pipe[0], STDIN_FILENO);
+    close(cgiPipes.in_pipe[0]);
+    close(cgiPipes.in_pipe[1]);
+  }
+  execve(this->getCurrentLocation_().cgi_path.c_str(), argv, envp);
+  perror("execve failed");
+  exit(0);
+}
+
+void  Server::handleParentProcess_(const int&fd, const CgiPipes& cgiPipes)
+{
+  this->_pipeFd.push_back(cgiPipes.out_pipe[0]);
+  this->_pipeFdClient[cgiPipes.out_pipe[0]] = fd;
+  this->setNonBlocking_(cgiPipes.out_pipe[0]);
+  this->addFdToPoll_(cgiPipes.out_pipe[0]);
+  close(cgiPipes.out_pipe[1]);
+  if (this->getMethod_(fd) == "POST")
+  {
+    this->_pipeFd.push_back(cgiPipes.in_pipe[1]);
+    this->_pipeFdClient[cgiPipes.in_pipe[1]] = fd;
+    this->setNonBlocking_(cgiPipes.in_pipe[1]);
+    this->addFdToPoll_(cgiPipes.in_pipe[1]);
+    this->setPollOut_(cgiPipes.in_pipe[1]);
+    close(cgiPipes.in_pipe[0]);
+  }
+}
+
+void  Server::setIsCGIRequest_(const int&fd)
+{
+  LocationConfig  location = this->getCurrentLocation_();
+  std::string     localPath;
+  localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
+
+  if (this->getFileExtension_(getUriPath_(fd)) ==
+      this->getCurrentLocation_().cgi_extension
+      && !this->getCurrentLocation_().cgi_extension.empty()
+      && !this->getCurrentLocation_().cgi_path.empty())
+    this->_clients[fd]->getRequest()._isCgiRequest = true;
+}
+
+char  **Server::buildEnvpForExecve_(const int& fd)
+{
+  logger(LOG_DEBUG, "In function buildEnvpForExecve_");
+  std::map<std::string, std::string>  envMap;
+  std::ostringstream  oss;
+
+  Client *client = this->_clients[fd];
+  envMap["CONTENT_LENGTH"] = toString(client->getRequest().getBody().size());
+  oss << "        " << "CONTENT_LENGTH = " << envMap["CONTENT_LENGTH"] << std::endl;
+  const std::map<std::string, std::string>& headers = client->getRequest().getHeaders();
+  if (headers.find("CONTENT-TYPE") != headers.end())
+    envMap["CONTENT_TYPE"] = headers.at("CONTENT-TYPE");
+  envMap["GATEWAY_INTERFACE"] = "CGI/1.1";
+  size_t pos = this->getRequestUri_(fd).rfind("?");
+  if (pos != std::string::npos)
+  {
+    std::string queryString = this->getRequestUri_(fd).substr(pos + 1);
+    envMap["QUERY_STRING"] = queryString;
+    oss << "        " << "QUERY_STRING = " << envMap["QUERY_STRING"] << std::endl;;
+  }
+  envMap["REQUEST_METHOD"] = this->getMethod_(fd);
+  oss << "        " << "REQUEST_METHOD = " << envMap["REQUEST_METHOD"] << std::endl;
+  envMap["SCRIPT_NAME"] = this->getUriPath_(fd);
+  oss << "        " << "SCRIPT_NAME = " << envMap["SCRIPT_NAME"] << std::endl;
+  std::string host = headers.at("HOST");
+  envMap["SERVER_NAME"] = host.substr(0, host.find(":"));
+  oss << "        " << "SERVER_NAME = " << envMap["SERVER_NAME"] << std::endl;
+  envMap["SERVER_PORT"] = toString(client->getRequest().getServerConf()->port);
+  oss << "        " << "SERVER_PORT = " << envMap["SERVER_PORT"] << std::endl;
+  envMap["SERVER_PROTOCOL"] = this->getVersion_(fd);
+  oss << "        " << "SERVER_PROTOCOL = " << envMap["SERVER_PROTOCOL"] << std::endl;
+  envMap["SERVER_SOFTWARE"] = "webserv/1.0";
+  oss << "        " << "SERVER_SOFTWARE = " << envMap["SERVER_SOFTWARE"] << std::endl;
+  if (headers.find("USER-AGENT") != headers.end())
+  {
+    envMap["HTTP_USER_AGENT"] = headers.at("USER-AGENT");
+    oss << "        " << "HTTP_USER_AGENT = " << envMap["HTTP_USER_AGENT"] << std::endl;
+  }
+  if (headers.find("ACCEPT") != headers.end())
+  {
+    envMap["HTTP_ACCEPT"] = headers.at("ACCEPT");
+    oss << "        " << "HTTP_ACCEPT = " << envMap["HTTP_ACCEPT"] << std::endl;
+  }
+  if (!client->getRequest().getLocation().upload_dir.empty())
+  {
+    envMap["UPLOAD_DIR"] = client->getRequest().getLocation().upload_dir;
+    oss << "        " << "UPLOAD_DIR = " << envMap["UPLOAD_DIR"] << std::endl;
+  }
+  if (headers.find("COOKIE") != headers.end())
+  {
+    envMap["HTTP_COOKIE"] = headers.at("COOKIE");
+    oss << "        " << "HTTP_COOKIE = " << envMap["HTTP_COOKIE"] << std::endl;
+  }
+
+  logger(LOG_DEBUG, "Here are the environment variables passed to the CGI:\n" + oss.str());
+  std::vector<std::string>  envVars;
+  for (std::map<std::string, std::string>::iterator it = envMap.begin();
+      it != envMap.end(); it++)
+    envVars.push_back(it->first + "=" + it->second);
+
+  char **envp = new char*[envVars.size() + 1]();
+  for (size_t i = 0; i < envVars.size(); i++)
+  {
+    envp[i] = strdup(envVars[i].c_str());
+    if (envp[i] == NULL)
+    {
+      for (size_t j = 0; j < i; j++)
+        free(envp[j]);
+      delete [] envp;
+      throw std::runtime_error("strdup fail");
+    }
+  }
+  envp[envVars.size()] = NULL;
+  return (envp);
+}
+
+void  Server::readCgiResponse_(const int& pipeFd, const int& clientFd)
+{
+  if (this->_clients.find(clientFd) == this->_clients.end())
+    return ;
+  Client* client = this->_clients[clientFd];
+  if (client->_isReadingCgiResponse == false)
+  {
+    logger(LOG_INFO,
+        "📥 Receiving CGI-generated HTTP response in parent process ...");
+    client->_isReadingCgiResponse = true;
+  }
+  char buffer[8192];
+  int count = read(pipeFd, buffer, sizeof(buffer) - 1);
+  if (count == -1)
+  {
+    logger(LOG_ERROR, "CGI read failure, fallback response will be sent");
+    this->_clients[pipeFd]->getRequest()._isCgiRequest = false;
+    this->unregisterCgiFd_(pipeFd);
+    this->respondFallbackError_(clientFd);
+    this->saveHeaderAndBodySize_(clientFd);
+    this->setPollOut_(clientFd);
+  } 
+  else if (count == 0)
+  {
+    logger(LOG_INFO,
+      "Parent received CGI response, ready to send to client fd=" + toString(clientFd));
+    client->_isReadingCgiResponse = false;
+    client->getResponse().addExtraHeader(this->buildConnectionHeader_(clientFd),
+        this->getVersion_(clientFd));
+    client->getResponse().saveCgiRespondSize(clientFd);
+    this->unregisterCgiFd_(pipeFd);
+    if (this->_clients[clientFd]->getResponse()._cgiError)
+    {
+      this->respondInternalServerError_(clientFd);
+      this->_clients[clientFd]->getRequest()._isCgiRequest = false;
+    }
+    this->setPollOut_(clientFd);
+  }
+  else if (count > 0)
+  {
+    buffer[count] = '\0';
+    client->getResponse().appendCgiResponse(buffer, count);
+  }
+}
+
+void  Server::sendRequestBodyToCgi_(const int&pipeFd, const int& clientFd)
+{
+  logger(LOG_INFO, "in function sendRequestBodyToCgi");
+  Client* client = this->_clients[clientFd];
+  client->getRequest().sendRequestBodyToCgi(pipeFd, clientFd);
+}
+
+void  Server::unregisterCgiFd_(const int& pipeFd)
+{
+  std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
+  close(pipeFd);
+  while (itPollFd != this->_pool_fds.end())
+  {
+    if (itPollFd->fd == pipeFd)
+    {
+      itPollFd = this->_pool_fds.erase(itPollFd);
+      logger(LOG_DEBUG,
+        "🟢 Pipe fd=" + toString(pipeFd) + " successfully removed from poll monitoring");
+      return ;
+    }
+    else
+      ++itPollFd;
+  }
+  logger(LOG_DEBUG,
+    "⚠️ Failed to remove pipe fd=" + toString(pipeFd) + ": not found in poll monitoring");
+}
