@@ -10,10 +10,11 @@
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
+#include <stdexcept>
 
 Server::Server(const Config& config) : _config(config)
 {
-  this->loadMimeTypes();
+  this->loadMimeTypes_();
   this->start_server_();
 }
 
@@ -32,9 +33,9 @@ void Server::start_server_(void)
   while (true)
   {
     int ready = poll(&_pool_fds[0], _pool_fds.size(), 20);
-    this->handleServerTimeout();
-    this->handleFinishedChildren();
-    if (this->checkShutdownRequest())
+    this->handleServerTimeout_();
+    this->handleFinishedChildren_();
+    if (this->checkShutdownRequest_())
       return ;
     if (ready == -1)
       throwWithLog(LOG_FATAL, "poll() failed");
@@ -68,11 +69,11 @@ void Server::start_server_(void)
       {
         if (revents & (POLLIN | POLLHUP))
         {
-          this->readCgiResponse(fd, this->_pipeFdClient[fd]);
+          this->readCgiResponse_(fd, this->_pipeFdClient[fd]);
         }
         if (revents & POLLOUT)
         {
-          this->sendRequestBodyToCgi(fd, this->_pipeFdClient[fd]);
+          this->sendRequestBodyToCgi_(fd, this->_pipeFdClient[fd]);
         }
       }
       else
@@ -81,9 +82,9 @@ void Server::start_server_(void)
   }
 }
 
-void  Server::handleServerTimeout(void)
+void  Server::handleServerTimeout_(void)
 {
-  for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
+  for (std::vector<struct pollfd>::iterator it = _pool_fds.end() - 1; it != _pool_fds.begin(); --it)
   {
     if (this->_clients.find(it->fd) != this->_clients.end())
     {
@@ -91,43 +92,41 @@ void  Server::handleServerTimeout(void)
       if (it->events == POLLIN)
       {
         if (client->getRequest().getMethod().empty() && client->getRequest()._isReadingRequest)
-          this->handleClientHeaderTimeout(it->fd);
+          this->handleClientHeaderTimeout_(it->fd);
         else if (!client->getRequest()._isReadingRequest)
-          this->handleKeepAliveTimeout(it->fd);
+          this->handleKeepAliveTimeout_(it->fd);
         else
-          this->handleClientBodyTimeout(it->fd);
+          this->handleClientBodyTimeout_(it->fd);
       }
       else if (it->events == POLLOUT)
-        this->handleSendTimeout(it->fd);
+        this->handleSendTimeout_(it->fd);
     }
-    if (this->_clients.size() == 0)
-      return ;
   }
 }
 
-void  Server::handleClientHeaderTimeout(const int& fd)
+void  Server::handleClientHeaderTimeout_(const int& fd)
 {
   time_t now = time(NULL);
   double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
   if (elapsed_seconds  >= timeouts::CLIENT_HEADER_TIMEOUT)
   {
     logger(LOG_INFO, "Header timeout: closing client " + toString(fd));
-    this->respond408RequestTimeout(fd);
+    this->respond408RequestTimeout_(fd);
   }
 }
 
-void  Server::handleClientBodyTimeout(const int& fd)
+void  Server::handleClientBodyTimeout_(const int& fd)
 {
   time_t now = time(NULL);
   double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
   if (elapsed_seconds >= timeouts::CLIENT_BODY_TIMEOUT)
   {
     logger(LOG_INFO, "Body timeout: closing client " + toString(fd));
-    this->respond408RequestTimeout(fd);
+    this->respond408RequestTimeout_(fd);
   }
 }
 
-void  Server::handleKeepAliveTimeout(const int& fd)
+void  Server::handleKeepAliveTimeout_(const int& fd)
 {
   time_t now = time(NULL);
   double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
@@ -138,7 +137,7 @@ void  Server::handleKeepAliveTimeout(const int& fd)
   }
 }
 
-void Server::handleSendTimeout(const int& fd)
+void Server::handleSendTimeout_(const int& fd)
 {
   time_t now = time(NULL);
   double  elapsed_seconds = difftime(now, this->_clients[fd]->getLastActivity());
@@ -163,7 +162,7 @@ void Server::handleSendTimeout(const int& fd)
   }
 }
 
-void  Server::handleFinishedChildren(void)
+void  Server::handleFinishedChildren_(void)
 {
     int status;
     pid_t finished;
@@ -191,16 +190,16 @@ void  Server::handleFinishedChildren(void)
     }
 }
 
-void  Server::respond408RequestTimeout(const int& fd)
+void  Server::respond408RequestTimeout_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respond408RequestTimeout");
     std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(408, fd);
-  if (this->hasCustomErrorPage(408, fd))
-    this->saveErrorBodyFilePath(408, fd, contentType, contentLength);
+  this->setStatus_(408, fd);
+  if (this->hasCustomErrorPage_(408, fd))
+    this->saveErrorBodyFilePath_(408, fd, contentType, contentLength);
   else
   {
     body = "408 Request Timeout";
@@ -209,15 +208,15 @@ void  Server::respond408RequestTimeout(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 408 Request Timeout\r\n"
+  headers << this->getVersion_(fd) << " 408 Request Timeout\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
@@ -231,7 +230,7 @@ void  Server::stop_server(void)
   }
 }
 
-bool  Server::checkShutdownRequest(void)
+bool  Server::checkShutdownRequest_(void)
 {
   if (g_shouldStop == 1)
   {
@@ -244,7 +243,7 @@ bool  Server::checkShutdownRequest(void)
 void  Server::create_all_listeners_(void)
 {
   logger(LOG_INFO, "Create all listeners");
-  const std::vector<ServerConfig>& servers = this->getServers();
+  const std::vector<ServerConfig>& servers = this->getServers_();
 
   for (std::vector<ServerConfig>::const_iterator it = servers.begin(); it != servers.end(); ++it)
   {
@@ -272,7 +271,7 @@ int   Server::createTcpSocket_(void)
   return (fd);
 }
 
-void  Server::bindSocket_(int fd, const ServerConfig &cfg, struct sockaddr_in& addr)
+void  Server::bindSocket_(const int& fd, const ServerConfig &cfg, struct sockaddr_in& addr)
 {
   std::ostringstream oss;
 
@@ -297,14 +296,14 @@ void  Server::buildIpv4Sockaddr_(struct sockaddr_in& addr, const ServerConfig& c
   addr.sin_addr.s_addr = inet_addr(cfg.host.c_str());
 }
 
-void  Server::setSocketReuseAddr_(int fd)
+void  Server::setSocketReuseAddr_(const int& fd)
 {
   int opt = 1;
   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
     throwWithLog(LOG_FATAL, "setsockopt() failed");
 }
 
-void Server::startListener_(int fd, ServerConfigConstIterator cfg)
+void Server::startListener_(const int& fd, ServerConfigConstIterator cfg)
 {
   std::ostringstream oss;
 
@@ -322,7 +321,7 @@ void Server::startListener_(int fd, ServerConfigConstIterator cfg)
   _serverListeners[fd] = cfg;
 }
 
-void  Server::addFdToPoll_(int fd)
+void  Server::addFdToPoll_(const int& fd)
 {
   struct pollfd pfd;
 
@@ -333,7 +332,7 @@ void  Server::addFdToPoll_(int fd)
   _pool_fds.push_back(pfd);
 }
 
-void  Server::accept_new_client_(int listener_fd)
+void  Server::accept_new_client_(const int& listener_fd)
 {
   int                 client_fd;
   struct sockaddr_in  client_address;
@@ -358,7 +357,7 @@ void  Server::accept_new_client_(int listener_fd)
   logger(LOG_INFO, "New client successfully added to poll fd=[" + toString(client_fd) + "]");
 }
 
-void  Server::setNonBlocking_(int fd)
+void  Server::setNonBlocking_(const int& fd)
 {
     int flags = fcntl(fd, F_GETFL, 0);
     if (flags == -1)
@@ -367,7 +366,7 @@ void  Server::setNonBlocking_(int fd)
         throwWithLog(LOG_FATAL, "fcntl(F_SETFL, O_NONBLOCK) failed");
 }
 
-void  Server::handle_pollin_(int fd, bool& isClientClosed)
+void  Server::handle_pollin_(const int& fd, bool& isClientClosed)
 {
   Client *client = this->_clients[fd];
   if (!(*client).readData() || (*client).getRequest().hasError())
@@ -380,8 +379,8 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
   if ((*client).isRequestComplete() && !(*client).getRequest().hasError())
   {
     this->_clients[fd]->getRequest().setServerConf(this->_clients[fd]->getServerConfig());
-    std::string method = this->getMethod(fd);
-    logger(LOG_DEBUG, "method = " + this->getMethod(fd));
+    std::string method = this->getMethod_(fd);
+    logger(LOG_DEBUG, "method = " + this->getMethod_(fd));
     if (this->_clients[fd]->getRequest()._isBadRequest)
     {
       this->badRequest_(fd);
@@ -392,36 +391,36 @@ void  Server::handle_pollin_(int fd, bool& isClientClosed)
       this->respondNotImplemented_(fd);
       return ;
     }
-    if (this->checkShutdownRequest())
+    if (this->checkShutdownRequest_())
       return ;
     this->_currentLocation = this->_clients[fd]->getRequest().getLocation();
-    this->setIsCGIRequest(fd);
-    if (this->getCurrentLocation().path.empty())
+    this->setIsCGIRequest_(fd);
+    if (this->getCurrentLocation_().path.empty())
       this->handleNoMatchingLocation_(fd);
-    else if (!this->getCurrentLocation().redirect.empty())
+    else if (!this->getCurrentLocation_().redirect.empty())
       this->handleRedirect_(fd);
-    else if (!isSupportedHttpMethod(method))
+    else if (!isSupportedHttpMethod_(method))
       this->methodNotAllowed_(fd);
-    else if (getCurrentLocation().methods.empty())
+    else if (getCurrentLocation_().methods.empty())
       this->methodNotAllowed_(fd);
     else if (this->_clients[fd]->getRequest()._isCgiRequest)
-      this->prepareAndLaunchCGI(fd);
-    else if (method == "GET" && this->isMethodAllowedForLocation("GET"))
+      this->prepareAndLaunchCGI_(fd);
+    else if (method == "GET" && this->isMethodAllowedForLocation_("GET"))
       this->GETMethod_(fd);
-    else if (method == "POST" && this->isMethodAllowedForLocation("POST"))
+    else if (method == "POST" && this->isMethodAllowedForLocation_("POST"))
     {
       this->POSTMethod_(fd);
       if (!this->_clients[fd]->getRequest()._isReadingRequest)
       {
-        this->_clients[fd]->setPath(this->getCurrentLocation().upload_dir);
-        this->_clients[fd]->getRequest().setClientMaxBodySize(this->getCurrentLocation().client_max_body_size);
+        this->_clients[fd]->setPath(this->getCurrentLocation_().upload_dir);
+        this->_clients[fd]->getRequest().setClientMaxBodySize(this->getCurrentLocation_().client_max_body_size);
       }
     }
-    else if (method == "DELETE" && this->isMethodAllowedForLocation("DELETE"))
+    else if (method == "DELETE" && this->isMethodAllowedForLocation_("DELETE"))
       this->DELETEMethod_(fd);
     else
       this->methodNotAllowed_(fd);
-    if (this->checkShutdownRequest())
+    if (this->checkShutdownRequest_())
       return ;
   }
   else if (this->_clients[fd]->getRequest().hasError())
@@ -442,22 +441,22 @@ std::string  Server::getUriPath_(const int& fd)
     return (uriPath.substr(0, pos));
 }
 
-void  Server::saveHeaderAndBodySize(const int& fd)
+void  Server::saveHeaderAndBodySize_(const int& fd)
 {
   this->_clients[fd]->getResponse().saveHeadersAndBodySize();
 }
 
-const LocationConfig& Server::getCurrentLocation(void)
+const LocationConfig& Server::getCurrentLocation_(void)
 {
   return (this->_currentLocation);
 }
 
-std::string  Server::getMethod(int fd)
+std::string  Server::getMethod_(const int& fd)
 {
   return (this->_clients[fd]->getRequest().getMethod());
 }
 
-std::string  Server::getVersion(int fd)
+std::string  Server::getVersion_(const int& fd)
 {
   return (this->_clients[fd]->getRequest().getVersion());
 }
@@ -467,21 +466,21 @@ const std::string& Server::getRequestUri_(const int& fd)
   return (this->_clients[fd]->getRequest().getPath());
 }
 
-void  Server::setStatus(int code, int fd)
+void  Server::setStatus_(const int& code, const int& fd)
 {
   this->_clients[fd]->getResponse().setStatus(code);
 }
 
-int  Server::getStatus(int fd)
+int  Server::getStatus_(const int& fd)
 {
   return (this->_clients[fd]->getResponse().getStatus());
 }
 
-bool  Server::isMethodAllowedForLocation(const std::string method)
+bool  Server::isMethodAllowedForLocation_(const std::string& method)
 {
-  std::vector<std::string>::const_iterator it = std::find(this->getCurrentLocation().methods.begin(),
-        this->getCurrentLocation().methods.end(), method);
-  if (it != this->getCurrentLocation().methods.end())
+  std::vector<std::string>::const_iterator it = std::find(this->getCurrentLocation_().methods.begin(),
+        this->getCurrentLocation_().methods.end(), method);
+  if (it != this->getCurrentLocation_().methods.end())
   {
     logger(LOG_DEBUG, "[" + method + "] is allowed in location");
     return (true);
@@ -490,19 +489,19 @@ bool  Server::isMethodAllowedForLocation(const std::string method)
   return (false);
 }
 
-bool  Server::isSupportedHttpMethod(const std::string& method)
+bool  Server::isSupportedHttpMethod_(const std::string& method)
 {
     return (method == "GET" || method == "POST" || method == "DELETE");
 }
 
-bool  Server::isHttpMethodValid_(std::string method)
+bool  Server::isHttpMethodValid_(const std::string& method)
 {
   return (method == "GET" || method == "POST" || method == "DELETE" || method == "PUT"
       || method == "HEAD" || method == "CONNECT" || method == "OPTIONS" || method == "TRACE"
       || method == "PATCH");
 }
 
-void  Server::setPollOut_(int fd)
+void  Server::setPollOut_(const int& fd)
 {
   for (std::vector<struct pollfd>::iterator it = _pool_fds.begin(); it != _pool_fds.end(); ++it)
   {
@@ -541,7 +540,7 @@ void  Server::setPollIn_(const int& fd)
     "Failed to monitor input events (POLLIN) on fd=" + toString(fd) + " — descriptor not found");
 }
 
-void  Server::handle_pollout_(int fd, bool& isClientClosed)
+void  Server::handle_pollout_(const int& fd, bool& isClientClosed)
 {
   if (this->_clients.find(fd) == this->_clients.end())
     return ;
@@ -555,21 +554,21 @@ void  Server::handle_pollout_(int fd, bool& isClientClosed)
         == client->getResponse().getCgiRespondSize())
       client->getResponse()._isFullySent = true;
   }
-  else if (this->getMethod(fd) == "POST"
+  else if (this->getMethod_(fd) == "POST"
       && this->_clients[fd]->getRequest().isBodySizeAllowed()
       && this->directoryExists_(path)
       && !this->_clients[fd]->getRequest()._allFilesSaved)
   {
     if (this->_clients[fd]->getRequest().hasBoundary_())
-      this->saveMultipartFiles(fd);
+      this->saveMultipartFiles_(fd);
     else
-      this->saveBodyToBinary(fd);
+      this->saveBodyToBinary_(fd);
   }
 
-  if (this->getMethod(fd) != "POST" ||
-      (this->getMethod(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved)
+  if (this->getMethod_(fd) != "POST" ||
+      (this->getMethod_(fd) == "POST" && this->_clients[fd]->getRequest()._allFilesSaved)
       || !this->_clients[fd]->getRequest().isBodySizeAllowed()
-      || (this->getMethod(fd) == "POST" && !this->directoryExists_(path)))
+      || (this->getMethod_(fd) == "POST" && !this->directoryExists_(path)))
   {
     client->sendData();
     if (client->getResponse().areHeadersFullySent() &&
@@ -594,7 +593,7 @@ void  Server::handle_pollout_(int fd, bool& isClientClosed)
   }
 }
 
-void Server::close_client_(int fd)
+void Server::close_client_(const int& fd)
 {
   this->_clients[fd]->getResponse().closeBodyFileStream(fd);
   logger(LOG_INFO, "Closing client connection (fd=" + toString(fd) + ")");
@@ -623,7 +622,7 @@ void Server::close_client_(int fd)
     "⚠️ Failed to remove client fd=" + toString(fd) + ": not found in poll monitoring");
 }
 
-const std::map<std::string, std::string>& Server::getHeaders(int fd)
+const std::map<std::string, std::string>& Server::getHeaders_(const int& fd)
 {
     return (_clients[fd]->getRequest().getHeaders());
 }
@@ -631,7 +630,7 @@ const std::map<std::string, std::string>& Server::getHeaders(int fd)
 void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg)
 {
   LocationConfig  best_match;
-  this->setCurrentLocation(best_match);
+  this->setCurrentLocation_(best_match);
   size_t best_length = 0;
 
   std::map<std::string, LocationConfig> locations = cfg->locations;
@@ -644,7 +643,7 @@ void Server::saveMatchingLocation_(const int& fd, ServerConfigConstIterator& cfg
       best_length = path.size();
     }
   }
-  this->setCurrentLocation(best_match);
+  this->setCurrentLocation_(best_match);
   logger(LOG_DEBUG, "matching LocationConfig found [" + best_match.path + "]");
 }
 
@@ -653,36 +652,36 @@ const Config& Server::getConfig(void)
   return (_config);
 }
 
-const std::vector<ServerConfig>&  Server::getServers(void)
+const std::vector<ServerConfig>&  Server::getServers_(void)
 {
   return (this->getConfig().getServers());
 }
 
-bool  Server::isFile_(const std::string localPath) const
+bool  Server::isFile_(const std::string& localPath) const
 {
   struct stat st;
   return (stat(localPath.c_str(), &st) == 0 &&
           S_ISREG(st.st_mode));
 }
 
-bool  Server::isReadable_(const std::string localPath) const
+bool  Server::isReadable_(const std::string& localPath) const
 {
   return (access(localPath.c_str(), R_OK) == 0);
 }
 
-void  Server::setCurrentLocation(LocationConfig& location)
+void  Server::setCurrentLocation_(LocationConfig& location)
 {
   this->_currentLocation = location;
 }
 
 void  Server::GETMethod_(const int& fd)
 {
-  LocationConfig  location = this->getCurrentLocation();
+  LocationConfig  location = this->getCurrentLocation_();
   std::string     localPath;
   std::string     extractUri;
 
-  logger(LOG_DEBUG, "root location -> " + this->getCurrentLocation().root);
-  if (this->getCurrentLocation().root.empty())
+  logger(LOG_DEBUG, "root location -> " + this->getCurrentLocation_().root);
+  if (this->getCurrentLocation_().root.empty())
   {
     this->respondNotFound_(fd);
     return ;
@@ -695,7 +694,7 @@ void  Server::GETMethod_(const int& fd)
     if (this->isReadable_(localPath))
       this->processReadableFile_(fd, localPath);
     else
-      this->respondFileNotReadable(fd);
+      this->respondFileNotReadable_(fd);
   }
   else if (!directoryExists_(localPath))
     this->respondNotFound_(fd);
@@ -704,7 +703,7 @@ void  Server::GETMethod_(const int& fd)
     std::string indexPath = this->getAccessibleIndexPath_(localPath);
     if (indexPath.empty())
     {
-      if (this->getCurrentLocation().autoindex)
+      if (this->getCurrentLocation_().autoindex)
         this->buildDirectoryListing_(fd);
       else if (this->existsAtLeastOneIndexFile_(localPath))
         this->respondIndexFilesUnreadable_(fd);
@@ -714,14 +713,14 @@ void  Server::GETMethod_(const int& fd)
     else
       this->serveIndexContent_(indexPath, fd);
   }
-  else if (this->getCurrentLocation().autoindex)
+  else if (this->getCurrentLocation_().autoindex)
     this->buildDirectoryListing_(fd);
-  else if (!this->getCurrentLocation().autoindex)
-    this->respondDirectoryListingForbidden(fd);
+  else if (!this->getCurrentLocation_().autoindex)
+    this->respondDirectoryListingForbidden_(fd);
 }
 
 
-std::string Server::getFileExtension_(std::string path)
+std::string Server::getFileExtension_(const std::string& path)
 {
   std::string uri;
   size_t pos = path.find("?");
@@ -729,7 +728,7 @@ std::string Server::getFileExtension_(std::string path)
     uri = path.substr(0, pos);
   else
     uri = path;
-  const std::string fileName = this->getFileName(path);
+  const std::string fileName = this->getFileName_(path);
 
   size_t extStart = uri.rfind('.');
   if (extStart == std::string::npos)
@@ -739,7 +738,7 @@ std::string Server::getFileExtension_(std::string path)
   return ("");
 }
 
-const std::string Server::getFileName(const std::string uriPath)
+const std::string Server::getFileName_(const std::string& uriPath)
 {
   size_t pos = uriPath.rfind("/");
 
@@ -762,16 +761,16 @@ bool Server::isExecutable_(const std::string& path)
   return false;
 }
 
-void  Server::respondNotExecutable(const int& fd)
+void  Server::respondNotExecutable_(const int& fd)
 {
   logger(LOG_DEBUG, "in function respondNotExecutable");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(500, fd);
-  if (this->hasCustomErrorPage(500, fd))
-    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  this->setStatus_(500, fd);
+  if (this->hasCustomErrorPage_(500, fd))
+    this->saveErrorBodyFilePath_(500, fd, contentType, contentLength);
   else
   {
     body = "CGI script is not executable.";
@@ -780,10 +779,10 @@ void  Server::respondNotExecutable(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+  headers << this->getVersion_(fd) << " 500 Internal Server Error\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
@@ -791,16 +790,16 @@ void  Server::respondNotExecutable(const int& fd)
 }
 
 
-void  Server::respondIndexFilesUnreadable_(const int fd)
+void  Server::respondIndexFilesUnreadable_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondIndexFilesUnreadable_");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "403 Forbidden: No readable index file found in this directory.";
@@ -809,28 +808,28 @@ void  Server::respondIndexFilesUnreadable_(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 403 Forbidden\r\n"
+  headers << this->getVersion_(fd) << " 403 Forbidden\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::respondNoIndexFileFound_(const int fd)
+void  Server::respondNoIndexFileFound_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondNoIndexFileFound_");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "403 Forbidden: No index file found in this directory.";
@@ -839,28 +838,28 @@ void  Server::respondNoIndexFileFound_(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 403 Forbidden.\r\n"
+  headers << this->getVersion_(fd) << " 403 Forbidden.\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::respondWithUploadError(const int fd)
+void  Server::respondWithUploadError_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondWithUploadError");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(500, fd);
-  if (this->hasCustomErrorPage(500, fd))
-    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  this->setStatus_(500, fd);
+  if (this->hasCustomErrorPage_(500, fd))
+    this->saveErrorBodyFilePath_(500, fd, contentType, contentLength);
   else
   {
     body = "500 Internal Server Error: Upload directory does not exist";
@@ -869,28 +868,28 @@ void  Server::respondWithUploadError(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 500 Internal Server Error: Upload directory does not exist\r\n"
+  headers << this->getVersion_(fd) << " 500 Internal Server Error: Upload directory does not exist\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::respondInternalServerError(const int& fd)
+void  Server::respondInternalServerError_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondWithUploadError");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(500, fd);
-  if (this->hasCustomErrorPage(500, fd))
-    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  this->setStatus_(500, fd);
+  if (this->hasCustomErrorPage_(500, fd))
+    this->saveErrorBodyFilePath_(500, fd, contentType, contentLength);
   else
   {
     body = "500 Internal Server Error";
@@ -899,57 +898,57 @@ void  Server::respondInternalServerError(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+  headers << this->getVersion_(fd) << " 500 Internal Server Error\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
 
 
 
-void  Server::serveIndexContent_(const std::string path, const int fd)
+void  Server::serveIndexContent_(const std::string& path, const int& fd)
 {
   logger(LOG_DEBUG, "In function serveIndexContent_");
-  std::string contentType = this->getContentTypeByFileExtension(path);
+  std::string contentType = this->getContentTypeByFileExtension_(path);
 
   std::string contentLength = toString(getFileSize(path));
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 200 OK\r\n"
+  headers << this->getVersion_(fd) << " 200 OK\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
 
-  this->setStatus(200, fd);
-  this->setBodyFilePath(fd, path);
+  this->setStatus_(200, fd);
+  this->setBodyFilePath_(fd, path);
   this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
-  this->setBodySize(fd, getFileSize(path));
-  this->setBodyFilePath(fd, path);
-  this->saveHeaderAndBodySize(fd);
+  this->setBodySize_(fd, getFileSize(path));
+  this->setBodyFilePath_(fd, path);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
 bool  Server::hasIndexDirective_(void)
 {
-  if (this->getCurrentLocation().indexs.empty())
+  if (this->getCurrentLocation_().indexs.empty())
     return (false);
   return (true);
 }
 
 std::string Server::getAccessibleIndexPath_(const std::string& path)
 {
-  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().indexs.begin();
-      it != this->getCurrentLocation().indexs.end(); it++)
+  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation_().indexs.begin();
+      it != this->getCurrentLocation_().indexs.end(); it++)
   {
     std::string resultPath = path + '/' + *it;
     if (this->isFile_(resultPath) && this->isReadable_(resultPath))
@@ -958,10 +957,10 @@ std::string Server::getAccessibleIndexPath_(const std::string& path)
   return ("");
 }
 
-bool  Server::existsAtLeastOneIndexFile_(const std::string path)
+bool  Server::existsAtLeastOneIndexFile_(const std::string& path)
 {
-  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().indexs.begin();
-      it != this->getCurrentLocation().indexs.end(); it++)
+  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation_().indexs.begin();
+      it != this->getCurrentLocation_().indexs.end(); it++)
   {
     std::string resultPath = path + '/' + *it;
     if (this->isFile_(resultPath))
@@ -970,22 +969,22 @@ bool  Server::existsAtLeastOneIndexFile_(const std::string path)
   return (false);
 }
 
-void  Server::POSTMethod_(const int fd)
+void  Server::POSTMethod_(const int& fd)
 {
-  LocationConfig  location = this->getCurrentLocation();
+  LocationConfig  location = this->getCurrentLocation_();
   if (location.upload_dir.empty())
   {
-    this->respondMissingUploadDir(fd);
+    this->respondMissingUploadDir_(fd);
     return ;
   }
   else if (!this->directoryExists_(location.upload_dir))
   {
-    this->respondWithUploadError(fd);
+    this->respondWithUploadError_(fd);
     return ;
   }
   else if (!this->_clients[fd]->getRequest().isBodySizeAllowed())
   {
-    this->respondPayloadTooLarge(fd);
+    this->respondPayloadTooLarge_(fd);
     return ;
   }
   std::string     localPath;
@@ -996,13 +995,13 @@ void  Server::POSTMethod_(const int fd)
   if (directoryExists_(localPath))
     this->saveUploadedFile_(fd);
   else
-    this->respondMissingUploadDir(fd);
+    this->respondMissingUploadDir_(fd);
   logger(LOG_DEBUG, "value of path [" + localPath + "]");
 }
 
-bool  Server::isBodySizeAllowed(const int& fd)
+bool  Server::isBodySizeAllowed_(const int& fd)
 {
-  LocationConfig  location = this->getCurrentLocation();
+  LocationConfig  location = this->getCurrentLocation_();
   size_t          contentLength = this->_clients[fd]->getRequest().getBody().size();
 
   if (contentLength > location.client_max_body_size)
@@ -1018,7 +1017,7 @@ bool  Server::isBodySizeAllowed(const int& fd)
   return (true);
 }
 
-void  Server::saveMultipartFiles(const int& fd)
+void  Server::saveMultipartFiles_(const int& fd)
 {
   std::vector<MultipartPart>& multipart = this->_clients[fd]->getRequest().getMultipart();
   LocationConfig location = this->_clients[fd]->getRequest().getLocation(); 
@@ -1064,11 +1063,11 @@ void  Server::saveMultipartFiles(const int& fd)
   }
 }
 
-void Server::saveBodyToBinary(const int& fd)
+void Server::saveBodyToBinary_(const int& fd)
 {
   std::string path;
   std::string filename;
-  path = this->getCurrentLocation().upload_dir + "/" + unique_filename("upload.bin");
+  path = this->getCurrentLocation_().upload_dir + "/" + unique_filename("upload.bin");
   std::ofstream out(path.c_str(), std::ios::out | std::ios::binary);
   if (!out)
   {
@@ -1081,39 +1080,39 @@ void Server::saveBodyToBinary(const int& fd)
   this->_clients[fd]->getRequest()._allFilesSaved = true;
 }
 
-void  Server::saveUploadedFile_(const int fd)
+void  Server::saveUploadedFile_(const int& fd)
 {
   logger(LOG_DEBUG, "In function saveUploadedFile_");
   std::string body;
 
-  this->setStatus(201, fd);
+  this->setStatus_(201, fd);
   body = "File uploaded successfully.";
 
   std::string contentLength = toString(body.size());
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 201 Created\r\n"
+  headers << this->getVersion_(fd) << " 201 Created\r\n"
     << CT << " " << CT_TEXT << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::respondMissingUploadDir(const int fd)
+void  Server::respondMissingUploadDir_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondMissingUploadDir");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(500, fd);
-  if (this->hasCustomErrorPage(500, fd))
-    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  this->setStatus_(500, fd);
+  if (this->hasCustomErrorPage_(500, fd))
+    this->saveErrorBodyFilePath_(500, fd, contentType, contentLength);
   else
   {
     body = "Server misconfiguration: upload_dir not specified.";
@@ -1122,25 +1121,25 @@ void  Server::respondMissingUploadDir(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+  headers << this->getVersion_(fd) << " 500 Internal Server Error\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
 
-void  Server::DELETEMethod_(const int fd)
+void  Server::DELETEMethod_(const int& fd)
 {
-  LocationConfig  location = this->getCurrentLocation();
+  LocationConfig  location = this->getCurrentLocation_();
   std::string     localPath;
   std::string     extractUri;
-  if (this->getCurrentLocation().root.empty())
+  if (this->getCurrentLocation_().root.empty())
   {
     this->respondNotFound_(fd);
     return;
@@ -1174,16 +1173,16 @@ bool Server::directoryExists_(const std::string& path)
     return (stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode));
 }
 
-void  Server::cannotDeleteFile_(const int fd, std::string& path)
+void  Server::cannotDeleteFile_(const int& fd, const std::string& path)
 {
   logger(LOG_DEBUG, "In function cannotDeleteFile_");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "You don't have permission to access '" + path + "'on this server.";
@@ -1192,28 +1191,28 @@ void  Server::cannotDeleteFile_(const int fd, std::string& path)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 409 Conflict\r\n"
+  headers << this->getVersion_(fd) << " 409 Conflict\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::respondNotFound_(const int fd)
+void  Server::respondNotFound_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondNotFound_");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(404, fd);
-  if (this->hasCustomErrorPage(404, fd))
-    this->saveErrorBodyFilePath(404, fd, contentType, contentLength);
+  this->setStatus_(404, fd);
+  if (this->hasCustomErrorPage_(404, fd))
+    this->saveErrorBodyFilePath_(404, fd, contentType, contentLength);
   else
   {
     body = "404 Not Found: Invalid path.";
@@ -1222,29 +1221,29 @@ void  Server::respondNotFound_(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 404 Not Found\r\n"
+  headers << this->getVersion_(fd) << " 404 Not Found\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
 
-void  Server::respondDirectoryListingForbidden(const int fd)
+void  Server::respondDirectoryListingForbidden_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondDirectoryListingForbidden");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "403 Forbidden: Directory listing denied.";
@@ -1253,28 +1252,28 @@ void  Server::respondDirectoryListingForbidden(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 403 Forbidden\r\n"
+  headers << this->getVersion_(fd) << " 403 Forbidden\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::respondFileNotReadable(const int fd)
+void  Server::respondFileNotReadable_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondFileNotReadable");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "You do not have permission to read the requested file.";
@@ -1283,48 +1282,48 @@ void  Server::respondFileNotReadable(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 403 Forbidden\r\n"
+  headers << this->getVersion_(fd) << " 403 Forbidden\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::buildDirectoryListing_(const int fd)
+void  Server::buildDirectoryListing_(const int& fd)
 {
-  const std::string body = this->generateAutoIndexHtml(fd);
+  const std::string body = this->generateAutoIndexHtml_(fd);
   std::string contentLength = toString(body.size());
   std::string contentType = CT_HTML;
-  this->setStatus(200, fd);
+  this->setStatus_(200, fd);
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 200 OK\r\n"
+  headers << this->getVersion_(fd) << " 200 OK\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
   logger(LOG_INFO, "Autoindex response created for directory: " + this->getUriPath_(fd));
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-const std::string Server::generateAutoIndexHtml(const int& fd)
+const std::string Server::generateAutoIndexHtml_(const int& fd)
 {
   std::string uriPath = this->getUriPath_(fd);
   if (uriPath.at(uriPath.size() - 1) == '/')
     uriPath.erase(uriPath.size() - 1);
 
-  const std::string localPath = this->getCurrentLocation().root
-    + "/" + uriPath.substr(this->getCurrentLocation().path.size());
+  const std::string localPath = this->getCurrentLocation_().root
+    + "/" + uriPath.substr(this->getCurrentLocation_().path.size());
   DIR *dir_ptr = opendir(localPath.c_str());
   
   struct dirent *entry;
@@ -1344,87 +1343,87 @@ const std::string Server::generateAutoIndexHtml(const int& fd)
   return (body);
 }
 
-void  Server::processReadableFile_(const int fd, const std::string& path)
+void  Server::processReadableFile_(const int& fd, const std::string& path)
 {
   logger(LOG_DEBUG, "In function processReadableFile_");
-  std::string contentType = this->getContentTypeByFileExtension(path);
+  std::string contentType = this->getContentTypeByFileExtension_(path);
 
   std::string contentLength = toString(getFileSize(path));
-  this->setBodySize(fd, getFileSize(path));
+  this->setBodySize_(fd, getFileSize(path));
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 200 OK\r\n"
+  headers << this->getVersion_(fd) << " 200 OK\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
 
-  this->setStatus(200, fd);
-  this->setBodyFilePath(fd, path);
+  this->setStatus_(200, fd);
+  this->setBodyFilePath_(fd, path);
   this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::onDeleteSuccess_(const int fd)
+void  Server::onDeleteSuccess_(const int& fd)
 {
   logger(LOG_DEBUG, "In function onDeleteSuccess_");
 
-  this->setStatus(204, fd);
+  this->setStatus_(204, fd);
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 204 No Content\r\n"
+  headers << this->getVersion_(fd) << " 204 No Content\r\n"
     << CL << " " << "0" << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody("");
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::methodNotAllowed_(const int fd)
+void  Server::methodNotAllowed_(const int& fd)
 {
   logger(LOG_DEBUG, "In function methodNotAllowed_");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(405, fd);
-  if (this->hasCustomErrorPage(405, fd))
-    this->saveErrorBodyFilePath(405, fd, contentType, contentLength);
+  this->setStatus_(405, fd);
+  if (this->hasCustomErrorPage_(405, fd))
+    this->saveErrorBodyFilePath_(405, fd, contentType, contentLength);
   else
   {
-    body = "The method " + this->getMethod(fd) + " is not allowed on " + this->getCurrentLocation().path;
+    body = "The method " + this->getMethod_(fd) + " is not allowed on " + this->getCurrentLocation_().path;
     contentLength = toString(body.size());
   }
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 405 Method Not Allowed\r\n"
-    << "Allow: " << this->getAllowedMethodsForLocation() << "\r\n"
+  headers << this->getVersion_(fd) << " 405 Method Not Allowed\r\n"
+    << "Allow: " << this->getAllowedMethodsForLocation_() << "\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
 
-std::string Server::getAllowedMethodsForLocation(void)
+std::string Server::getAllowedMethodsForLocation_(void)
 {
   std::string allowedMethod;
   int i = 0;
-  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation().methods.begin();
-      it != this->getCurrentLocation().methods.end(); it++)
+  for (std::vector<std::string>::const_iterator it = this->getCurrentLocation_().methods.begin();
+      it != this->getCurrentLocation_().methods.end(); it++)
   {
     if (i == 0)
     {
@@ -1438,16 +1437,16 @@ std::string Server::getAllowedMethodsForLocation(void)
 }
 
 
-void  Server::badRequest_(const int fd)
+void  Server::badRequest_(const int& fd)
 {
   logger(LOG_DEBUG, "In function badRequest_");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(400, fd);
-  if (this->hasCustomErrorPage(400, fd))
-    this->saveErrorBodyFilePath(400, fd, contentType, contentLength);
+  this->setStatus_(400, fd);
+  if (this->hasCustomErrorPage_(400, fd))
+    this->saveErrorBodyFilePath_(400, fd, contentType, contentLength);
   else
   {
     body = "400 Bad Request: Invalid HTTP request syntax.";
@@ -1456,19 +1455,19 @@ void  Server::badRequest_(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 400 Bad Request\r\n"
+  headers << this->getVersion_(fd) << " 400 Bad Request\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::handleNoMatchingLocation_(const int fd)
+void  Server::handleNoMatchingLocation_(const int& fd)
 {
 
   logger(LOG_DEBUG, "In function handleNoMatchingLocation_");
@@ -1476,9 +1475,9 @@ void  Server::handleNoMatchingLocation_(const int fd)
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(404, fd);
-  if (this->hasCustomErrorPage(404, fd))
-    this->saveErrorBodyFilePath(404, fd, contentType, contentLength);
+  this->setStatus_(404, fd);
+  if (this->hasCustomErrorPage_(404, fd))
+    this->saveErrorBodyFilePath_(404, fd, contentType, contentLength);
   else
   {
     body = "404 Not Found: The requested resource does not exist.";
@@ -1487,22 +1486,22 @@ void  Server::handleNoMatchingLocation_(const int fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 404 Not Found\r\n"
+  headers << this->getVersion_(fd) << " 404 Not Found\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void Server::saveErrorBodyFilePath(const int code, const int& fd,
+void Server::saveErrorBodyFilePath_(const int& code, const int& fd,
     std::string& contentType, std::string& contentLength)
 {
-  if (this->getCurrentLocation().path.empty())
+  if (this->getCurrentLocation_().path.empty())
   {
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     std::map<int, std::string> errorPages = serverConf->error_pages;
@@ -1512,29 +1511,29 @@ void Server::saveErrorBodyFilePath(const int code, const int& fd,
       if (it->first == code)
       {
         std::string path = serverConf->root + '/' + it->second;
-        contentType = this->getContentTypeByFileExtension(path);
+        contentType = this->getContentTypeByFileExtension_(path);
         contentLength = toString(getFileSize(path));
         this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
-        this->setBodySize(fd, getFileSize(path));
-        this->setBodyFilePath(fd, path);
+        this->setBodySize_(fd, getFileSize(path));
+        this->setBodyFilePath_(fd, path);
         return ;
       }
     }
   }
   else
   {
-    std::map<int, std::string> errorPages = this->getCurrentLocation().error_pages;
+    std::map<int, std::string> errorPages = this->getCurrentLocation_().error_pages;
     for (std::map<int, std::string>::iterator it = errorPages.begin();
         it != errorPages.end(); it++)
     {
       if (it->first == code)
       {
-        std::string path = this->getCurrentLocation().root + '/' + it->second;
-        contentType = this->getContentTypeByFileExtension(path);
+        std::string path = this->getCurrentLocation_().root + '/' + it->second;
+        contentType = this->getContentTypeByFileExtension_(path);
         contentLength = toString(getFileSize(path));
         this->_clients[fd]->getResponse().openAndSaveBodyFileStream(path);
-        this->setBodySize(fd, getFileSize(path));
-        this->setBodyFilePath(fd, path);
+        this->setBodySize_(fd, getFileSize(path));
+        this->setBodyFilePath_(fd, path);
         return ;
       }
     }
@@ -1544,7 +1543,7 @@ void Server::saveErrorBodyFilePath(const int code, const int& fd,
   contentLength = "0";
 }
 
-std::string Server::readLocalFileToString(std::string path)
+std::string Server::readLocalFileToString_(const std::string& path)
 {
   std::ifstream file(path.c_str(), std::ios::binary);
   if (file.is_open())
@@ -1558,16 +1557,16 @@ std::string Server::readLocalFileToString(std::string path)
   return ("");
 }
 
-std::string Server::buildConnectionHeader(const int fd)
+std::string Server::buildConnectionHeader_(const int& fd)
 {
-  if (this->getVersion(fd) == "HTTP/1.0"
+  if (this->getVersion_(fd) == "HTTP/1.0"
       || !this->_clients[fd]->getRequest().isBodySizeAllowed())
   {
     this->_clients[fd]->getResponse().setKeepAliveStatus(false);
     return "Connection: close\r\n\r\n";
   }
 
-  const std::map<std::string, std::string>& headers = this->getHeaders(fd);
+  const std::map<std::string, std::string>& headers = this->getHeaders_(fd);
   for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); ++it)
   {
     if (caseInsensitiveEqual(it->first, "connection"))
@@ -1588,9 +1587,9 @@ std::string Server::buildConnectionHeader(const int fd)
   return "Connection: keep-alive\r\n\r\n";
 }
 
-bool  Server::hasCustomErrorPage(const int code, const int fd)
+bool  Server::hasCustomErrorPage_(const int& code, const int& fd)
 {
-  if (this->getCurrentLocation().path.empty())
+  if (this->getCurrentLocation_().path.empty())
   {
     ServerConfigConstIterator serverConf = this->_clients[fd]->getServerConfig();
     std::map<int, std::string> errorPages = serverConf->error_pages;
@@ -1613,13 +1612,12 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
   }
   else
   {
-    std::map<int, std::string> errorPages = this->getCurrentLocation().error_pages;
-
+    std::map<int, std::string> errorPages = this->getCurrentLocation_().error_pages;
     for (std::map<int, std::string>::iterator it = errorPages.begin(); it != errorPages.end(); it++)
     {
       if (it->first == code)
       {
-        std::string path = this->getCurrentLocation().root + '/' + it->second;
+        std::string path = this->getCurrentLocation_().root + '/' + it->second;
         std::ifstream file(path.c_str());
         if (file.is_open())
         {
@@ -1634,7 +1632,7 @@ bool  Server::hasCustomErrorPage(const int code, const int fd)
   return (false);
 }
 
-void Server::loadMimeTypes(void)
+void Server::loadMimeTypes_(void)
 {
   std::ifstream file("./config/mimes.types");
   if (!file.is_open())
@@ -1677,7 +1675,7 @@ void Server::loadMimeTypes(void)
   file.close();
 }
 
-std::string Server::getContentTypeByFileExtension(std::string path)
+std::string Server::getContentTypeByFileExtension_(std::string path)
 {
   std::string fileName;
   size_t      slashPos;
@@ -1713,9 +1711,9 @@ std::string Server::getContentTypeByFileExtension(std::string path)
 
 void  Server::handleRedirect_(const int& fd)
 {
-  if (this->getCurrentLocation().redirect.size() > 1)
+  if (this->getCurrentLocation_().redirect.size() > 1)
     logger(LOG_WARNING, "Parsing error: invalid or unexpected configuration format.");
-  std::map<int, std::string>::const_iterator it = this->getCurrentLocation().redirect.begin();
+  std::map<int, std::string>::const_iterator it = this->getCurrentLocation_().redirect.begin();
   if (this->isRedirectCode_(it->first))
   {
     if (it->second.empty())
@@ -1726,7 +1724,7 @@ void  Server::handleRedirect_(const int& fd)
   else if (this->isValidHttpStatusCode_(it->first))
     this->respondNotImplemented_(fd);
   else
-    this->respondInternalServerError(fd);
+    this->respondInternalServerError_(fd);
 }
 
 void  Server::respondNotImplemented_(const int& fd)
@@ -1736,9 +1734,9 @@ void  Server::respondNotImplemented_(const int& fd)
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(501, fd);
-  if (this->hasCustomErrorPage(501, fd))
-    this->saveErrorBodyFilePath(501, fd, contentType, contentLength);
+  this->setStatus_(501, fd);
+  if (this->hasCustomErrorPage_(501, fd))
+    this->saveErrorBodyFilePath_(501, fd, contentType, contentLength);
   else
   {
     body = "501 Not Implemented";
@@ -1747,19 +1745,19 @@ void  Server::respondNotImplemented_(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 501 Not Implemented\r\n"
+  headers << this->getVersion_(fd) << " 501 Not Implemented\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-bool  Server::isRedirectCode_(int statusCode)
+bool  Server::isRedirectCode_(const int& statusCode)
 {
     return ((statusCode >= 301 && statusCode <= 303)
         || statusCode == 307 || statusCode == 308);
@@ -1799,16 +1797,16 @@ void  Server::respondRedirect_(const int& fd,
       status_text = "";
       break;
   }
-  headers << this->getVersion(fd) << " " << it->first << status_text << "\r\n"
+  headers << this->getVersion_(fd) << " " << it->first << status_text << "\r\n"
     << "Location: " << it->second << "\r\n"
     << CL << " " << body.size() << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->setStatus(it->first, fd);
-  this->saveHeaderAndBodySize(fd);
+  this->setStatus_(it->first, fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
@@ -1819,9 +1817,9 @@ void  Server::handleReturnWithoutUrl_(const int& fd)
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "Access denied: Forbidden.";
@@ -1830,15 +1828,15 @@ void  Server::handleReturnWithoutUrl_(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 403 Forbidden\r\n"
+  headers << this->getVersion_(fd) << " 403 Forbidden\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
@@ -1847,26 +1845,26 @@ bool  Server::isValidHttpStatusCode_(const int& code)
   return (code >= 100 && code <= 599);
 }
 
-void  Server::setBodyFilePath(const int& fd, const std::string& path)
+void  Server::setBodyFilePath_(const int& fd, const std::string& path)
 {
   this->_clients[fd]->getResponse().setBodyFilePath(path);
 }
 
-void  Server::setBodySize(const int& fd, const ssize_t& bodySize)
+void  Server::setBodySize_(const int& fd, const ssize_t& bodySize)
 {
   this->_clients[fd]->getResponse().setBodySize(bodySize);
 }
 
-void  Server::respondPayloadTooLarge(const int& fd)
+void  Server::respondPayloadTooLarge_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondPayloadTooLarge");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(413, fd);
-  if (this->hasCustomErrorPage(413, fd))
-    this->saveErrorBodyFilePath(413, fd, contentType, contentLength);
+  this->setStatus_(413, fd);
+  if (this->hasCustomErrorPage_(413, fd))
+    this->saveErrorBodyFilePath_(413, fd, contentType, contentLength);
   else
   {
     body = "413 Request Entity Too Large";
@@ -1875,29 +1873,28 @@ void  Server::respondPayloadTooLarge(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 413 Request Entity Too Large\r\n"
+  headers << this->getVersion_(fd) << " 413 Request Entity Too Large\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-// TODO 
-void  Server::respondFallbackError(const int& fd)
+void  Server::respondFallbackError_(const int& fd)
 {
   logger(LOG_DEBUG, "In function respondFallbackError");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(502, fd);
-  if (this->hasCustomErrorPage(502, fd))
-    this->saveErrorBodyFilePath(502, fd, contentType, contentLength);
+  this->setStatus_(502, fd);
+  if (this->hasCustomErrorPage_(502, fd))
+    this->saveErrorBodyFilePath_(502, fd, contentType, contentLength);
   else
   {
     body = "Failed to retrieve response from CGI.";
@@ -1906,10 +1903,10 @@ void  Server::respondFallbackError(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 502 Bad Gateway\r\n"
+  headers << this->getVersion_(fd) << " 502 Bad Gateway\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());

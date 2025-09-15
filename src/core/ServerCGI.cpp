@@ -6,15 +6,15 @@
 /*   By: zramahaz <zramahaz@student.42antananarivo  +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/21 13:24:59 by zramahaz          #+#    #+#             */
-/*   Updated: 2025/09/14 15:51:21 by srandria         ###   ########.fr       */
+/*   Updated: 2025/09/15 10:40:12 by srandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../include/core/Server.hpp"
 
-void  Server::prepareAndLaunchCGI(const int& fd)
+void  Server::prepareAndLaunchCGI_(const int& fd)
 {
-  LocationConfig  location = this->getCurrentLocation();
+  LocationConfig  location = this->getCurrentLocation_();
   std::string     localPath;
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
   std::string cgiPath = location.cgi_path;
@@ -23,10 +23,10 @@ void  Server::prepareAndLaunchCGI(const int& fd)
   else if (this->isExecutable_(localPath))
   {
     if (!this->isFile_(cgiPath) || !this->isExecutable_(cgiPath))
-      this->respondBinaryNotFound(fd);
+      this->respondBinaryNotFound_(fd);
     else
     {
-      this->launchCgiProcess(fd, localPath);
+      this->launchCgiProcess_(fd, localPath);
       return ;
     }
   }
@@ -42,9 +42,9 @@ void  Server::respondForbidden_(const int& fd)
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(403, fd);
-  if (this->hasCustomErrorPage(403, fd))
-    this->saveErrorBodyFilePath(403, fd, contentType, contentLength);
+  this->setStatus_(403, fd);
+  if (this->hasCustomErrorPage_(403, fd))
+    this->saveErrorBodyFilePath_(403, fd, contentType, contentLength);
   else
   {
     body = "Access denied: Forbidden.";
@@ -53,50 +53,50 @@ void  Server::respondForbidden_(const int& fd)
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 403 Forbidden\r\n"
+  headers << this->getVersion_(fd) << " 403 Forbidden\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
 }
 
-void  Server::respondBinaryNotFound(const int&fd)
+void  Server::respondBinaryNotFound_(const int&fd)
 {
   logger(LOG_DEBUG, "in function respondBinaryNotFound");
   std::string body;
   std::string contentLength;
   std::string contentType = CT_TEXT;
 
-  this->setStatus(500, fd);
-  if (this->hasCustomErrorPage(500, fd))
-    this->saveErrorBodyFilePath(500, fd, contentType, contentLength);
+  this->setStatus_(500, fd);
+  if (this->hasCustomErrorPage_(500, fd))
+    this->saveErrorBodyFilePath_(500, fd, contentType, contentLength);
   else
   {
-    body = "CGI binary not found or not executable: " + this->getCurrentLocation().cgi_path;
+    body = "CGI binary not found or not executable: " + this->getCurrentLocation_().cgi_path;
     contentLength = toString(body.size());
   }
 
   std::ostringstream headers;
 
-  headers << this->getVersion(fd) << " 500 Internal Server Error\r\n"
+  headers << this->getVersion_(fd) << " 500 Internal Server Error\r\n"
     << CT << " " << contentType << "\r\n"
     << CL << " " << contentLength << "\r\n"
-    << this->buildConnectionHeader(fd);
+    << this->buildConnectionHeader_(fd);
 
   HttpResponse& response = this->_clients[fd]->getResponse();
   response.setHeader(headers.str());
   response.setBody(body);
-  this->saveHeaderAndBodySize(fd);
+  this->saveHeaderAndBodySize_(fd);
   this->setPollOut_(fd);
 }
 
-void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
+void  Server::launchCgiProcess_(const int& fd, const std::string& localPath)
 {
   CgiPipes cgiPipes;
-  const std::string method = this->getMethod(fd);
+  const std::string method = this->getMethod_(fd);
 
   if (pipe(cgiPipes.out_pipe) == -1 || (method == "POST" && pipe(cgiPipes.in_pipe)))
   {
@@ -105,7 +105,7 @@ void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
   }
   this->_clients[fd]->getRequest()._isCgiRequest = true;
   logger(LOG_DEBUG,
-      "🚀 Executing CGI handler [" + this->getFileName(this->getUriPath_(fd)) + "] ...");
+      "🚀 Executing CGI handler [" + this->getFileName_(this->getUriPath_(fd)) + "] ...");
   int pid = fork();
   if (pid < 0)
   {
@@ -113,46 +113,46 @@ void  Server::launchCgiProcess(const int& fd, const std::string& localPath)
     return ;
   }
   else if (pid == 0)
-    this->handleChildProcess(fd, localPath, cgiPipes);
+    this->handleChildProcess_(fd, localPath, cgiPipes);
   else
   {
     this->_clients[fd]->setChildPid(pid);
-    this->handleParentProcess(fd, cgiPipes);
+    this->handleParentProcess_(fd, cgiPipes);
   }
 }
 
-void  Server::handleChildProcess(const int&fd, const std::string& localPath,
+void  Server::handleChildProcess_(const int&fd, const std::string& localPath,
     const CgiPipes& cgiPipes)
 {
   char **envp = this->buildEnvpForExecve_(fd);
 
   char *argv[] = {
-      (char*)this->getCurrentLocation().cgi_path.c_str(),
+      (char*)this->getCurrentLocation_().cgi_path.c_str(),
       (char*)localPath.c_str(),
       NULL
   };
   dup2(cgiPipes.out_pipe[1], STDOUT_FILENO);
   close(cgiPipes.out_pipe[0]);
   close(cgiPipes.out_pipe[1]);
-  if (this->getMethod(fd) == "POST")
+  if (this->getMethod_(fd) == "POST")
   {
     dup2(cgiPipes.in_pipe[0], STDIN_FILENO);
     close(cgiPipes.in_pipe[0]);
     close(cgiPipes.in_pipe[1]);
   }
-  execve(this->getCurrentLocation().cgi_path.c_str(), argv, envp);
+  execve(this->getCurrentLocation_().cgi_path.c_str(), argv, envp);
   perror("execve failed");
   exit(0);
 }
 
-void  Server::handleParentProcess(const int&fd, const CgiPipes& cgiPipes)
+void  Server::handleParentProcess_(const int&fd, const CgiPipes& cgiPipes)
 {
   this->_pipeFd.push_back(cgiPipes.out_pipe[0]);
   this->_pipeFdClient[cgiPipes.out_pipe[0]] = fd;
   this->setNonBlocking_(cgiPipes.out_pipe[0]);
   this->addFdToPoll_(cgiPipes.out_pipe[0]);
   close(cgiPipes.out_pipe[1]);
-  if (this->getMethod(fd) == "POST")
+  if (this->getMethod_(fd) == "POST")
   {
     this->_pipeFd.push_back(cgiPipes.in_pipe[1]);
     this->_pipeFdClient[cgiPipes.in_pipe[1]] = fd;
@@ -163,16 +163,16 @@ void  Server::handleParentProcess(const int&fd, const CgiPipes& cgiPipes)
   }
 }
 
-void  Server::setIsCGIRequest(const int&fd)
+void  Server::setIsCGIRequest_(const int&fd)
 {
-  LocationConfig  location = this->getCurrentLocation();
+  LocationConfig  location = this->getCurrentLocation_();
   std::string     localPath;
   localPath = location.root + '/' + getUriPath_(fd).substr(location.path.size());
 
   if (this->getFileExtension_(getUriPath_(fd)) ==
-      this->getCurrentLocation().cgi_extension
-      && !this->getCurrentLocation().cgi_extension.empty()
-      && !this->getCurrentLocation().cgi_path.empty())
+      this->getCurrentLocation_().cgi_extension
+      && !this->getCurrentLocation_().cgi_extension.empty()
+      && !this->getCurrentLocation_().cgi_path.empty())
     this->_clients[fd]->getRequest()._isCgiRequest = true;
 }
 
@@ -196,7 +196,7 @@ char  **Server::buildEnvpForExecve_(const int& fd)
     envMap["QUERY_STRING"] = queryString;
     oss << "        " << "QUERY_STRING = " << envMap["QUERY_STRING"] << std::endl;;
   }
-  envMap["REQUEST_METHOD"] = this->getMethod(fd);
+  envMap["REQUEST_METHOD"] = this->getMethod_(fd);
   oss << "        " << "REQUEST_METHOD = " << envMap["REQUEST_METHOD"] << std::endl;
   envMap["SCRIPT_NAME"] = this->getUriPath_(fd);
   oss << "        " << "SCRIPT_NAME = " << envMap["SCRIPT_NAME"] << std::endl;
@@ -205,7 +205,7 @@ char  **Server::buildEnvpForExecve_(const int& fd)
   oss << "        " << "SERVER_NAME = " << envMap["SERVER_NAME"] << std::endl;
   envMap["SERVER_PORT"] = toString(client->getRequest().getServerConf()->port);
   oss << "        " << "SERVER_PORT = " << envMap["SERVER_PORT"] << std::endl;
-  envMap["SERVER_PROTOCOL"] = this->getVersion(fd);
+  envMap["SERVER_PROTOCOL"] = this->getVersion_(fd);
   oss << "        " << "SERVER_PROTOCOL = " << envMap["SERVER_PROTOCOL"] << std::endl;
   envMap["SERVER_SOFTWARE"] = "webserv/1.0";
   oss << "        " << "SERVER_SOFTWARE = " << envMap["SERVER_SOFTWARE"] << std::endl;
@@ -252,7 +252,7 @@ char  **Server::buildEnvpForExecve_(const int& fd)
   return (envp);
 }
 
-void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
+void  Server::readCgiResponse_(const int& pipeFd, const int& clientFd)
 {
   if (this->_clients.find(clientFd) == this->_clients.end())
     return ;
@@ -269,9 +269,9 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
   {
     logger(LOG_ERROR, "CGI read failure, fallback response will be sent");
     this->_clients[pipeFd]->getRequest()._isCgiRequest = false;
-    this->unregisterCgiFd(pipeFd);
-    this->respondFallbackError(clientFd);
-    this->saveHeaderAndBodySize(clientFd);
+    this->unregisterCgiFd_(pipeFd);
+    this->respondFallbackError_(clientFd);
+    this->saveHeaderAndBodySize_(clientFd);
     this->setPollOut_(clientFd);
   } 
   else if (count == 0)
@@ -279,10 +279,10 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
     logger(LOG_INFO,
       "Parent received CGI response, ready to send to client fd=" + toString(clientFd));
     client->_isReadingCgiResponse = false;
-    client->getResponse().addExtraHeader(this->buildConnectionHeader(clientFd),
-        this->getVersion(clientFd));
+    client->getResponse().addExtraHeader(this->buildConnectionHeader_(clientFd),
+        this->getVersion_(clientFd));
     client->getResponse().saveCgiRespondSize(clientFd);
-    this->unregisterCgiFd(pipeFd);
+    this->unregisterCgiFd_(pipeFd);
     this->setPollOut_(clientFd);
   }
   else if (count > 0)
@@ -292,14 +292,14 @@ void  Server::readCgiResponse(const int& pipeFd, const int& clientFd)
   }
 }
 
-void  Server::sendRequestBodyToCgi(const int&pipeFd, const int& clientFd)
+void  Server::sendRequestBodyToCgi_(const int&pipeFd, const int& clientFd)
 {
   logger(LOG_INFO, "in function sendRequestBodyToCgi");
   Client* client = this->_clients[clientFd];
   client->getRequest().sendRequestBodyToCgi(pipeFd, clientFd);
 }
 
-void  Server::unregisterCgiFd(const int& pipeFd)
+void  Server::unregisterCgiFd_(const int& pipeFd)
 {
   std::vector<struct pollfd>::iterator itPollFd = this->_pool_fds.begin();
   close(pipeFd);
